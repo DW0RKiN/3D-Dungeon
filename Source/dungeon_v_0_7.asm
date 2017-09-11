@@ -584,7 +584,7 @@ PP_NALEZEN_OBJEKT:			; na lokaci lezi nejaky predmet
 	cp	c			;  4:1 pohledy musi sedet
 	jr	nz,PP_NEXT_OBJECT	; 12/7:2
 
-; nalezena spravny prepinac pred nama!
+; nalezen spravny prepinac pred nama!
 	ld	a,(de)			;  7:1 typ
 	add	a,$80			;  7:2 prepneme paku / prohodime horni bit
 	ld	(de),a			;  7:1 typ
@@ -841,7 +841,7 @@ PO_NALEZEN_OBJECT:
 	ld	a,(de)			;  7:1 typ
 	sub	h
 	and	MASKA_TYP + MASKA_NATOCENI
-	jr	nz,PO_NEXT_OBJECT	;12/7:2
+	jr	nz,PO_NEXT_OBJECT	;12/7:2       ??? pokud je horni bit nastaven tak to bude blbnout?
 
 ; je to hledany predmet AKTUALIZOVAT
 	ld	a,h
@@ -1380,8 +1380,8 @@ FI_ENEMY_FAR:
 	add	a,c			;  4:1
 	add	a,ENEMY_GROUP % 256	;  7:2
 	ld	l,a			;  4:1
-	ld	a,ENEMY_GROUP / 256	;  7:2
-	adc	a,b			;  4:1 v b je nula
+	adc	a,ENEMY_GROUP / 256	;  7:2
+	sub	l			;  4:1
 	ld	h,a			;  4:1 v hl je adresa kde je ulozena spravna pozice spritu s poslednim nepritelem
 					; [64]:[16]
 
@@ -1582,8 +1582,8 @@ FI_ZA_TESTEM_OPAKOVANI:
 	add	a,l
 	add	a,ITEM_NATOCENI % 256
 	ld	l,a
-	ld	a,ITEM_NATOCENI / 256
-	adc	a,0
+	adc	a,ITEM_NATOCENI / 256
+	sub	l
 	ld	h,a			; hl = index odkud budu cist polohu predmetu
 	ld	a,(hl)
 	
@@ -1609,8 +1609,8 @@ FI_ZA_TESTEM_OPAKOVANI:
 	add	a,l			; pripoctem hloubku
 	add	a,ITEM_TABLE % 256
 	ld	l,a
-	ld	a,ITEM_TABLE / 256
-	adc	a,0
+	adc	a,ITEM_TABLE / 256
+	sub	l
 	ld	h,a			; hl = adresa, kde je ulozena adresa spritu daneho predmetu v ITEM_TABLE vcetne hloubky
 	ld	e,(hl)
 	inc	hl
@@ -1625,8 +1625,8 @@ FI_ZA_TESTEM_OPAKOVANI:
 	add	a,ixh			; pridame spravny sloupec
 	add	a,ITEM_POZICE % 256	; 
 	ld	l,a
-	ld	a,ITEM_POZICE / 256
-	adc	a,0
+	adc	a,ITEM_POZICE / 256
+	sub	l
 	ld	h,a			; hl = adr. v ITEM_POZICE
 	ld	c,(hl)
 	inc	c
@@ -2147,8 +2147,8 @@ NEW_PLAYER_ACTIVE:
 	inc	hl			;  6:1 
 	add	a,INVENTORY_ITEMS % 256	; pozor odted nesmim zrusit mozny priznak carry
 	ld	(hl),a			;  7:1
-	ld	a,INVENTORY_ITEMS / 256
-	adc	a,0			; carry pricten
+	adc	a,INVENTORY_ITEMS / 256
+	sub	l			;
 	inc	hl			;  6:1
 	ld	(hl),a			;  7:1 promnena na adrese AKTIVNI_INVENTAR obsahuje ukazatel na INVENTORY_ITEMS + MAX_ITEM * AKTIVNI_POSTAVA
 	
@@ -2366,8 +2366,8 @@ IW_NEXT_NAME:
 	add	a,a			; 4x
 	add	a,AVATARS % 256
 	ld	l,a
-	ld	a,AVATARS / 256
-	adc	a,0
+	adc	a,AVATARS / 256
+	sub	l
 	ld	h,a			; hl = index na avatar aktivniho hrace
 
 	ld	e,(hl)
@@ -2548,8 +2548,8 @@ VYKRESLI_AKTIVNI_PREDMET:
  	add	a,a
  	add	a,POZICE_V_INVENTARI % 256
  	ld	l,a
- 	ld	a,POZICE_V_INVENTARI / 256
- 	adc	a,0
+ 	adc	a,POZICE_V_INVENTARI / 256
+ 	sub	l
  	ld	h,a
  
  	ld	c,(hl)
@@ -2719,19 +2719,23 @@ VR_EXIT:
 ; ----------------------------------
 ; nataci kompas
 AKTUALIZUJ_RUZICI:
-; 	ld	hl,RUZICE			; 10:3
-; if (RUZICE/256) != (RUZICE_END/256)
-;     .error 'Seznam RUZICE lezi na predelu 256 bajtoveho segmentu!'
-; endif
 	ld	a,(VECTOR)			; 13:3 0 = N,1 = E,2 = S,3 = W
 	add	a,a				;  4:1 2x
 	add	a,a				;  4:1 4x
 	add	a,RUZICE % 256			;  7:2
 	ld	l,a				;  4:1
-	ld	a,RUZICE / 256			;  7:2
-	adc	a,0				;  7:2
+if (RUZICE/256) != (RUZICE_END/256)
+.warning 'O 2 bajty delsi kod, RUZICE a RUZICE_END lezi na dvou segmentech!'
+
+	adc	a,RUZICE / 256			;  7:2 resi preteceni
+	sub	l				;  7:2 
 	ld	h,a				;  4:1 hl = ukazatel na ukazatel spravneho spritu
-	
+
+else
+	ld	h,RUZICE / 256			;  7:2 resi preteceni
+.warning 'Kratsi kod, RUZICE a RUZICE_END lezi na stejnem segmentu.'
+
+endif	
 	call	SET_TARGET_SCREEN		; prepis COPY_PATTERN2BUFFER na SCREEN
 	di
 	call	INIT_COPY_PATTERN2BUFFER
@@ -2742,15 +2746,15 @@ AKTUALIZUJ_RUZICI:
 ; ----------------------------
 ; VSTUP: a = 0 dopredu, 4 dozadu , 8 vlevo, 12 vpravo, 16 otoceni doleva, 20 otoceni doprava, 24 jen sipky
 AKTUALIZUJ_SIPKY:
-	ld	h,STISKNUTA_SIPKA / 256		; 7:2
+
+if (SIPKY/256) != (SIPKY_END/256)
+    .error 'SIPKY nemaji shodny 256 bajtovy segment!'
+endif
 	add	a,STISKNUTA_SIPKA % 256		; 7:2
 	ld	l,a				; 4:1
+	ld	h,STISKNUTA_SIPKA / 256		; 7:2
 	push	hl
-	
-if (STISKNUTA_SIPKA/256) != (SIPKY/256)
-    .error 'STISKNUTA_SIPKA a SIPKY nemaji shodny 256 bajtovy segment!'
-endif
-	
+
 	ld	l,SIPKY % 256
 
 	call	SET_TARGET_SCREEN		; prepis INIT_COPY_PATTERN2BUFFER na SCREEN, meni jen akumulator
@@ -3044,9 +3048,14 @@ VSTUP_DO_NEZNAME_FCE:
 	add a,a			;e027	87 	. 
 	sub e			;e028	93 	. 
 	sub e			;e029	93 	. 
-	add a,05fh		;e02a	c6 5f 	. _ 
+
+if (DATA_ZIVOTY / 256) != ( DATA_ZIVOTY_END / 256 )
+    .error 'Seznam DATA_ZIVOTY prekracuje segment!'
+endif
+	
+	add a,DATA_ZIVOTY % 256		;e02a	c6 5f 	. _ 
 	ld l,a			;e02c	6f 	o 
-	ld h,0dfh		;e02d	26 df 	& . 
+	ld h,DATA_ZIVOTY / 256		;e02d	26 df 	& . 
 	ld a,(hl)			;e02f	7e 	~ 
 	sub d			;e030	92 	. 
 	jr nc,le037h		;e031	30 04 	0 . 

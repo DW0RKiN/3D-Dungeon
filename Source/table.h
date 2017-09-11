@@ -554,10 +554,11 @@ defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_POTION_B	equ	30*POSUN_PODTYP
 ; typ       = bity 5,6,7 = nenulove horni 3 bity = nepruchozi ( u dveri zaroven zavreno )
 ; dodatecny = bity 0,1,2,3,4 podtyp objektu
 ; dodatecny u dveri 
-; %???? ???1 ram dveri S-J = chodba V-Z, tzn vidime uvnitr dveri pri natoceni S nebo J
 ; %???? ???0 ram dveri V-Z = chodba S-J, tzn vidime uvnitr dveri pri natoceni V nebo Z
+; %???? ???1 ram dveri S-J = chodba V-Z, tzn vidime uvnitr dveri pri natoceni S nebo J
 
-
+TYP_DVERE_SJ		equ	TYP_DVERE
+TYP_DVERE_VZ		equ	(TYP_DVERE+1)
 
 ADR_ZARAZKY
 defw	ZARAZKA					; ma ukazovat adresu $ff zarazky v TABLE_ITEM, pouziva se pri brani/vkladani radku
@@ -599,39 +600,58 @@ defb	95,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
 defb	115,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
-defb	119,	$80 + TYP_DVERE + 1		, $81
+defb	119,	$80 + TYP_DVERE_VZ		, $81
+
+defb	130,	$00 + TYP_DEKORACE		, PODTYP_RUNA
 
 defb	132,	$00 + TYP_PREPINAC + south	, south
-defb	0,	119				, $80 + TYP_DVERE + 1	; aktivace paky prepne predmet na lokaci 119 s typem dvere
+defb	0,	119				, $80 + TYP_DVERE_VZ	; aktivace paky prepne predmet na lokaci 119 s typem dvere
 
-defb	158,	$E0 + TYP_DVERE			, $80			; zavreno az na 3 bity!!!
+defb	158,	$E0 + TYP_DVERE_SJ		, $80			; zavreno az na 3 bity!!!
 
 defb	176,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
 ; ---------- ctverice pak na dvere 158
 
-defb	185,	$00 + TYP_PREPINAC + south	, south				; primarne prepne 158-dvere bit $80
-defb	0,	158				, $A0 + TYP_DVERE		; bit $80 + $20
-defb	0,	188				, $80 + TYP_PREPINAC + south	; 
+PAKA_A	equ	185
+PAKA_B	equ	186
+PAKA_C	equ	187
+PAKA_D	equ	188
 
-defb	186,	$00 + TYP_PREPINAC + south	, $80 + south			; sam neprepne nic
-defb	0,	158				, $20 + TYP_DVERE		; bit $20
-defb	0,	188				, $80 + TYP_PREPINAC + south	; aktivace paky prepne predmet na lokaci 169 s typem paka
+; Bit dveri    7 6 5
+; Paka       A B C D = 185 .. 188
+; zaroven s  + + + +  
+; pakou      B C D B
+; a zaroven  C
+; a jeste    D 
 
-defb	187,	$00 + TYP_PREPINAC + south	, south				; primarne prepne 158-dvere bit $40
-defb	0,	158				, $C0 + TYP_DVERE		; bit $40 + $80
-defb	0,	185				, $80 + TYP_PREPINAC + south	;
 
-defb	188,	$00 + TYP_PREPINAC + south	, $80 + south			; primarne prepne 158-dvere bit $20
-defb	0,	158				, $60 + TYP_DVERE		; bit $20 + $40
-defb	0,	187				, $80 + TYP_PREPINAC + south	; 
+;	lokace	prepinace+typ			dodatecny
+
+defb	PAKA_A,	$00 + TYP_PREPINAC + south	, south				; paka A meni jen ostatni paky (takze rovnou otevre dvere pokud jsou shodne nahore)
+defb	0,	158				, $E0 + TYP_DVERE_SJ		; celkove meni bity $20 + $40 + $80
+defb	0,	PAKA_B				, $80 + TYP_PREPINAC + south	; zmeni i paku B
+defb	0,	PAKA_C				, $80 + TYP_PREPINAC + south	; zmeni i paku C
+defb	0,	PAKA_D				, $80 + TYP_PREPINAC + south	; zmeni i paku D
+
+defb	PAKA_B,	$00 + TYP_PREPINAC + south	, $80 + south			; paka B primarne meni bit 7 na dverich v lokaci 158
+defb	0,	158				, $C0 + TYP_DVERE_SJ		; celkove meni bity $80(B) + $40(C)
+defb	0,	PAKA_C				, $80 + TYP_PREPINAC + south	; zmeni i paku C
+
+defb	PAKA_C,	$00 + TYP_PREPINAC + south	, south				; paka C primarne meni bit 6 na dverich v lokaci 158
+defb	0,	158				, $60 + TYP_DVERE_SJ		; celkove meni bity $40(C) + $20(D)
+defb	0,	PAKA_D				, $80 + TYP_PREPINAC + south	; zmeni i paku D
+
+defb	PAKA_D,	$00 + TYP_PREPINAC + south	, $80 + south			; paka D primarne meni bit 5 na dverich v lokaci 158
+defb	0,	158				, $A0 + TYP_DVERE_SJ		; celkove meni bity $20(D) + $80(B)
+defb	0,	PAKA_B				, $80 + TYP_PREPINAC + south	; zmeni i paku B
 
 ; ----------
 
 defb	216,	$00 + TYP_PREPINAC + west	, west
-defb	0,	232				, $80 + TYP_DVERE +1		; aktivace paky prepne predmet na lokaci 232 s typem dvere
+defb	0,	232				, $80 + TYP_DVERE_VZ		; aktivace paky prepne predmet na lokaci 232 s typem dvere
 
-defb	232,	$80 + TYP_DVERE + 1		, $81
+defb	232,	$80 + TYP_DVERE_VZ		, $81
 
 defb	246,	$00 + TYP_DEKORACE		, PODTYP_RUNA
 
