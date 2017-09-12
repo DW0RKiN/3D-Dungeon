@@ -94,7 +94,7 @@ MAIN_LOOP:
 	call	COPY_VYREZ2SCREEN
 	call	TEST_OTEVRENY_INVENTAR
 	jr	nz,MAIN_OTEVRENY_INVENTAR
-	call	sub_e046h
+	call	PLAYERS_WINDOW_AND_DAMAGE
 MAIN_OTEVRENY_INVENTAR:
 
 	call	COPY_INVENTORY2SCREEN
@@ -1671,7 +1671,7 @@ INCLUDE sprite2buffer.asm
 ; Buffer ma rozmery a rozlozeni dat stejne jako SCREEN, jen jinou adresu
 ; Na obrazovce bude obsah zobrazen vlevo nahore
 COPY_INVENTORY2SCREEN:	; $D64D
-	halt					; cekame nez 50x za sekundu nezacne ULU prekreslovat obrazovku
+	halt					; cekame nez 50x za sekundu nezacne ULA prekreslovat obrazovku
 
 	ld	a,COPY_LOOP_14x - COPY_END_SEGMENT
 	ld	(COPY_MENITELNY_SKOK+1),a
@@ -2121,34 +2121,35 @@ defw	18*8+1,25*8+1,7*256+18*8+1,7*256+25*8+1,14*256+18*8+1,14*256+25*8+1
 COLOR_OTHER_PLAYERS	equ	%00000111	; white ink + black paper
 COLOR_ACTIVE_PLAYER	equ	%00000011	; magenta ink + black paper
 
+; VSTUP: A = '1' .. '6'
 NEW_PLAYER_ACTIVE:
 	sub	49			; odectem hodnotu znaku "1"
 	ld	hl,MAX_POSTAVA_PLUS_1	; 10:3
-	cp	(hl)			;  7:1
+	cp	(hl)			;  7:1  0..5 - MAX_POSTAVA_PLUS_1
 	ret	nc			; aktivni vetsi jak MAX_POSTAVA_PLUS_1
 					; tohle muze nastat jen u 5. a 6. postavy pokud jeste nejsou v parte
 	inc	hl			;  6:1 hl = adr. AKTIVNI_POSTAVA
 	cp	(hl)			;  7:1
 	ret	z			; nastavujeme uz aktivni, nebudeme vse znovu prekreslovat
-	ld	(hl),a			;  7:1
+	ld	(hl),a			;  7:1 nova AKTIVNI_POSTAVA
 	
 	; zmenime ukazatel ulozeny v AKTIVNI_INVENTAR
 	; potrebujeme nasobit AKTIVNI_POSTAVA {0..5} * MAX_ITEM { = 27 }
+	
 	ld	e,a			; ulozim si 1x do "e"
 	add	a,a			; 2x 
-	add	a,a			; 4x
-	ld	d,a			; ulozim si 4x do "d"
-	add	a,a			; 8x
-	add	a,a			; 16x
-	add	a,a			; 32x
-	sub	d			; - 4x
-	sub	e			; - 1x = MAX_ITEM * AKTIVNI_POSTAVA = ( 32 - 5 - 1) * AKTIVNI_POSTAVA
+	add	a,e			; 3x
+	ld	d,a			; ulozim si 3x do "d"
+	add	a,a			; 6x
+	add	a,a			; 12x
+	add	a,a			; 24x
+	add	a,d			; 27x = MAX_ITEM * AKTIVNI_POSTAVA = 27 * AKTIVNI_POSTAVA
 
 	inc	hl			;  6:1 
 	add	a,INVENTORY_ITEMS % 256	; pozor odted nesmim zrusit mozny priznak carry
 	ld	(hl),a			;  7:1
 	adc	a,INVENTORY_ITEMS / 256
-	sub	l			;
+	sub	(hl)			;
 	inc	hl			;  6:1
 	ld	(hl),a			;  7:1 promnena na adrese AKTIVNI_INVENTAR obsahuje ukazatel na INVENTORY_ITEMS + MAX_ITEM * AKTIVNI_POSTAVA
 	
@@ -2532,7 +2533,7 @@ IW_NEXT_ITEM:
 ; -------------------------------------------------------
 VYKRESLI_AKTIVNI_PREDMET:
 	call TEST_OTEVRENY_INVENTAR	;ddf7	cd a6 ca
-	ret	z				; u zavreneho nebudem vykreslovat presah
+	ret	z			; u zavreneho nebudem vykreslovat presah
 	
 	ld	a,(DRZENY_PREDMET)
 	or	a
@@ -2881,13 +2882,13 @@ ldf50h:
 	ret			;df5e	c9 	. 
 	
 DATA_ZIVOTY:
-;	aktualne	max	offset	segment pocatku prouzku	zraneni      cas ukonceni krvaveho fleku
-defb	132,		132,	$b4,	Adr_Attr_Buffer/256+0,	0,      0
-defb	90,		90,	$bb,	Adr_Attr_Buffer/256+0,	0,      0
-defb	64,		64,	$94,	Adr_Attr_Buffer/256+1,	0,      0
-defb	40,		40,	$9b,	Adr_Attr_Buffer/256+1,	0,      0
-defb	46,		46,	$74,	Adr_Attr_Buffer/256+2,	0,      0
-defb	40,		40,	$7b,	Adr_Attr_Buffer/256+2,	0,      0
+;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas ukonceni krvaveho fleku
+defb    132,    132,    $b4,    Adr_Attr_Buffer/256+0,  0,                  0
+defb    90,     90,     $bb,    Adr_Attr_Buffer/256+0,  0,                  0
+defb    64,     64,     $94,    Adr_Attr_Buffer/256+1,  0,                  0
+defb    40,     40,     $9b,    Adr_Attr_Buffer/256+1,  0,                  0
+defb    46,     46,     $74,    Adr_Attr_Buffer/256+2,  0,                  0
+defb    40,     40,     $7b,    Adr_Attr_Buffer/256+2,  0,                  0
 DATA_ZIVOTY_END:
 
 
@@ -3039,61 +3040,65 @@ VKF_POKRACUJ:
 JEDNA:
 defb	"1",0
 
-VSTUP_DO_NEZNAME_FCE:
-	push hl			;defb 0e5h
 
-	ld a,e			;e024	7b 	{ 
-	add a,a			;e025	87 	. 
-	add a,a			;e026	87 	. 
-	add a,a			;e027	87 	. 
-	sub e			;e028	93 	. 
-	sub e			;e029	93 	. 
+
+; VSTUP: E = index postavy hrace 0..5
+;        D = zraneni
+ZRAN_POSTAVU:
+	push hl			;
+
+	ld a,e			;
+	add a,a			; 2xE 
+	add a,e			; 3xE
+	add a,a			; 6xE 
 
 if (DATA_ZIVOTY / 256) != ( DATA_ZIVOTY_END / 256 )
     .error 'Seznam DATA_ZIVOTY prekracuje segment!'
 endif
 	
-	add a,DATA_ZIVOTY % 256		;e02a	c6 5f 	. _ 
-	ld l,a			;e02c	6f 	o 
-	ld h,DATA_ZIVOTY / 256		;e02d	26 df 	& . 
-	ld a,(hl)			;e02f	7e 	~ 
-	sub d			;e030	92 	. 
-	jr nc,le037h		;e031	30 04 	0 . 
-	xor a			;e033	af 	. 
-	ld (hl),a			;e034	77 	w 
-	jr le044h		;e035	18 0d 	. . 
-le037h:
-	ld (hl),a			;e037	77 	w 
-	inc hl			;e038	23 	# 
-	inc hl			;e039	23 	# 
-	inc hl			;e03a	23 	# 
-	inc hl			;e03b	23 	# 
-	ld (hl),d			;e03c	72 	r 
-	inc hl			;e03d	23 	# 
-	ld a,(TIMER_ADR)		;e03e	3a 78 5c 	: x \ 
-	add a,032h		;e041	c6 32 	. 2 
-	ld (hl),a			;e043	77 	w 
-le044h:
+	add a,DATA_ZIVOTY % 256	; 
+	ld l,a			; 
+	ld h,DATA_ZIVOTY / 256	; 
+	ld a,(hl)		; aktualni pocet zivotu 
+	sub d			; - zraneni 
+	jr nc,ZP_ZIJE		; 
+	xor a			; zemrel, vynulujeme zaporne zivoty na nulu 
+	ld (hl),a		; ulozime nulu
+	jr ZP_EXIT		;
+ZP_ZIJE:
+	ld (hl),a		; ulozime zbyvajici pocet zivotu
+	inc hl			; +1
+	inc hl			; +2 
+	inc hl			; +3 
+	inc hl			; +4 
+	ld (hl),d		; ulozim hodnotu posledniho zraneni 
+	inc hl			; +5 
+	ld a,(TIMER_ADR)	; 
+	add a,032h		; +50 = +1 vterina
+	ld (hl),a		; doba zobrazovani krvaveho fleku s hodnotou zraneni 
+ZP_EXIT:
 	pop hl			;e044	e1 	. 
 	ret			;e045	c9 	. 
 
 
 ; ????????????????????????????????????????
-sub_e046h:
-	ld a,002h		;e046	3e 02 
-	ld hl,TIMER_ADR		;e048	21 78 5c 
-	xor (hl)		;e04b	ae 
-	and 080h		;e04c	e6 80 
-	jr z,le05fh		;e04e	28 0f 
-	ld a,(hl)		;e050	7e 
-	ld (sub_e046h+1),a	;e051	32 47 e0 
-	ld de,00100h		;e054	11 00 01 
-	ld b,006h		;e057	citac = 6 
-le059h:
-	call VSTUP_DO_NEZNAME_FCE	;e059	cd 23 e0 
-	inc e			;e05c	1c
-	djnz le059h		;e05d	10 fa 
-le05fh:
+PLAYERS_WINDOW_AND_DAMAGE:
+	ld a,002h		; hmm tady mela byt asi nula
+	ld hl,TIMER_ADR		; 1/50 vteriny citac
+	xor (hl)		; je hornibit shodny s ulozenym 
+	and 080h		; zajima nas jen horni bit
+	jr z,PWAD_NEZRANUJ	; 
+	
+	ld a,(hl)		; ulozime horni bit
+	ld (PLAYERS_WINDOW_AND_DAMAGE+1),a	;e051	32 47 e0
+	
+	ld de,$0100		; D = 1 = zraneni, E = 0 = index postavy 
+	ld b,$06		; citac = 6 
+PWAD_LOOP:
+	call ZRAN_POSTAVU	; 
+	inc e			; dalsi postava
+	djnz PWAD_LOOP		;
+PWAD_NEZRANUJ:
 	call PLAYERS_WINDOW	;e05f	cd 67 dc 
 	ret			;e062	c9 
 
