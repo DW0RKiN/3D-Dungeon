@@ -21,6 +21,8 @@ typedef char CHAR;
 #define GIF_END                 0x3b
 
 
+int alfa_prah = 34;
+
 enum ZX_Colors {
 Black = 0,
 Blue,
@@ -296,26 +298,31 @@ void DecodeBuff(BYTE * Buff, PICTURE *screen, int minimalni_sirka ) {
     i++;        // = 0
 
     int sum = 0;
-    
+#if INFO
     printf("Ctene kody:");
-    
+#endif
 // cteni prvniho kodu
     kod = CtiBitovyProud( &(Buff[i]), &i, minimalni_sirka, &uz_nacteno_bitu );
+#if INFO
     printf(" %i", kod );    
     if ( kod == clearcode ) printf(" = Clear Code");
     else {
         printf(" Prvni kod se nerovna Clear Code (%i)!\n", clearcode );
     }
+#endif
 
 after_clearcode:
     new = stopcode + 1;
     kod_overflows = clearcode << 1;
     kod_size = minimalni_sirka;
+#if INFO
     printf("\n\t%i-bit", kod_size );
-
+#endif
 // cteni prvniho skutecneho kodu, ktery se neuklada do slovniku    
     kod = CtiBitovyProud( &(Buff[i]), &i, kod_size, &uz_nacteno_bitu );
+#if INFO
     printf(" %i", kod );
+#endif
 // prvni kod je vzdy mensi jak clearcode, zatim nic neobsahuje, ani predchozi neni takze nemuze byt ani roven new
     screen->screen_buf[sum++] = kod;    
     predchozi = kod;
@@ -323,15 +330,20 @@ after_clearcode:
 // cteni dalsich kodu, pokazde se vytvori nove slovo ve slovniku
     while ( 1 ) {
         kod = CtiBitovyProud( &(Buff[i]), &i, kod_size, &uz_nacteno_bitu );
+#if INFO
         printf(" %i", kod );
-        
+#endif
         if ( kod == stopcode  ) {
+#if INFO
             printf(" = Stop Code\n");
+#endif
             break;
         }
 
         if ( kod == clearcode ) {
+#if INFO
             printf(" = Clear Code\n");
+#endif
             goto after_clearcode;    // alias "double break"
         }
         
@@ -370,10 +382,15 @@ after_clearcode:
           
             if ( kod_size < 12 ) {
                 kod_size++;
-                printf("\n\t%i-bit", kod_size );          
+#if INFO
+                printf("\n\t%i-bit", kod_size );
+#endif
                 kod_overflows <<= 1;
-            } else     printf("\n\tdosazeno limitu 12 bitu, index do tabulky je %i\n", new );
-
+            }
+#if INFO
+            else     
+                printf("\n\tdosazeno limitu 12 bitu, index do tabulky je %i\n", new );
+#endif
         }
 
 // vytvorime nove slovo ve slovniku
@@ -385,11 +402,12 @@ after_clearcode:
 // cteni dalsiho kodu
     }
         
+#if INFO
     int n;
     printf("\nIndex stream: ");
     for ( n = 0; n < sum; n++ ) printf("%i,", screen->screen_buf[n] );
     printf("(%i polozek) \n", sum );
-  
+#endif
 }
 
 
@@ -418,13 +436,15 @@ void ReadDataSubBlocks( FILE * f, PICTURE *screen, int sirka_cisla )
         Nacti (&sum, 1, 1, f, "size data subblocks" );
     
         if ( sum == 0 ) {
+#if INFO
             printf( "\t0 = Block Terminator\n" );
+#endif
              if ( screen != NULL ) DecodeBuff( Buff, screen, sirka_cisla );
             return;
         }
-    
+#if INFO
         printf( "\t%i\t:velikost dalsiho bloku v bajtech\n", sum );
-
+#endif
         Nacti ( aktualni, sum, 1, f,"data subblocks" );
         aktualni += sum;
     }
@@ -535,9 +555,9 @@ void write_zx_format(PICTURE *screen, char * soubor)
                 }
             }
         }
-#if 1
+#if INFO
 if ( x == 3*8 && y == 8*8 )
-printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/8, alfa_sum, ink_sum, ink, paper_sum, paper);
+    printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/8, alfa_sum, ink_sum, ink, paper_sum, paper);
 #endif
         // Analyza kombinace barev
         
@@ -568,7 +588,7 @@ printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/
                 i &= ~PAPER_MASK;       /* polopruhledny znak s jednou barvou (PAPER == 0)*/
             else                        /* polopruhledny s 2 barvami */
             {
-                if ( alfa_sum > 34 )
+                if ( alfa_sum > alfa_prah )
                 {
                     i = ink & INK_MASK;   /* zachovame puvodni paper => nastavime tento na BLACK */
                     if ( ink > 7 ) i |= BRIGHT_MASK;    /* muzeme ztratit i brightness */
@@ -577,7 +597,7 @@ printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/
             }
         }
         
-#if 1
+#if INFO
 if ( x == 3*8 && y == 8*8 ) {
     printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/8, alfa_sum, ink_sum, ink, paper_sum, paper);
     printf("attr: %20x\n", i);
@@ -675,8 +695,19 @@ if ( x == 3*8 && y == 8*8 ) {
 
 
 int main( int argc, char **argv ) {
-  
-    if ( argc != 3 )
+
+    if ( argc == 4 )
+    {
+        int alfa_prah = strtol(argv[3], NULL, 10);
+        if ( alfa_prah <= 0 || alfa_prah >= 63 )
+        {
+            fprintf(stderr, "Hodnota alfa_prah musi byt v rozsahu 1-62\n\n");
+            return 1;
+        }
+    }
+
+    
+    if ( argc < 3 && argc > 4)
     {
         fprintf(stderr, "Spatny pocet parametru! Ocekavam\n\t%s vstupni.gif vystupni\n\n", argv[0]);
         return 1;
@@ -703,12 +734,18 @@ int main( int argc, char **argv ) {
     Nacti (&header, sizeof(GIFHEAD), 1, inFile, "Gif header" );
     numGColors = (header.Packed & 0x80) >> 6;    // 0 nebo 2
     numGColors <<= (header.Packed & 0x07);
+#if INFO
     ViewHeader(&header, numGColors);
+#endif
     if( numGColors > 0 ) {
+#if INFO
         printf( "\n\tReading %lu bytes size palette.\n", sizeof(RGB) * numGColors );
+#endif
         gpal = (RGB*)malloc(sizeof(RGB) * numGColors);
         Nacti (gpal, sizeof(RGB), numGColors, inFile, "global palette." );
+#if INFO
         ViewPalette( numGColors, gpal );
+#endif
     }
     
     PICTURE screen;
@@ -734,21 +771,26 @@ int main( int argc, char **argv ) {
         Nacti (&c, 1, 1, inFile,"next Gif frame header" );
     
 // Trailer ----------------------
+#if INFO
         printf( "\n\t%#04x\t= ", c);
-
+#endif
         
         if ( c == GIF_END ) {
+#if INFO
             printf( "Done.\n" );
+#endif
             fclose(inFile);
             break;
         }
     
         else if ( c == GIF_EXTENSION ) {
-
+#if INFO
             printf( "Identifier Gif Extension\n");
+#endif
             Nacti (&c, 1, 1, inFile,"Gif frame label" );
+#if INFO
             printf( "\t%#04x\t= ", c);
-    
+#endif
             if ( c == GRAPHICS_CONTROL_EXT ) {
                 GCE gce;
                 Nacti (&gce, sizeof(GCE), 1, inFile,"Gif Graphics Control Extension" );
@@ -757,49 +799,68 @@ int main( int argc, char **argv ) {
                     screen.alfa_index = gce.ColorIndex;
                 else
                     screen.alfa_index = -1;
-
+#if INFO
                 ViewGraphicControlExtension(&gce);
+#endif
             }
 
             else if ( c == COMMENT_EXT ) {
+#if INFO
                 printf( "Comment Extension\n" );
+#endif
                 Nacti (&c, sizeof(c), 1, inFile,"Delka komentare" );
                 int i = c;
+#if INFO
                 printf( "\t%i\t: Delka komentare\n", i );
                 char c = '\t';
+#endif
                 for ( ; i >= 0; i-- ) {
-                    printf("%c", c);                    
+#if INFO
+                    printf("%c", c);
+#endif
                     Nacti (&c, sizeof(c), 1, inFile,"Gif Comment Extension" );
                 }
+#if INFO
                 printf( "\n\t%i\t= 0\n", c );
+#endif
             }
 
             else if ( c == PLAIN_TEXT_EXT ) {
-                printf( "Plain Text Extension Block\n" );                
+#if INFO
+                printf( "Plain Text Extension Block\n" );
+#endif
                 GIFPLAINTEXT gpt;
                 Nacti (&gpt, sizeof(gpt), 1, inFile,"Plain Text Extension Block" );
+#if INFO
                 ViewPlainTextExtensionBlock( &gpt );
+#endif
                 ReadDataSubBlocks( inFile, NULL, 0 );
             }
 
             else if ( c == APPLICATION_EXT ) {
+#if INFO
                 printf( "Application frame\n" );
+#endif
                 GIFAPPLICATION gap;
                 Nacti (&gap, sizeof(gap), 1, inFile,"Application Header" );
+#if INFO
                 ViewAplication( &gap );
+#endif
                 ReadDataSubBlocks( inFile, NULL, 0 );
             }
 
             else {
+#if INFO
                 printf( "Nezname rozsireni: t%#04x\n", c );
+#endif
                 return -1;
             }
       
         }
         else if ( c == IMAGE_DESCRIPTOR ) {
-      
+#if INFO
             printf( "Gif Image Descriptor\n");
-
+#endif
             GIFIMGDESC idesc;
             RGB *lpal;
             int numLColors;
@@ -808,20 +869,25 @@ int main( int argc, char **argv ) {
             Nacti (&(idesc.Left), sizeof(GIFIMGDESC), 1, inFile, "Gif Graphics Control Extension" );
             numLColors = (idesc.Packed & 0x80) >> 6;    // 0 nebo 2
             numLColors <<= (idesc.Packed & 0x07);
-            
+#if INFO
             ViewGifImageDescriptor(&idesc, numLColors);
-                
+#endif
             if( numLColors > 0 ) {
+#if INFO
                 printf( "Reading %lu bytes size palette.\n", sizeof(RGB) * numLColors );
+#endif
                 lpal = (RGB*)malloc(sizeof(RGB) * numLColors);
                 Nacti (lpal, sizeof(RGB), numLColors, inFile, "local palette" );
+#if INFO
                 ViewPalette( numGColors, lpal );
+#endif
             }
             
             Nacti (&sizeLZW, 1, 1, inFile,"size LZW" );
             sizeLZW++;
+#if INFO
             printf( "\t%i\t:velikost LZW kodu v bitech\n", sizeLZW );                
-    
+#endif
             ReadDataSubBlocks( inFile, &screen, sizeLZW );
 
         } else {
