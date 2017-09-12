@@ -24,14 +24,14 @@ typedef char CHAR;
 int alfa_prah = 34;
 
 enum ZX_Colors {
-Black = 0,
-Blue,
-Red,
-Magenta,
-Green,
-Cyan,
-Yellow,
-White,
+Black = 0,          // 0
+Blue,               // 1
+Red,                // 2
+Magenta,            // 3
+Green,              // 4
+Cyan,               // 5
+Yellow,             // 6
+White,              // 7
 Light_Black ,
 Light_Blue,
 Light_Red,
@@ -556,14 +556,16 @@ void write_zx_format(PICTURE *screen, char * soubor)
             }
         }
 #if INFO
-if ( x == 3*8 && y == 8*8 )
-    printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/8, alfa_sum, ink_sum, ink, paper_sum, paper);
+    printf("x: %2i, y: %2i\n", x/8, y/8);
+    printf("\talfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", alfa_sum, ink_sum, ink, paper_sum, paper);
 #endif
         // Analyza kombinace barev
         
         if ( paper == Black ) /* cerna musi vzdy jako INK, protoze cerny PAPER znamena polopruhledny znak, anebo ignoruj hodnotu barvy PAPER kdyz obsahuje masku */
         {
-// printf("prohozeni ink za paper\n");
+#if INFO
+    printf("\tprohozeni ink za paper\n");
+#endif
             i = paper;
             paper = ink;
             ink = i;
@@ -598,10 +600,7 @@ if ( x == 3*8 && y == 8*8 )
         }
         
 #if INFO
-if ( x == 3*8 && y == 8*8 ) {
-    printf("x: %2i, y: %2i, alfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", x/8, y/8, alfa_sum, ink_sum, ink, paper_sum, paper);
-    printf("attr: %20x\n", i);
-}
+    printf("\tattr: %02x\n", i);
 #endif
         
         attr_buf[attr_sum++] = i;
@@ -758,6 +757,7 @@ int main( int argc, char **argv ) {
         return -1;
     }
     screen.pocet_barev = numGColors;
+    screen.alfa_index = -1;
     if ((screen.palette = zx_palette(gpal, numGColors)) == NULL)
     {
         fclose(inFile);
@@ -797,8 +797,6 @@ int main( int argc, char **argv ) {
                 
                 if (gce.Packed & 0x01)
                     screen.alfa_index = gce.ColorIndex;
-                else
-                    screen.alfa_index = -1;
 #if INFO
                 ViewGraphicControlExtension(&gce);
 #endif
