@@ -648,7 +648,12 @@ defb	0,	PAKA_B				, $80 + TYP_PREPINAC + south	; zmeni i paku B
 
 ; ----------
 
+defb	216,	$00 + TYP_PREPINAC + east	, west
+defb	0,	216				, $80 + TYP_PREPINAC + west	; prepne i paku na druhe strane
+defb	0,	232				, $80 + TYP_DVERE_VZ		; aktivace paky prepne predmet na lokaci 232 s typem dvere
+
 defb	216,	$00 + TYP_PREPINAC + west	, west
+defb	0,	216				, $80 + TYP_PREPINAC + east	; prepne i paku na druhe strane
 defb	0,	232				, $80 + TYP_DVERE_VZ		; aktivace paky prepne predmet na lokaci 232 s typem dvere
 
 defb	232,	$80 + TYP_DVERE_VZ		, $81
