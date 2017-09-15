@@ -607,7 +607,9 @@ defb	130,	$00 + TYP_DEKORACE		, PODTYP_RUNA
 defb	132,	$00 + TYP_PREPINAC + south	, south
 defb	0,	119				, $80 + TYP_DVERE_VZ	; aktivace paky prepne predmet na lokaci 119 s typem dvere
 
-defb	158,	$E0 + TYP_DVERE_SJ		, $80			; zavreno az na 3 bity!!!
+defb	142,	$80 + TYP_DVERE_SJ		, $80			; 
+
+defb	158,	$E0 + TYP_DVERE_SJ		, $80			; $E0 = zavreno az na 3 bity!!!
 
 defb	176,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
@@ -628,7 +630,8 @@ PAKA_D	equ	188
 
 ;	lokace	prepinace+typ			dodatecny
 
-defb	PAKA_A,	$00 + TYP_PREPINAC + south	, south				; paka A meni jen ostatni paky (takze rovnou otevre dvere pokud jsou shodne nahore)
+defb	PAKA_A,	$00 + TYP_PREPINAC + south	, south				; paka A meni dvere 142 a paky pro dvere 158 (takze rovnou otevre dvere pokud jsou shodne nahore)
+defb	0,	142				, $80 + TYP_DVERE_SJ		; meni bit $80
 defb	0,	158				, $E0 + TYP_DVERE_SJ		; celkove meni bity $20 + $40 + $80
 defb	0,	PAKA_B				, $80 + TYP_PREPINAC + south	; zmeni i paku B
 defb	0,	PAKA_C				, $80 + TYP_PREPINAC + south	; zmeni i paku C
