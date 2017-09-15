@@ -21,6 +21,11 @@ typedef char CHAR;
 #define GIF_END                 0x3b
 
 
+/* Barva PAPER kterou naznacime ze polopruhledny znak ma ponechat puvodni hodnotu PAPER */
+#define FAKE_PAPER_RED      0x33
+#define FAKE_PAPER_GREEN    0x33
+#define FAKE_PAPER_BLUE     0x33
+
 int alfa_prah = 34;
 
 enum ZX_Colors {
@@ -40,6 +45,7 @@ Light_Green,
 Light_Cyan,
 Light_Yellow,
 Light_White,
+Previous_Paper,
 Alfa };
 
 
@@ -458,11 +464,16 @@ BYTE *zx_palette(RGB *gpal, int pocet)
     BYTE *ret=calloc(pocet,1);
     while ( ret != NULL && --pocet >= 0 )
     {
-        if (gpal[pocet].blue  >= 0xA0 ) ret[pocet]++;
-        if (gpal[pocet].red   >= 0xA0 ) ret[pocet]+=2;
-        if (gpal[pocet].green >= 0xA0 ) ret[pocet]+=4;
+        if (gpal[pocet].blue == FAKE_PAPER_BLUE || gpal[pocet].red == FAKE_PAPER_RED || gpal[pocet].green == FAKE_PAPER_GREEN ) 
+            ret[pocet] = Previous_Paper;
+        else
+        {
+            if (gpal[pocet].blue  >= 0xA0 ) ret[pocet]++;
+            if (gpal[pocet].red   >= 0xA0 ) ret[pocet]+=2;
+            if (gpal[pocet].green >= 0xA0 ) ret[pocet]+=4;
         
-        if (gpal[pocet].blue >= 0xE0 || gpal[pocet].red >= 0xE0 || gpal[pocet].green >= 0xE0 ) ret[pocet] +=8;
+            if (gpal[pocet].blue >= 0xE0 || gpal[pocet].red >= 0xE0 || gpal[pocet].green >= 0xE0 ) ret[pocet] +=8;
+        }
         
 // printf("r:%i g:%i b:%i -> zx: %i\n", gpal[pocet].red, gpal[pocet].green, gpal[pocet].blue, ret[pocet] );
     }
@@ -535,7 +546,7 @@ void write_zx_format(PICTURE *screen, char * soubor)
                 alfa_sum++;
             else 
             {
-                i = screen->palette[i]; /* index z palety obrazku na index zx barvy*/
+                i = screen->palette[i]; /* index z palety obrazku na index zx barvy */
                 if ( ink_sum == 0 || ink == i )
                 {
                     ink = i;
@@ -560,11 +571,22 @@ void write_zx_format(PICTURE *screen, char * soubor)
     printf("\talfa_sum: %i, %2ix ink: %2i, %2ix paper: %2i\n", alfa_sum, ink_sum, ink, paper_sum, paper);
 #endif
         // Analyza kombinace barev
-        
+    
+        if ( ink == Previous_Paper )    // $555555
+        {
+#if INFO
+    printf("\tink = $555555 -> prohozeni ink za paper\n");
+#endif
+            i = paper;
+            paper = ink;
+            ink = i;
+            // jeste by to chtelo prohodit sumy...
+        }
+
         if ( paper == Black ) /* cerna musi vzdy jako INK, protoze cerny PAPER znamena polopruhledny znak, anebo ignoruj hodnotu barvy PAPER kdyz obsahuje masku */
         {
 #if INFO
-    printf("\tprohozeni ink za paper\n");
+    printf("\tpaper = 0 -> prohozeni ink za paper\n");
 #endif
             i = paper;
             paper = ink;
@@ -575,13 +597,13 @@ void write_zx_format(PICTURE *screen, char * soubor)
         if ( ink == paper && alfa_sum == 0 )
         {
             if ( paper == Black )    /* obe jsou cerne */
-                paper = White;       /* cerny paper znamena polopruhledny znak */
+                paper = White;       /* do PAPER dame libovolnou barvu co nebude pouzite, budou same jednicky, cerny paper totiz znamena polopruhledny znak */
             else
                 ink = Black;         /* barvu dame do PAPER, budou sam nuly */ 
         }
 
         i = (paper * 8 & PAPER_MASK) + (ink & INK_MASK);
-        if ( (paper | ink) > 7 ) i |= BRIGHT_MASK;
+        if ( paper != Previous_Paper && (paper | ink) > 7 ) i |= BRIGHT_MASK;
         if ( alfa_sum ) 
         {
             if ( alfa_sum == 64 )  
@@ -590,8 +612,13 @@ void write_zx_format(PICTURE *screen, char * soubor)
                 i &= ~PAPER_MASK;       /* polopruhledny znak s jednou barvou (PAPER == 0)*/
             else                        /* polopruhledny s 2 barvami */
             {
-                if ( alfa_sum > alfa_prah )
+                /* Pokud ma matice 8x8 prilis mnoho pruhlednych znaku, nebo primo je PAPER kreslen barvou $555555 tak bude PAPER pouzit aby vynuloval bity ale barva zustane puvodni */
+                if ( alfa_sum > alfa_prah || paper == Previous_Paper )
                 {
+#if INFO
+    printf("\talfa_sum > alfa_prah, %i > %i\n", alfa_sum, alfa_prah);
+#endif
+                    /* PAPER nastavime na Black */
                     i = ink & INK_MASK;   /* zachovame puvodni paper => nastavime tento na BLACK */
                     if ( ink > 7 ) i |= BRIGHT_MASK;    /* muzeme ztratit i brightness */
                 }
@@ -697,7 +724,7 @@ int main( int argc, char **argv ) {
 
     if ( argc == 4 )
     {
-        int alfa_prah = strtol(argv[3], NULL, 10);
+        alfa_prah = strtol(argv[3], NULL, 10);
         if ( alfa_prah <= 0 || alfa_prah >= 63 )
         {
             fprintf(stderr, "Hodnota alfa_prah musi byt v rozsahu 1-62\n\n");
@@ -715,7 +742,7 @@ int main( int argc, char **argv ) {
  // File ---------------------
     FILE *inFile;
 
-    printf( "Opening file %s for reading.\n", argv[1] );
+    fprintf( stderr, "Opening file %s for reading.\n", argv[1] );
 
     inFile = fopen( argv[1], "rb" );
     if( !inFile ) {

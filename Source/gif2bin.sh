@@ -21,11 +21,5 @@ for soubor in ${source}/*.gif
 do 
 	naco=${soubor##*/}
 	naco="./Bin/${naco%.*}"  
-
-#	if [ "$soubor" == "R1" ]
-#	then
-#		./gif2bin ${soubor} ${naco} 25 > /dev/null
-#	else
-		./gif2bin ${soubor} ${naco} > /dev/null
-#	fi
+	./gif2bin ${soubor} ${naco} 61 > /dev/null
 done 
