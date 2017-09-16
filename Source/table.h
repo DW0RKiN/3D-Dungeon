@@ -523,15 +523,15 @@ defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_BRACERS	equ	14*POSUN_PODTYP
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_BOOTS		equ	15*POSUN_PODTYP
 ;---
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_ANKH		equ	16*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_AXE		equ	17*POSUN_PODTYP
+defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_AXE		equ	17*POSUN_PODTYP
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_BOOK		equ	18*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_BOW		equ	19*POSUN_PODTYP
-defw	I0_dagger,	I1_dagger,	I2_dagger,	0	; PODTYP_DAGGER		equ	20*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_MACE		equ	21*POSUN_PODTYP
+defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_BOW		equ	19*POSUN_PODTYP
+defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_DAGGER		equ	20*POSUN_PODTYP
+defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_MACE		equ	21*POSUN_PODTYP
 defw	I0_shield,	I1_shield,	I2_shield,	0	; PODTYP_SHIELD		equ	22*POSUN_PODTYP
 defw	I0_shield,	I1_shield,	I2_shield,	0	; PODTYP_SHIELD		equ	23*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_SLING		equ	24*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_SWORD		equ	25*POSUN_PODTYP
+defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_SLING		equ	24*POSUN_PODTYP
+defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_SWORD		equ	25*POSUN_PODTYP
 defw	I0_bone,	I1_bone,	I2_bone,	0	; PODTYP_BONE		equ	26*POSUN_PODTYP
 ;---
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_FOOD		equ	27*POSUN_PODTYP
@@ -570,9 +570,9 @@ defb	1,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
 defb	6,	$00 + TYP_DEKORACE		, PODTYP_RUNA
 
-defb	16,	TYP_ITEM			, PODTYP_DAGGER
+defb	16,	TYP_ITEM			, PODTYP_SWORD
 defb	16,	TYP_ITEM + i_ne			, PODTYP_DAGGER
-defb	16,	TYP_ITEM + i_se			, PODTYP_DAGGER
+defb	16,	TYP_ITEM + i_se			, PODTYP_SWORD
 defb	16,	TYP_ITEM + i_sw			, PODTYP_SHIELD
 
 defb	17,	TYP_ITEM			, PODTYP_BONE
@@ -582,17 +582,17 @@ defb	17,	TYP_ITEM + i_sw			, PODTYP_SHIELD
 
 defb	21,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
 
-defb	32,	TYP_ITEM			, PODTYP_DAGGER
-defb	32,	TYP_ITEM + i_ne			, PODTYP_DAGGER
-defb	32,	TYP_ITEM + i_se			, PODTYP_DAGGER
-defb	32,	TYP_ITEM + i_sw			, PODTYP_DAGGER
+defb	32,	TYP_ITEM			, PODTYP_MACE
+defb	32,	TYP_ITEM + i_ne			, PODTYP_BOW
+defb	32,	TYP_ITEM + i_se			, PODTYP_SLING
+defb	32,	TYP_ITEM + i_sw			, PODTYP_AXE
 
 defb	33,	TYP_ITEM			, PODTYP_SHIELD
 defb	33,	TYP_ITEM + i_ne			, PODTYP_SHIELD
 defb	33,	TYP_ITEM + i_se			, PODTYP_SHIELD
 defb	33,	TYP_ITEM + i_sw			, PODTYP_SHIELD
 
-defb	48,	TYP_ITEM			, PODTYP_DAGGER
+defb	48,	TYP_ITEM			, PODTYP_SWORD
 
 defb	67,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
 
