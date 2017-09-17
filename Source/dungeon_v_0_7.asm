@@ -2870,19 +2870,32 @@ FILL_ATTR_BLOCK_SCREEN:
 
 
 ZOBRAZ_ZIVOTY:
-	ld de,DATA_ZIVOTY	;df4b	11 5f df 	. _ . 
-	ld b,006h		;df4e	06 06 	. . 
-ldf50h:
-	push bc			;df50	c5 	. 
-	call VYKRESLI_PROUZEK	;df51	cd 83 df 	. . . 
-	ld a,(de)		;df54	1a 	. 
-	inc de			;df55	13 	. 
-	or a			;df56	b7 	. 
-	call nz,VYKRESLI_KRVAVY_FLEK		;df57	c4 e3 df 	. . . 
-	inc de			;df5a	13 	. 
-	pop bc			;df5b	c1 	. 
-	djnz ldf50h		;df5c	10 f2 	. . 
-	ret			;df5e	c9 	. 
+    ld      DE, DATA_ZIVOTY             ;
+    ld      B, $06                      ; 6 postav 
+ZZ_LOOP:
+    push    BC                          ; 
+    call    VYKRESLI_PROUZEK            ;
+    ld      A, (DE)                     ; hodnota posledniho zraneni 
+    inc     DE                          ; adresa casu ukonceni krvaveho fleku
+    or      A                           ; 
+    call    nz,VYKRESLI_KRVAVY_FLEK     ; 
+    inc     DE                          ; adresa aktualniho poctu zivotu dals postavy
+    pop     BC                          ; 
+    djnz    ZZ_LOOP                     ; 
+    ret                                 ; 
+
+; VSTUP: DE = cas ukonceni krvaveho fleku
+VYKRESLI_KRVAVY_FLEK:
+	push de			;dfe3	d5 	. 
+	ld a,(de)		;dfe4	1a 	. 
+	dec de			; ukazatel na hodnotu posledniho zraneni 
+	ld hl,TIMER_ADR		;
+	cp (hl)			;dfe9	be 	. 
+	jp p,VKF_POKRACUJ	;dfea	f2 f1 df 	. . . 
+	xor a			; cas vyprsel 
+	ld (de),a		; vynulovani hodnoty posledniho zraneni
+	pop de			;dfef	d1 	. 
+	ret			;dff0	c9 	. 
 	
 DATA_ZIVOTY:
 ;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas ukonceni krvaveho fleku
@@ -2906,116 +2919,102 @@ DATA_ZIVOTY_END:
 ; -----------------------------------------------------------
 ; VSTUP: DE adresa na aktualni pocet zivotu
 ; MENI:  HL, BC, A
+; VYSTUP: DE = adresa posledniho zraneni
 VYKRESLI_PROUZEK:
-	ex	de,hl		;  4:1
-	ld	c,(hl)		;  7:1 c = aktualni pocet zivotu
-	inc	hl		;  6:1 ukazatel na max. pocet zivotu
-	ld	b,0		;  7:2 b = 0 
-	ld	a,(hl)		;  7:1 a = maximalni pocet zivotu
-	inc	hl		;  6:1 ukazatel na adresu pocatku prouzku
-	push hl			; 11:1 ulozeni ukazatele na zasobnik 
-	ld h,b			;  4:1 
-	ld l,c			;  4:1 hl = aktualni pocet zivotu
-	add hl,hl		; 11:1 2x 
-	add hl,hl		; 11:1 4x 
-	add hl,bc		; 11:1 5x 
-	add hl,hl		; 11:1 10x 
-	add hl,hl		; 11:1 20x 
-	add hl,hl		; 11:1 40x aktualni pocet zivotu
-	
-; VSTUP:   HL delenec 16 bit, A delitel 8-bit, B = 0
-; VYSTUP:  C = - ( podil+1), A = (zbytek+1)
-; MENI:    HL, BC, A
-;ODECITANI
-	ld c,b			;  4:1 bc = 0
-	ld d,b			;  4:1 d = 0 
-	ld e,a			;  4:1 de = delitel = maximalni pocet zivotu
-	ex de,hl		;  4:1
-	add hl,hl		; 11:1 2x
-	add hl,hl		; 11:1 4x
-	add hl,hl		; 11:1 8x
-	ex de,hl		; 4:1  DE = 8*delitel & CARRY = 0
-	scf			; 4:1 nechceme vysledek 0..5 ale radeji 0..4.99999 
-; 8 * (5 * aktulni / maximalni ) = 8 * ( 5 * hl / de )
-VZ_ODECTI:
-	dec	c		;  4:1 nemeni CARRY
-	sbc	hl,de		; 15:2
-	jr	nc,VZ_ODECTI	; 12/7:2
-				; sum loop {0..4}*31 + 26:5 = {26..150}:5
-	adc	hl,de		; 15:2 pri nulovem delenci by to jinak delalo neplechu ( byl by $ffff a ne nula )
-	ld	d,b		;  4:1
-	ld	e,a		;  4:1 DE = 0A
-	xor a			;  4:1 a = 0 
-VZ_ODECTI_ZBYTEK:
-	inc a			;  4:1
-	sbc hl,de		; 15:2 
-	jr nc,VZ_ODECTI_ZBYTEK	;12/7:2
-				; sum loop 27 + {0..7}*31 + 26:10 = {53..270}:10
-	add a,(CARKY-1) % 256	; offset + 1..8
-	ld (VZ_LOOP_SELF+1),a	;dfad	32 c4 df 	2 . . 
-	
-	pop hl			; 10:1 nacteni ukazatele na adresu zacatku prouzku ze zasobniku
-	ld e,(hl)		; offset zacatku prouzku
-	inc hl			;
-	ld d,(hl)		; segment zacatku prouzku
-	inc hl			;
-	ex de,hl		; de = ukazatel na hodnotu posledniho zraneni, hl = adresa zacatku prouzku
-	ld a,c			; zaporny pocet znaku prouzku  -5 = ..011, -4 = ..100, -3 = ..101, -2 = ..110, -1 = ..111
-	inc a			; -4 = ..10., -3 = ..10., -2 = ..11., -1 = ..11.
-	jr nz,VZ_DLOUHY    	; 
-	ld a,$42		; light red = ..01.
-VZ_DLOUHY:
-	and $46    		; 0100 0110 = BRIGHTNES + INK GREEN + INK RED
-	ld (VZ_BARVA_SELF+1),a	; 
-	ld b,$05		; 5 znaku 
-	
+    xor     A                   ;  4:1 A = 0
+    ex      DE, HL              ;  4:1
+    ld      C, (HL)             ;  7:1 C = aktualni pocet zivotu
+    inc     HL                  ;  6:1 ukazatel na max. pocet zivotu
+    ld      E, (HL)             ;  7:1 E = maximalni pocet zivotu
+    inc     HL                  ;  6:1 ukazatel na adresu pocatku prouzku
+    push    HL                  ; 11:1
+    
+    ld      B, A                ;  4:1 BC = aktualni pocet zivotu
+    ld      L, C
+    ld      H, A                ;  4:1 HL = aktualni pocet zivotu
+    ld      D, A                ;  4:1 DE = maximalni pocet zivotu
+    add     HL, HL              ; 11:1 2x 
+    add     HL, HL              ; 11:1 4x 
+    add     HL, BC              ; 11:1 5x
+    ld      C, A                ;  4:1 C = 0
+    scf                         ;  4:1 (= dec HL)
+VP_ZNAKU:
+    dec     C                   ;  4:1
+    sbc     HL, DE              ; 15:2
+    jr      nc, VP_ZNAKU        ; 12/7:2
+    adc     HL, DE              ; 15:2 HL = zbytek = 0..maximalni pocet zivotu
+    
+    add     HL, HL              ; 11:1 2x
+    add     HL, HL              ; 11:1 4x
+    add     HL, HL              ; 11:1 8x zbytek
+VP_ZBYTEK:
+    inc     A                   ;  4:1
+    sbc     HL, DE              ; 15:2
+    jr      nc, VP_ZBYTEK       ; 12/7:2
+    
+    pop     HL                  ; 10:1
+
+    ; C = -(znaku+1) = -1..-5
+    ; A = zbytek+1 = 1..9
+    
+    add     A,(CARKY-1)%256     ; offset + 1..8
+    ld      (VP_LOOP_SELF+1),A  ; 
+
+    ; set color
+    ld      E, (HL)             ; offset zacatku prouzku
+    inc     HL                  ;
+    ld      D, (HL)             ; segment zacatku prouzku
+    inc     HL                  ;
+    ex      DE,HL               ;  4:1 DE = ukazatel na hodnotu posledniho zraneni, HL = adresa zacatku prouzku (attr)
+    ld      A,C                 ;  4:1 zaporny pocet znaku prouzku  -5 = ..011, -4 = ..100, -3 = ..101, -2 = ..110, -1 = ..111
+    inc     A                   ;  4:1  -4 = ..10., -3 = ..10., -2 = ..11., -1 = ..11.
+    jr      nz, VP_VICEZNAKOVY  ; 12/7:2
+    ld      a, $42              ; light red = ..01.
+VP_VICEZNAKOVY:
+    and     $46                 ; 0100 0110 = BRIGHTNES + INK GREEN + INK RED
+    ld      (VP_COL_SELF+1), A  ;
+    
+    ld      b, $05              ; 5 znaku 
+
 if ((CARKY-1) / 256) != ( CARKY_END / 256 )
     .error 'Seznam CARKY prekracuje segment!'
 endif
 	
-VZ_LOOP_SELF:
-	ld a,(CARKY)		; obsahuje znak predelu konce prouzku 
-	inc c			; zmensime zaporny pocet celych znaku
-	jr z,VZ_KRESLI_6CAREK	; posledni znak? 
-	ld a,$00		; prazdny znak pro kladne cislo kdyz jsme za prouzkem
-	jp p,VZ_KRESLI_6CAREK	; 
-	dec a			; plny znak pokud jsme uvnitr prouzku
-VZ_KRESLI_6CAREK:
-VZ_BARVA_SELF:
-	ld (hl), $00		; barva prouzku 
-	push hl			; uschovame adresu zacatku prouzku 
-	push bc			; uschovame hodnotu registru B
-	ld c,a			; "prouzek" do C
-	call SEG_ATTR2SCREEN	; zrusi A, z HL ukazujici na atributy udela HL ukazujici na screen/buffer
-	ld b,$06		; 6 carek
-VZ_6CAREK_LOOP:
-	inc h			; prvne klesneme o pixel
-	ld (hl),c		; ulozime "prouzek"
-	djnz VZ_6CAREK_LOOP	; 
-	pop bc			; obnovime hodnotu registru B
-	pop hl			; obnovime adresu zacatku prouzku
+VP_LOOP_SELF:
+    ld      A, (CARKY)          ; 13:3 obsahuje znak predelu konce prouzku 
+    inc     C                   ;  4:1 zmensime zaporny pocet celych znaku
+    jr      z, VP_PREDEL        ;12/7:2 posledni znak? 
+    ld      A, C                ;  4:1
+    rla                         ;  4:1 carry kdyz C < 0
+    sbc      A,A                ;  4:1 if (carry) A = $ff else A = $00
+VP_PREDEL:
+
+VP_COL_SELF:
+    ld      (HL), $00           ; barva prouzku 
+    push    HL                  ; uschovame adresu zacatku prouzku 
+    push    BC                  ; uschovame hodnotu registru B
+    ld      C, A                ; "prouzek" do C
+    call    SEG_ATTR2SCREEN     ; zrusi A, z HL ukazujici na atributy udela HL ukazujici na screen/buffer
+    ld      B, $06              ; 6 carek
+VP_LOOP_PX:
+    inc     H                   ; prvne klesneme o pixel
+    ld      (HL), C             ; ulozime "prouzek"
+    djnz    VP_LOOP_PX          ; 
+    pop     BC                  ; obnovime hodnotu registru B
+    pop     HL                  ; obnovime adresu zacatku prouzku
 	
-	inc l			; o znak doprava
-	
-	djnz VZ_LOOP_SELF	; 5x 
-	ret			; 
-	
-VYKRESLI_KRVAVY_FLEK:
-	push de			;dfe3	d5 	. 
-	ld a,(de)		;dfe4	1a 	. 
-	dec de			;dfe5	1b 	. 
-	ld hl,TIMER_ADR		;dfe6	21 78 5c 	! x \ 
-	cp (hl)			;dfe9	be 	. 
-	jp p,VKF_POKRACUJ	;dfea	f2 f1 df 	. . . 
-	xor a			;dfed	af 	. 
-	ld (de),a		;dfee	12 	. 
-	pop de			;dfef	d1 	. 
-	ret			;dff0	c9 	. 
-	
+    inc     L                   ; o znak doprava
+
+    djnz    VP_LOOP_SELF        ; 5x 
+    ret                         ; 
+
+
+    
+; VSTUP: DE = adresa posledniho zraneni
 VKF_POKRACUJ:
-	dec de			;dff1	1b 	. 
-	ld a,(de)		;dff2	1a 	. 
-	ld c,a			;dff3	4f 	O 
+	dec de			; adresa segmentu pocatku prouzku
+	ld a,(de)		;
+	ld c,a			; segment pocatku prouzku 
 	add a,a			;dff4	87 	. 
 	add a,a			;dff5	87 	. 
 	add a,a			;dff6	87 	. 
