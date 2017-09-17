@@ -1002,15 +1002,18 @@ PROHOD_SKRETA:
 ; 	ld	(ENEMY_GROUP+24),bc
 ; 	ld	(ENEMY_TABLE+2),hl
 	ret
-	nop			;ce58	00 	. 
-	add a,b			;ce59	80 	. 
-	ret nz			;ce5a	c0 	. 
-	ret po			;ce5b	e0 	. 
-	ret p			;ce5c	f0 	. 
-	ret m			;ce5d	f8 	. 
+	
 CARKY:
-	call m,0fffeh		;ce5e	fc fe ff
-
+defb    $00     ; 0000 0000
+defb    $80     ; 1000 0000
+defb    $C0     ; 1100 0000
+defb    $E0     ; 1110 0000
+defb    $F0     ; 1111 0000
+defb    $F8     ; 1111 1000 
+defb    $FC     ; 1111 1100
+defb    $FE     ; 1111 1110
+defb    $FF     ; 1111 1111
+CARKY_END:
 
 INCLUDE table.h
 
@@ -2933,7 +2936,7 @@ VYKRESLI_PROUZEK:
 	add hl,hl		; 11:1 8x
 	ex de,hl		; 4:1  DE = 8*delitel & CARRY = 0
 	scf			; 4:1 nechceme vysledek 0..5 ale radeji 0..4.99999 
-
+; 8 * (5 * aktulni / maximalni ) = 8 * ( 5 * hl / de )
 VZ_ODECTI:
 	dec	c		;  4:1 nemeni CARRY
 	sbc	hl,de		; 15:2
@@ -2944,68 +2947,74 @@ VZ_ODECTI:
 	ld	e,a		;  4:1 DE = 0A
 	xor a			;  4:1 a = 0 
 VZ_ODECTI_ZBYTEK:
-	inc a			;  4:1 
+	inc a			;  4:1
 	sbc hl,de		; 15:2 
 	jr nc,VZ_ODECTI_ZBYTEK	;12/7:2
 				; sum loop 27 + {0..7}*31 + 26:10 = {53..270}:10
-	
-	add a,057h		;dfab	c6 57 	. W 
+	add a,(CARKY-1) % 256	; offset + 1..8
 	ld (VZ_LOOP_SELF+1),a	;dfad	32 c4 df 	2 . . 
-	pop hl			; 10:1 nacteni ukazatele zacatku prouzku ze zasobniku
-	ld e,(hl)		;dfb1	5e 	^ 
-	inc hl			;dfb2	23 	# 
-	ld d,(hl)		;dfb3	56 	V 
-	inc hl			;dfb4	23 	# 
-	ex de,hl		;dfb5	eb 	. 
-	ld a,c			;dfb6	79 	y 
-	inc a			;dfb7	3c 	< 
-	jr nz,ldfbch		;dfb8	20 02 	  . 
-	ld a,042h		;dfba	3e 42 	> B 
-ldfbch:
-	and 046h		;dfbc	e6 46 	. F 
-	ld (VZ_KRESLI_6CAREK+1),a		;dfbe	32 d0 df 	2 . . 
-	ld b,005h		;dfc1	06 05 	. . 
+	
+	pop hl			; 10:1 nacteni ukazatele na adresu zacatku prouzku ze zasobniku
+	ld e,(hl)		; offset zacatku prouzku
+	inc hl			;
+	ld d,(hl)		; segment zacatku prouzku
+	inc hl			;
+	ex de,hl		; de = ukazatel na hodnotu posledniho zraneni, hl = adresa zacatku prouzku
+	ld a,c			; zaporny pocet znaku prouzku  -5 = ..011, -4 = ..100, -3 = ..101, -2 = ..110, -1 = ..111
+	inc a			; -4 = ..10., -3 = ..10., -2 = ..11., -1 = ..11.
+	jr nz,VZ_DLOUHY    	; 
+	ld a,$42		; light red = ..01.
+VZ_DLOUHY:
+	and $46    		; 0100 0110 = BRIGHTNES + INK GREEN + INK RED
+	ld (VZ_BARVA_SELF+1),a	; 
+	ld b,$05		; 5 znaku 
+	
+if ((CARKY-1) / 256) != ( CARKY_END / 256 )
+    .error 'Seznam CARKY prekracuje segment!'
+endif
+	
 VZ_LOOP_SELF:
-	ld a,(CARKY)		;dfc3	3a 5e ce 	: ^ . 
-	inc c			;dfc6	0c 	. 
-	jr z,VZ_KRESLI_6CAREK		;dfc7	28 06 	( . 
-	ld a,000h		;dfc9	3e 00 	> . 
-	jp p,VZ_KRESLI_6CAREK		;dfcb	f2 cf df 	. . . 
-	dec a			;dfce	3d 	= 
+	ld a,(CARKY)		; obsahuje znak predelu konce prouzku 
+	inc c			; zmensime zaporny pocet celych znaku
+	jr z,VZ_KRESLI_6CAREK	; posledni znak? 
+	ld a,$00		; prazdny znak pro kladne cislo kdyz jsme za prouzkem
+	jp p,VZ_KRESLI_6CAREK	; 
+	dec a			; plny znak pokud jsme uvnitr prouzku
 VZ_KRESLI_6CAREK:
-	ld (hl),044h		;dfcf	36 44 	6 D 
-	push hl			;dfd1	e5 	. 
-	push bc			;dfd2	c5 	. 
-	ld c,a			;dfd3	4f 	O 
-	call SEG_ATTR2SCREEN		;dfd4	cd 3a df 	. : . 
-	ld b,006h		;dfd7	06 06 	. . 
+VZ_BARVA_SELF:
+	ld (hl), $00		; barva prouzku 
+	push hl			; uschovame adresu zacatku prouzku 
+	push bc			; uschovame hodnotu registru B
+	ld c,a			; "prouzek" do C
+	call SEG_ATTR2SCREEN	; zrusi A, z HL ukazujici na atributy udela HL ukazujici na screen/buffer
+	ld b,$06		; 6 carek
 VZ_6CAREK_LOOP:
-	inc h			;dfd9	24 	$ 
-	ld (hl),c			;dfda	71 	q 
-	djnz VZ_6CAREK_LOOP		;dfdb	10 fc 	. . 
-	pop bc			;dfdd	c1 	. 
-	pop hl			;dfde	e1 	. 
+	inc h			; prvne klesneme o pixel
+	ld (hl),c		; ulozime "prouzek"
+	djnz VZ_6CAREK_LOOP	; 
+	pop bc			; obnovime hodnotu registru B
+	pop hl			; obnovime adresu zacatku prouzku
 	
-	inc l			;dfdf	2c 	,
+	inc l			; o znak doprava
 	
-	djnz VZ_LOOP_SELF		;dfe0	10 e1 	. . 
-	ret			;dfe2	c9 	. 
+	djnz VZ_LOOP_SELF	; 5x 
+	ret			; 
 	
 VYKRESLI_KRVAVY_FLEK:
 	push de			;dfe3	d5 	. 
-	ld a,(de)			;dfe4	1a 	. 
+	ld a,(de)		;dfe4	1a 	. 
 	dec de			;dfe5	1b 	. 
 	ld hl,TIMER_ADR		;dfe6	21 78 5c 	! x \ 
 	cp (hl)			;dfe9	be 	. 
-	jp p,VKF_POKRACUJ		;dfea	f2 f1 df 	. . . 
+	jp p,VKF_POKRACUJ	;dfea	f2 f1 df 	. . . 
 	xor a			;dfed	af 	. 
-	ld (de),a			;dfee	12 	. 
+	ld (de),a		;dfee	12 	. 
 	pop de			;dfef	d1 	. 
 	ret			;dff0	c9 	. 
 	
 VKF_POKRACUJ:
 	dec de			;dff1	1b 	. 
-	ld a,(de)			;dff2	1a 	. 
+	ld a,(de)		;dff2	1a 	. 
 	ld c,a			;dff3	4f 	O 
 	add a,a			;dff4	87 	. 
 	add a,a			;dff5	87 	. 
@@ -3014,15 +3023,15 @@ VKF_POKRACUJ:
 	sub 0d9h		;dff8	d6 d9 	. . 
 	ld c,a			;dffa	4f 	O 
 	dec de			;dffb	1b 	. 
-	ld a,(de)			;dffc	1a 	. 
+	ld a,(de)		;dffc	1a 	. 
 	and 01fh		;dffd	e6 1f 	. . 
 	dec a			;dfff	3d 	= 
 	ld b,a			;e000	47 	G 
 	push bc			;e001	c5 	. 
 	ld de,Flek		;e002	11 1a 70 	. . p 
-	call OBAL_SPRITE2BUFFER		;e005	cd 2d de 	. - . 
+	call OBAL_SPRITE2BUFFER	;e005	cd 2d de 	. - . 
 	pop bc			;e008	c1 	. 
-	call PRINT2BUFFER		;e009	cd f9 da 	. . . 
+	call PRINT2BUFFER	;e009	cd f9 da 	. . . 
 	ld a,b			;e00c	78 	x 
 	add a,003h		;e00d	c6 03 	. . 
 	add a,a			;e00f	87 	. 
@@ -3103,18 +3112,18 @@ PWAD_NEZRANUJ:
 	ret			;e062	c9 
 
 ; Najde pocatek x-teho retezce zakonceny nulou od pocatecni adresy
-; VSTUP: hl pocatecni adresa
-;	b kolikaty retezec hledam od nuly
-; VYSTUP: IX = hl + b * delky_retezcu
+; VSTUP:    hl pocatecni adresa
+;           b kolikaty retezec hledam od nuly
+; VYSTUP:   IX = hl + b * delky_retezcu
 ADR_X_STRING:
-	xor	a
+    xor     a
 AXS_LOOP:
-	ld	c,$ff
-	cpir
-	djnz	AXS_LOOP
-	push	hl
-	pop	ix
-	ret
+    ld      c,$ff           ; pokud by byl retezec delsi jak 255 znaku tak mame smulu
+    cpir                    ; hl++, bc--
+    djnz    AXS_LOOP
+    push    hl
+    pop     ix
+    ret
 
 
 ; VSTUP: hl = odkud, de = kam

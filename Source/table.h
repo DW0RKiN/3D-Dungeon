@@ -486,9 +486,11 @@ ITEM2SPRITE_END:
 
   
 ITEM_POZICE:
-; Vyska nula znamena nekreslit
-; 	primy smer			vpravo				vlevo
-;	l.dal	pr.dal	l.bliz	pr.bliz	l.dal	pr.dal	l.bliz	pr.bliz	l.dal	pr.dal	l.bliz	pr.bliz		
+; dvoubajtove cislo oznacuje levy horni roh odkud kreslit sprite
+; prvni je souradnice se znamenkem X (zleva doprava)
+; druhe je kladna souradnice Y (shora dolu), pokud je zaporna, tak se ma sprite kreslit zprava doleva 
+; 	primy smer			vpravo				vlevo                             sirka zadni
+;	l.dal	pr.dal	l.bliz	pr.bliz	l.dal	pr.dal	l.bliz	pr.bliz	l.dal	pr.dal	l.bliz	pr.bliz	  steny	
 defw	$000C,	$11F3,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	; 16
 defw	$040A,	$0DF5,	$030B,	$0EF4,	$100A,	0,	$110B,	0,	0,	$01F5,	0,	$00F4	; 10
 defw	$0608,	$0BF7,	$0509,	$0CF6,	$0D08,	$12F7,	$0E09,	$13F6,	$FF08,	$04F7,	$FE09,	$03F6	;  6
