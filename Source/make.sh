@@ -9,4 +9,5 @@ ls ./Bin -l | awk 'BEGIN{ adr=24320; sum=1; printf("; SPRITY od adresy $%x = %i\
 cat ./Bin/* >> ./grafika.bin 
 ./bin2tap grafika.bin
 
-pasmo -d dungeon_v_0_7.asm dungeon7.bin > test.asm ; ./bin2tap dungeon7.bin
+pasmo -d dungeon_v_0_7.asm dungeon7.bin > test.asm
+#./bin2tap dungeon7.bin
