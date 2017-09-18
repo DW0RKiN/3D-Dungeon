@@ -93,7 +93,7 @@ org NAMES+5*NEXT_NAME
 defb		"IRIS      ",0
 
 
-STRING_ITEM:
+ARRAY_STRING_ITEMS:
 defb	0
 ;-----
 defb	"RING",0
