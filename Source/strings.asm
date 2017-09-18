@@ -10,20 +10,22 @@ defb	%00000001
 BIT_MASKA_END:
 
 
-    
-
 ; VSTUP: 
-;   IX ukazatel na string zakonceny znakem mensim jak 32
+;   IX ukazatel na string zakonceny znakem mensim jak 32 a ktery neni vetsi jak 85+32
 ;   H = radek (Y char), L = pixel sloupec (X px)
 ;   offset PISMO_5PX = 0
 ; VYSTUP: 
 ;   IX ukazuje na zacatek dalsiho retece
 ; MENI:
 ;   DE, HL, BC, A
-PRINT_STRING:                           ; ver 0.1
+PRINT_STRING_BUF:                       ; ver 0.2
 
 PS_ADRESA_SEGMENTU:
-    ld      D, $40                      ;  7:2
+    ld      D, Adr_Buffer/256           ;  7:2
+    
+; VSTUP:
+;   D = $40
+PRINT_STRING_SCREEN:                    ;
 
     ld      A, H                        ;  4:1
     and     $F8                         ;  7:2
@@ -36,7 +38,7 @@ PS_ADRESA_SEGMENTU:
     add     HL, HL                      ; 11:1
     add     HL, HL                      ; 11:1
     add     HL, HL                      ; 11:1
-    add     HL, HL                      ; 11:1 H = 32*(Y % 8) + C/8
+    add     HL, HL                      ; 11:1 H = 32*(Y % 8) + X/8
     ld      E, H                        ;  4:1
     
     ld      HL, BIT_MASKA               ; 10:3
@@ -44,128 +46,72 @@ PS_ADRESA_SEGMENTU:
     ld      L, A                        ;  4:1
     ld      C, (HL)                     ;  7:1
 
-
 if (BIT_MASKA / 256 != BIT_MASKA_END / 256)
     .error 'Pole BIT_MASKA prekracuje segment!'
 endif
-	
-
 
 ; DE adresa na obrazovce, 
-; c = kterym bitem zaciname
+; C = kterym bitem zaciname
 ; DE' adresa aktualniho znaku
 
-PRINT_NEXT_CHAR:
-	ld a,(ix+0)		; 19:3
-	inc	ix		; 10:2	pri ukonceni ukazuje na zacatek dalsiho retezce
-	sub 	32
-	ret 	c		; mensi jak 32
-	
-	ld	h,PISMO_5PX/256
-	ld	l,a
-	add	a,a		; 2x
-	add	a,a		; 4x	opravit preteceni
-	add	a,l		; 5x
-	ld	l,a		; hl adresa prvniho sloupce znaku, opravit preteceni 256
-	ld	a,h
-	adc	a,0
-	ld	h,a
+PS_NEXT_CHAR:
+    ld      A, (IX+$00)                 ; 19:3
+    inc     IX                          ; 10:2 pri ukonceni ukazuje na zacatek dalsiho retezce
+    sub     32                          ;  7:2 z mezery udela nulu
+    ret     c                           ;11/5:1  if ( char < 32 ) return
+    
+    ; 5*char Funguje az do znaku char = (85+32), pak pretece 85*3=255
+    ld      H, A                        ;  4:1 1x
+    add     A, A                        ;  4:1 2x 0..128
+    ld      L, A                        ;  4:1 2x
+    add     A, H                        ;  4:1 3x 0..192
+    add     A, L                        ;  4:1 5x 0..320 carry?
+    ld      L, A                        ;  4:1
+    adc     A, PISMO_5PX/256            ;  7:2
+    sub     L                           ;  4:1
+    ld      H, A                        ;  4:1 HL adresa prvniho sloupce znaku
 
-	ld	b,5
-PRINT_MIKROSLOUPEC:
-	ld	a,(hl)
-	or	a
-	jr	z,PRINT_MIKROSLOUPEC_DOPRAVA		; same nuly
-; 1x
-	bit	7,(hl)
-	jr	z,NO_1x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_1x:
-	inc	d
+    ; HL adresa sloupcu znaku, DE adresa v pameti, C bit
+    ld      B, $05                      ;  7:2
+PS_RIGHT_LOOP:
 
+    ld      A, (HL)                     ; 
+    or      A                           ;
+    jr      z, PS_PX_RIGHT              ; same nuly
+    
+    push    HL                          ; 11:1
+    ld      L, A                        ;  7:1
+    ld      H, D                        ;  4:1
+    push    BC                          ; 11:1
+    ld      B, $08                      ;  7:2
+    
+PS_LOOP_PX_DOWN:
+    rl      L                           ;  8:2
+    jr      nc, PS_NEXT_PX_DOWN         ; 12/7:2
+    ld      A, (DE)                     ;  7:1
+    xor     C                           ;  4:1
+    ld      (DE), A                     ;  7:1
+PS_NEXT_PX_DOWN:
+    inc     D                           ;  4:1
+    djnz    PS_LOOP_PX_DOWN             ;13/8:2
+    
+    pop     BC                          ; 10:1
+    ld      D, H                        ;  4:1    
+    pop     HL                          ; 10:1 
+PS_PX_RIGHT:
+    inc     HL                          ;  4:1 ukazatel na dalsi mikroradek znaku
 
-; 2x
-	bit	6,(hl)					; 12:2
-	jr	z,NO_2x					; 12/7:2
-	ld	a,(de)					;  7:1
-	xor	c					;  4:1
-	ld	(de),a					;  7:1
-NO_2x:
-	inc	d					;  4:1			28/41 taktu kazdy bit..
+    xor     A                           ; 4:1
+    rrc     C                           ; 8:2
+    adc     A, E                        ; 4:1
+    ld      E, A                        ; 4:1
 
-; 3x
-	bit	5,(hl)
-	jr	z,NO_3x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_3x:
-	inc	d
+    djnz    PS_RIGHT_LOOP              ;13/8:2
 
-; 4x
-	bit	4,(hl)
-	jr	z,NO_4x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_4x:
-	inc	d
+    jr      PS_NEXT_CHAR
+    
 
-; 5x
-	bit	3,(hl)
-	jr	z,NO_5x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_5x:
-	inc	d
-
-; 6x
-	bit	2,(hl)
-	jr	z,NO_6x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_6x:
-	inc	d
-
-; 7x
-	bit	1,(hl)
-	jr	z,NO_7x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_7x:
-	inc	d
-
-; 8x
-	bit	0,(hl)
-	jr	z,NO_8x
-	ld	a,(de)
-	xor	c
-	ld	(de),a
-NO_8x:
-
-	ld	a,d
-	sub	7
-	ld	d,a
-	
-PRINT_MIKROSLOUPEC_DOPRAVA:
-	
-	rrc	c			; 8:2
-	ld	a,e
-	adc	a,0
-	ld	e,a
-	
-	inc	hl
-
-	djnz	PRINT_MIKROSLOUPEC
-	jr	PRINT_NEXT_CHAR
-	
-
-; ??????????????????????????????????????
+; ------------------------------------------
 ; VSTUP: 
 ;	"b" =  radek, "c" pixel sloupec
 ;	IX ukazatel na string zakonceny znakem mensim jak 32
@@ -173,7 +119,7 @@ PRINT_STRING_OBAL:
 	push	hl			;db94
 	push	af			;db95	 
 	push	bc			;db96	ulozi BC, "b" =  radek, "c" pixel sloupec
-	call	PRINT_STRING		;db97	 
+	call	PRINT_STRING_BUF	;db97	 
 	pop	bc			;db9a	c1 	. 
 	pop	af			;db9b	f1 	. 
 	pop	hl			;db9c	e1 	. 
@@ -181,7 +127,7 @@ PRINT_STRING_OBAL:
 	
 ;------------------------------------
 
-
+if (0)
 PRINT2BUFFER:
     ld	a,Adr_Buffer / 256
     ld	(PS_ADRESA_SEGMENTU+1),a
@@ -191,7 +137,7 @@ PRINT2SCREEN:
     ld	a,$40
     ld	(PS_ADRESA_SEGMENTU+1),a
     ret
-
+endif
 
 
 ; scroll routine, o jeden radek nahoru textoveho pole 
@@ -235,20 +181,22 @@ SCROLL_CLEAR_MICROLINE:
 ;------------------------------------
 ; Odskroluje textove pole a zapise naspod novy retezec
 ; VSTUP: IX ukazatel na string zakonceny znakem mensim jak 32
+; zapisuje primo na obrazovku
 PRINT_MESSAGE:
-	ld	a,%00000111		; INK = 7 = bila
+    ld      a, %00000111                ; INK = 7 = bila
 PRINT_MESSAGE_COLOR:
-	call	SCROLL			; nemeni "IX" ani "a"
+    call    SCROLL                      ; nemeni "IX" ani "a"
 
-	ld	hl,$5AE0		; 10:3 "l" = E0 = 256-32 
+    ld      hl, $5AE0                   ; 10:3 "l" = E0 = 256-32 
 PRINT_MESSAGE_SET_ATTR:
-	ld	(hl),a			;  7:1
-	inc	l
-	jr	nz,PRINT_MESSAGE_SET_ATTR
+    ld      (hl), a                     ;  7:1
+    inc     l
+    jr      nz, PRINT_MESSAGE_SET_ATTR
 
-	ld	hl,23*256
-	call	PRINT_STRING
-	ret
+    ld      HL, 23*256
+    ld      D, $40                      ; Screen segment
+    call    PRINT_STRING_SCREEN
+    ret
 	
 ;------------------------------------
 
