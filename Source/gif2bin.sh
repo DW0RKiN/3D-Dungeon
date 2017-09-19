@@ -12,8 +12,7 @@ fi
 gcc gif2bin.c -o gif2bin
 #gcc gif2bin.c -o gif2bin -D INFO
 
-
-mkdir Bin
+[ ! -d ./Bin ] && mkdir Bin
 rm ./Bin/*
 
 

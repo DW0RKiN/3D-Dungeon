@@ -1,5 +1,5 @@
-progStart          equ        $C400        ; 50176
-spritesStart          equ        $5F00        ; 
+progStart           equ        $C400        ; 50176
+spritesStart        equ        $5F00        ; 
 
 
 org spritesStart
@@ -1996,7 +1996,6 @@ PLAYERS_WINDOW:
 
     
     call    VIEW_PLAYER_ACTIVE
-    call    PRINT2BUFFER
 
     ld      ix,NAMES
     ld      B,$03                       ;dc95   3x po dvou 
@@ -2022,7 +2021,6 @@ PW_HP_LOOP:
     call    PRINT_STRING_OBAL           ;dcb5 
     djnz    PW_HP_LOOP                  ;dcb9 
     
-    call    PRINT2SCREEN                ;dcbb cd ff da         . . . 
     call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
     ld      ix,INVENTORY_ITEMS          ;dcc1 dd 21 78 ce         . ! x . 
     xor     a                           ;dcc5   a = 0 
@@ -2108,9 +2106,7 @@ IW_NEXT_NAME:
     push    hl
     pop     ix                      ; ix <- hl
     ld      hl,22*8+1
-    call    PRINT2BUFFER
-    call    PRINT_STRING
-    call    PRINT2SCREEN
+    call    PRINT_STRING_BUF
     
     pop     af                      ; nacteme aktivni postavu ze zasobniku
     add     a,a                     ; 2x
@@ -2855,7 +2851,6 @@ VKF_POKRACUJ:
     ld      de,Flek             ;e002        11 1a 70         . . p 
     call    OBAL_SPRITE2BUFFER  ;e005        cd 2d de         . - . 
     pop     BC                  ;e008        c1         . 
-    call    PRINT2BUFFER        ;e009        cd f9 da         . . . 
     ld      a,B                 ;e00c        78         x 
     add     a,003h              ;e00d        c6 03         . . 
     add     a,a                 ;e00f        87         . 
@@ -2865,8 +2860,7 @@ VKF_POKRACUJ:
     inc     h                   ;e013        04         . 
     ld      l,a                 ;e014        4f         O 
     ld      ix,JEDNA            ;e015        dd 21 21 e0         . ! ! . 
-    call    PRINT_STRING        ;e019        cd 0d db         . . . 
-    call    PRINT2SCREEN        ;e01c        cd ff da         . . . 
+    call    PRINT_STRING_BUF    ;e019        cd 0d db         . . . 
     pop     de                  ;e01f        d1         . 
     ret                         ;e020        c9         . 
     

@@ -315,13 +315,15 @@ NEXT_ENEMY		equ	72
 ENEMY_ATTACK_DISTANCE	equ	12
 
 ENEMY_GROUP:
-;					vpravo				vlevo
-; 	1	2	3	4	1	2	3	4	1	2	3	4
-defw	0,	$0,	0,	0,	0,	0,	0,	$0,	0,	0,	0,	0
-defw	$0305,	$0A05,	$0404,	$0904,	$1105,	0,	$1004,	0,	0,	$FC05,	0,	$FD04	; 16
-defw	$0505,	$0A05,	$0604,	$0904,	$0F05,	0,	$0E04,	0,	0,	$0005,	0,	$0104	; 10
-defw	$0605,	$0905,	$0705,	$0805,	$0D05,	$0F05,	$0C05,	$0E05,	$0005,	$0205,	$0105,	$0305	; 6
-defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0
+;                  3 4                               3(4)                       (3)4
+;                 1   2                               1(2)                     (1)2
+;                   *                   vpravo      *                   vlevo       *
+;       1       2       3       4       1       2       3       4       1       2       3       4
+defw    0,      $0,     0,      0,      0,      0,      0,      0,      0,      0,      0,      0
+defw    $0305,  $0A05,  $0404,  $0904,  $1105,  0,      $1004,  0,      0,      $FC05,  0,      $FD04   ; 16
+defw    $0505,  $0A05,  $0604,  $0904,  $0F05,  0,      $0E04,  0,      0,      $0005,  0,      $0104   ; 10
+defw    $0605,  $0905,  $0705,  $0805,  $0D05,  $0F05,  $0C05,  $0E05,  $0005,  $0205,  $0105,  $0305   ; 6
+defw    $08FB,  $0904,  $09FB,  $0AFB,  $0CFB,  $0EFB,  $0A04,  $0DFB,  $0304,  $0504,  $0404,  $07FB   ; 3.75? V tehle vzdalenosti to chce jeste o 2 vpravo a o 2 vlevo
 
 
 
@@ -336,7 +338,7 @@ defw	0
 defw	ES1	; 16
 defw	ES2	; 10
 defw	ES3	; 6
-defw	0
+defw	ES4
 
 ;PODTYP_PAVOUK
 defw	0
@@ -596,7 +598,7 @@ defb	33,	TYP_ITEM + i_sw			, PODTYP_SHIELD
 
 defb	48,	TYP_ITEM			, PODTYP_SWORD
 
-defb	67,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
+defb	68,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
 
 defb	95,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
@@ -604,7 +606,7 @@ defb	115,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
 defb	119,	$80 + TYP_DVERE_VZ		, $81
 
-defb	130,	$00 + TYP_DEKORACE		, PODTYP_RUNA
+defb	129,	$00 + TYP_DEKORACE		, PODTYP_RUNA
 
 defb	132,	$00 + TYP_PREPINAC + south	, south
 defb	0,	119				, $80 + TYP_DVERE_VZ	; aktivace paky prepne predmet na lokaci 119 s typem dvere
