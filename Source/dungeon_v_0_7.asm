@@ -1,11 +1,9 @@
 progStart           equ        $C400        ; 50176
 spritesStart        equ        $5F00        ; 
 
-
 org spritesStart
 
 INCBIN grafika.bin
-; INCLUDE grafika_v_0_6.asm
 
 org        progStart
 

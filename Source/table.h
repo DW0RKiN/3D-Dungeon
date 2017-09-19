@@ -375,7 +375,7 @@ TYP_DEKORACE		equ	3*POSUN_TYP
 ; 	primy smer	vpravo		vlevo
 KANAL_TABLE:		
 defw	0,	0,	0,	0,	0,	0	; 
-defw	Kanal0,	$0508,	0,	$1508,	0,	$F708	; 16
+defw	Kanal0,	$0508,	0,	0,	0,	0	; 16
 defw	Kanal1,	$0607,	Kanal1,	$1007,	Kanal1,	$FC07	; 10
 defw	Kanal2,	$0706,	Kanal2,	$0D06,	Kanal2,	$0106	; 6
 defw	Kanal3,	$0805,	Kanal3,	$0C05,	Kanal3,	$0405	; 4
