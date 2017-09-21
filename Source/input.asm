@@ -53,10 +53,10 @@ TK_TEST_STAVU:
     
 TK_ZMENA_AKT_POSTAVY:
     ld      c,031h                  ;cbe1   znak "1" 
-    ld      hl,AKTIVNI_POSTAVA      ;cbe3         
+    ld      hl,HLAVNI_POSTAVA       ;cbe3         
     ld      a,(hl)                  ;cbe6        
-    add     a,B                     ;cbe7   aktivni postava +- 1 
-    dec     hl                      ;cbe8   nemeni priznaky, hl = adresa MAX_POSTAVA_PLUS_1 
+    add     A, B                    ;cbe7   aktivni postava +- 1 
+    inc     hl                      ;cbe8   nemeni priznaky, hl = SUM_POSTAV 
     jp      m,TK_PODTECENI          ;cbe9   mozne podteceni v pripade 0-1
     cp      (hl)                    ;cbec   porovnani s MAX_POSTAVA_PLUS_1
     jr      z,TK_PRETECENI          ;cbed   mozna shoda s MAX_POSTAVA+1 = MAX_POSTAVA_PLUS_1

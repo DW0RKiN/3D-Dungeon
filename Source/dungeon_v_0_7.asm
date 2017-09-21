@@ -571,9 +571,6 @@ HELP:
 ;------------------------------------
   
 
-JMENA_POZICE:
-defw        18*8+1,25*8+1,7*256+18*8+1,7*256+25*8+1,14*256+18*8+1,14*256+25*8+1
-
 
 COLOR_OTHER_PLAYERS     equ     %00000111        ; white ink + black paper
 COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
@@ -581,11 +578,11 @@ COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
 ; VSTUP: A = znaky '1' .. '6'
 NEW_PLAYER_ACTIVE:
     sub     49                      ; odectem hodnotu znaku "1"
-    ld      hl,MAX_POSTAVA_PLUS_1   ; 10:3
-    cp      (hl)                    ;  7:1  0..5 - MAX_POSTAVA_PLUS_1
-    ret     nc                      ; aktivni vetsi jak MAX_POSTAVA_PLUS_1
+    ld      hl,SUM_POSTAV           ; 10:3
+    cp      (hl)                    ;  7:1  0..5 - SUM_POSTAV
+    ret     nc                      ; new >= SUM_POSTAV
                                     ; tohle muze nastat jen u 5. a 6. postavy pokud jeste nejsou v parte
-    inc     hl                      ;  6:1 hl = adr. AKTIVNI_POSTAVA
+    dec     hl                      ;  6:1 hl = HLAVNI_POSTAVA
     cp      (hl)                    ;  7:1
     ret     z                       ; nastavujeme uz aktivni, nebudeme vse znovu prekreslovat
     ld      (hl),a                  ;  7:1 nova AKTIVNI_POSTAVA
@@ -602,13 +599,12 @@ NEW_PLAYER_ACTIVE:
     add     a,a                     ; 24x
     add     a,d                     ; 27x = MAX_ITEM * AKTIVNI_POSTAVA = 27 * AKTIVNI_POSTAVA
 
-    inc     hl                      ;  6:1 
-    add     a,INVENTORY_ITEMS % 256 ; pozor      odted nesmim zrusit mozny priznak carry
-    ld      (hl),a                  ;  7:1
-    adc     a,INVENTORY_ITEMS / 256
-    sub     (hl)                    ;
-    inc     hl                      ;  6:1
-    ld      (hl),a                  ;  7:1 promnena na adrese AKTIVNI_INVENTAR obsahuje ukazatel na INVENTORY_ITEMS + MAX_ITEM * AKTIVNI_POSTAVA
+    add     a,INVENTORY_ITEMS % 256 ;  7:2
+    ld      (AKTIVNI_INVENTAR), a   ; 13:3
+    
+if ( (INVENTORY_ITEMS-27)/256 != INVENTORY_ITEMS_END/256)
+    .error 'Pole INVENTORY_ITEMS preleza segment!'
+endif
     
     ; je nastaveny pravy panel na zobrazeni vsech hracu?
     call    TEST_OTEVRENY_INVENTAR  ;dc11
@@ -706,11 +702,10 @@ PLAYERS_WINDOW:
     call    VIEW_PLAYER_ACTIVE
 
     ld      IX, NAMES                   ; 14:4
-    ld      BC,(MAX_POSTAVA_PLUS_1)     ; 20:4
-    ld      A, C
-    ld      C, B
-    ld      B, A
-    inc     C
+    
+if (1)
+    ld      BC,(HLAVNI_POSTAVA)         ; 20:4
+    inc     C                           ;  4:1
     
     ld      HL, Adr_Attr_Buffer+$12     ; 10:3
     ld      DE, Adr_Attr_Buffer+$19     ; 10:3
@@ -746,6 +741,63 @@ PW_AKTIVNI:
     
     ex      DE, HL                      ;  4:1
     djnz    PW_JMENA_LOOP               ;13/8:2
+    
+else
+
+    jr      ATR_SOURADNICE_END:
+ATR_SOURADNICE:
+defb        Adr_Attr_Buffer/256, $12-7
+defb        Adr_Attr_Buffer/256, $F2-7
+defb    1+(Adr_Attr_Buffer/256), $D2-7
+    
+ATR_SOURADNICE_END:
+
+    ld      BC,(MAX_POSTAVA_PLUS_1)     ; 20:4
+    ld      A, C                        ;  4:1
+    ld      C, B                        ;  4:1
+    ld      B, A                        ;  4:1
+    inc     C                           ;  4:1
+    
+    ld      DE, ATR_SOURADNICE          ; 10:3
+    ld      DE, Adr_Attr_Buffer+$19     ; 10:3
+
+PW_JMENA_LOOP:
+    bit     0, B                        ;
+    jr      z
+
+
+    ld      A, COLOR_ACTIVE_PLAYER      ;  7:2
+    dec     C
+    jr      z, PW_AKTIVNI               ;12/7:2
+    ld      A, COLOR_OTHER_PLAYERS      ;  7:2
+PW_AKTIVNI:
+    push    AF                          ; 11:1 color    
+    call    PRINT_STRING_OBAL           ; 17:3
+    
+    ld      A, L                        ;  4:1
+    add     A, $A0                      ;  7:2
+    ld      L, A                        ;  4:1
+    adc     A, H                        ;  4:1
+    sub     L                           ;  4:1
+    ld      H, A                        ;  4:1
+    pop     AF                          ; 10:1
+    
+    push    IX                          ; 15:2
+    ld      IX, VETA_HP                 ; 14:4
+    call    PRINT_STRING_OBAL           ; 17:3
+    pop     IX                          ; 14:2
+    
+    ld      A, L                        ;  4:1
+    add     A, $40                      ;  7:2
+    ld      L, A                        ;  4:1
+    adc     A, H                        ;  4:1
+    sub     L                           ;  4:1
+    ld      H, A                        ;  4:1
+    
+    ex      DE, HL                      ;  4:1
+    djnz    PW_JMENA_LOOP               ;13/8:2
+
+endif
 
     
     call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
@@ -821,7 +873,7 @@ INVENTORY_WINDOW_REFRESH:
     ld      hl,Adr_Attr_Buffer + $16
     call    FILL_ATTR_BLOCK
 
-    ld      a,(AKTIVNI_POSTAVA)
+    ld      a,(HLAVNI_POSTAVA)
     push    af                      ; ulozime aktivni postavu na zasobnik
     inc     a
     ld      bc,NEXT_NAME

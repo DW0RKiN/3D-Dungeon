@@ -6,10 +6,10 @@
 
 
 ; vvvv -----------------
-MAX_POSTAVA_PLUS_1:
-defb	6	; zacina se na 4, pozor musi navazovat na AKTIVNI_POSTAVA
-AKTIVNI_POSTAVA:
+HLAVNI_POSTAVA:
 defb	0	; 0..5
+SUM_POSTAV:
+defb	6	; 1..6 zpozor musi navazovat s HLAVNI_POSTAVA
 AKTIVNI_INVENTAR:
 defw	INVENTORY_ITEMS		
 ; ^^^^ ----------------- musi navazovat a byt v tomto poradi
@@ -64,6 +64,7 @@ defb	0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0,		0,		0
 defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		0,		0,		0,		PODTYP_MACE,	0,		0,		0,		0,		0,		0,		0,		0
 defb	0,		0,		PODTYP_NECKLACE,0,		0,		PODTYP_RING_G,	0,		0,		0,		PODTYP_BOOK,	PODTYP_RING
 
+INVENTORY_ITEMS_END:
 
 POZICE_PROSTIRANI	equ	$1904
 POZICE_HLAVA		equ	$1A07

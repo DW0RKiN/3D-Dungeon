@@ -89,12 +89,13 @@ defb	"HP",0
 
 ; pozpatku, kvuli vykresleni ve smycce
 NAMES:
-defb		"IRIS      ",0
-defb		"TOD UPHILL",0
-defb		"EITHNE    ",0
-defb		"LINDA     ",0
-defb		"WYRD      ",0
 defb		"DOHRUM    ",0
+defb		"WYRD      ",0
+defb		"LINDA     ",0
+defb		"EITHNE    ",0
+defb		"TOD UPHILL",0
+defb		"IRIS      ",0
+
 
 ARRAY_STRING_ITEMS:
 defb	"",0			; empty
