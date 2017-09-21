@@ -1,22 +1,26 @@
-progStart           equ        $C400        ; 50176
+
+; volna pamet 0x5E00+
 spritesStart        equ        $5F00        ; 
+
+INCLUDE sprites.h
 
 org spritesStart
 
 INCBIN grafika.bin
 
+
+progStart           equ        $D000        ; 53248
+
+if ( Adr_Buf_end > progStart )
+    .error 'Pretikaji sprity do kodu!'
+endif
+
 org        progStart
 
-; volna pamet 0x5E00+
-
-pismoStart          equ        $E100    ; za tim je hned buffer ( konec $E244 )
-Adr_Buffer:         equ        $E300    ; 
-Adr_Attr_Buffer:    equ        $FB00    ; 
-; Buff_End        equ        $FEFF
 
 ; 256 bajtu
 INCLUDE zrcadlovy.h
-; 16x16 bajtu
+; 16x16 = 256 bajtu
 INCLUDE        map.h
 
 
@@ -44,21 +48,6 @@ if (VEKTORY_POHYBU % 256 !=  0 )
 endif
 
 
-north               equ     0
-east                equ     1
-south               equ     2
-west                equ     3
-
-
-;----------- Vazane promnene kvuli optimalizacim ( ale nic zasadniho v nejake kriticke casti )
-LOCATION:
-defb        52      ; musi byt pred VECTOR! kvuli optimalizaci ld      hl,(VECTOR) ; 16:3 l=LOCATION, h=VECTOR
-VECTOR:
-defb        north   ; 0 = N,1 = E,2 = S,3 = W 
-POHYB:
-defb        0       ; nulty bit meni hodnotu pokazde pri otoceni nebo pohybu ( resi se to pres rychle inc(hl)  = pocitadlo pohybu/otoceni )
-                    ; pouziva se pro zmenu podlahy, pocit zmeny pri stejnych stenach
-;-----------
 
 
 PRIZNAK_OTEVRENY_INVENTAR   equ     1
@@ -66,7 +55,6 @@ PRIZNAK_OTEVRENY_INVENTAR   equ     1
 PRIZNAKY:
 defb        0
 
-INCLUDE sprites.h
 
 ; Pokud se da cokoliv dalsiho nad MAIN tak to zmeni adresu vstupniho bodu!!!
 
@@ -105,15 +93,16 @@ MAIN_OTEVRENY_INVENTAR:
     call    KEYPRESSED                  ; obsahuje EXIT_PROGRAM
     jp      MAIN_LOOP
 
-
 ; ===================================
 
+org  progStart + $0300
+
+INCLUDE font.h
+INCLUDE	typy.h
 INCLUDE input.h
 INCLUDE move.h
 INCLUDE objects.h
 INCLUDE strings.h
-INCLUDE table.h
-
 
 CARKY:
 defb    $00     ; 0000 0000
@@ -131,7 +120,9 @@ CARKY_END:
 INCLUDE sprite2buffer.asm
 INCLUDE input.asm
 INCLUDE move.asm
-
+INCLUDE strings.asm
+INCLUDE objects.asm
+INCLUDE draw3D.asm
 
 ; Nastavi zero flag kdyz nejsme v inventari
 ; Do akumulatoru vlozi kurzor      v inventari
@@ -315,8 +306,6 @@ PP_LOOP:
 ; --------------------------------
     
 
-INCLUDE objects.asm
-INCLUDE draw3D.asm
 
 
 ; =====================================================
@@ -602,8 +591,8 @@ NEW_PLAYER_ACTIVE:
     add     a,INVENTORY_ITEMS % 256 ;  7:2
     ld      (AKTIVNI_INVENTAR), a   ; 13:3
     
-if ( (INVENTORY_ITEMS-27)/256 != INVENTORY_ITEMS_END/256)
-    .error 'Pole INVENTORY_ITEMS preleza segment!'
+if ( INVENTORY_ITEMS/256 != INVENTORY_ITEMS_END/256)
+    .error 'Pole INVENTORY_ITEMS = preleza segment!'
 endif
     
     ; je nastaveny pravy panel na zobrazeni vsech hracu?
@@ -1609,24 +1598,29 @@ VZ_LOOP_PX:
 VKF_POKRACUJ:
     dec     de                  ; adresa segmentu pocatku prouzku
     ld      a,(de)              ;
-    ld      H, A                ; segment pocatku prouzku 
+    ld      H, A                ; segment pocatku prouzku
+    
     add     a,a                 ;
     add     a,a                 ;
-    add     a,a                 ; 
-    sub     H                   ;
-    sub     0d9h                ;
+    add     a,a                 ; 8x 
+    sub     H                   ; 7x
+Pomocny equ (Adr_Attr_Buffer/256)*7-4
+    sub     Pomocny             ; usetrim bajty 7*(H-seg Attr)+4 = 7*H - 7*seg Attr + 4 = 7*H - ( 7*seg Attr - 4)
     ld      c,a                 ;
+
     dec     de                  ;
     ld      a,(de)              ;
     
     ld      L, A                ;
     push    HL                  ;
     
-    and     01fh                ;
-    dec     a                   ;
-    ld      B,a                 ;
-    ld      de,Flek             ;
-    call    OBAL_SPRITE2BUFFER  ;
+    and     $1f                 ; offset na sloupce
+    dec     A                   ;
+    ld      B, A                ;
+    ld      DE, Flek            ;
+    ; DE adresa spritu
+    ; BC ...b=sloupec {0..17+},c=radek {0..13}
+    call    OBAL_SPRITE2BUFFER  ; 
     pop     HL                  ;
     inc     L
     inc     L
@@ -1638,6 +1632,58 @@ VKF_POKRACUJ:
     
 JEDNA:
 defb        "1",0
+
+
+
+; VSTUP:
+;   E = index postavy hrace 0..5
+VYHAZEJ_VSECHNO:
+    push    BC
+    push    DE
+
+    inc     E                   ; 1..7
+    ld      A, E
+    add     A, A                ; 2x
+    add     A, E                ; 3x
+    ld      E, A
+    add     A, A                ; 6x
+    add     A, A                ; 12x
+    add     A, A                ; 24x
+    add     A, E                ; 27x
+    add     A, INVENTORY_ITEMS%256
+    ld      E, A
+    ld      D, INVENTORY_ITEMS/256
+    
+if ( INVENTORY_ITEMS/256 != (INVENTORY_ITEMS_END+27)/256 )
+    .error 'INVENTORY_ITEMS!!!'
+endif
+    
+    ld      B, MAX_ITEM
+
+VV_LOOP:    
+    dec     E
+    push    DE
+    push    BC
+
+    ; VSTUP:
+;   A = PODTYP_ITEM
+;   DE = adresa ktera se bude nulovat
+;   L = lokace kam vkladam
+;   C = vector
+    ld      HL, (LOCATION)
+    ld      C,H
+    ld      A, (DE)
+    or      A
+    call    nz, VINP_BEZ_KONTROLY
+    
+    pop     BC
+    pop     DE
+    
+    djnz    VV_LOOP
+    
+    pop     DE
+    pop     BC
+    ret
 
 
 
@@ -1663,6 +1709,8 @@ endif
     jr      nc,ZP_ZIJE          ; 
     xor     a                   ; zemrel, vynulujeme zaporne zivoty na nulu 
     ld      (hl),a              ; ulozime nulu
+    call    VYHAZEJ_VSECHNO
+    
     jr      ZP_EXIT             ;
 ZP_ZIJE:
     ld      (hl),a              ; ulozime zbyvajici pocet zivotu
@@ -1703,8 +1751,14 @@ PWAD_NEZRANUJ:
     ret                         ; 
 
 ; melo by byt posledni
-INCLUDE strings.asm
+INCLUDE table.h                 ; tabulka veci roste dolu proti zasobniku
 
+
+END_CODE:
+
+if (END_CODE >= $fe00 )
+    .error 'Kod vteka do zasobniku.'
+endif
 
 
     

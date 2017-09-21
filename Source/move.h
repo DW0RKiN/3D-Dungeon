@@ -1,3 +1,21 @@
+north               equ     0
+east                equ     1
+south               equ     2
+west                equ     3
+
+
+;----------- Vazane promnene kvuli optimalizacim ( ale nic zasadniho v nejake kriticke casti )
+LOCATION:
+defb        52      ; musi byt pred VECTOR! kvuli optimalizaci ld      hl,(VECTOR) ; 16:3 l=LOCATION, h=VECTOR
+VECTOR:
+defb        north   ; 0 = N,1 = E,2 = S,3 = W 
+POHYB:
+defb        0       ; nulty bit meni hodnotu pokazde pri otoceni nebo pohybu ( resi se to pres rychle inc(hl)  = pocitadlo pohybu/otoceni )
+                    ; pouziva se pro zmenu podlahy, pocit zmeny pri stejnych stenach
+;-----------
+
+
+
 POSUN_VLEVO_INVENTAREM:
 ; rozsah do+1        posun o
 defb        2,          -11

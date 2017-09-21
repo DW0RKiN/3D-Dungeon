@@ -45,8 +45,9 @@ FIND_LAST_OBJECT:
     ret
 ; ------------------------------------------------------
 ; a zbytek posun dolu
-; VSTUP: HL = lokace kam vkladam
-;        c = (vector)
+; VSTUP: 
+;   L = lokace kam vkladam
+;   c = (vector)
 ; Je to komplikovanejsi fce nez sebrani, protoze musi najit to spravne misto kam to vlozit.
 ; Polozky jsou razeny podle lokace a nasledne podle natoceni.
 ; Pak existuji polozky ktere maji dodatecne radky zacinajici nulou.
@@ -57,6 +58,8 @@ VLOZ_ITEM_NA_POZICI:
     ld      ix,VETA_NEDRZI
     jp      z,PRINT_MESSAGE             ; nic nedrzi, fce volana pomoci "jp" misto "call" = uz se nevrati
 
+    
+VINP_BEZ_KONTROLY:
     ld      ixh,a    
     xor     a
     ld      (de),a

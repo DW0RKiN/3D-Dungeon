@@ -126,3 +126,7 @@
             V4m1    equ $AE62   ; 44642 125. =    91, +20322
             V4m3    equ $AEBD   ; 44733 126. =   127, +20413
 ; first address after   $AF3C   = 44860
+
+Adr_Buffer equ $B000
+Adr_Attr_Buffer equ $C800
+Adr_Buf_end equ $CB00
