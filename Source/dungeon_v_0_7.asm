@@ -32,7 +32,7 @@ stisknuto_vpravo    equ     3
 
 
 VEKTORY_POHYBU:                ; musi byt na adrese delitelne 256
-;           N       E       S       W
+;       N       E       S       W
 defb    -sirka,     +1, +sirka,     -1  ;  0 dopredu
 defb    +sirka,     -1, -sirka,     +1  ;  4 dozadu
 defb        -1, -sirka,     +1, +sirka  ;  8 vlevo
@@ -70,18 +70,22 @@ INCLUDE sprites.h
 
 ; Pokud se da cokoliv dalsiho nad MAIN tak to zmeni adresu vstupniho bodu!!!
 
-MAIN:                               ; $CA13   randomize usr 51731
+MAIN:                               ;
     call    PUSH_ALL
 
-    di                              ;c617        f3
-    im      1                       ;c618        ed 56
-    ei                              ;c61a        fb
-    ld      a, 12                   ;c61b        3e 0c
-    ld      hl, $5c09               ;c61d        21 09 5c = 23561
-    ld      (hl), a                 ;c620        77 POKE 23561,xx ( cas prodlevy autorepeat )
-    dec     l                       ;c621        2d = 23560 = LAST K system variable
-    ld      (hl), 0                 ;c622        36 00 put null value there
-    
+    di                              ;
+    im      1                       ;
+    ei                              ;
+    ld      a, 12                   ;
+    ld      hl, $5C09               ; HL = 23561
+    ld      (hl), a                 ; POKE 23561,12 ( cas prodlevy autorepeat )
+    dec     l                       ; HL = 23560 = LAST K system variable
+    ld      (hl), 0                 ; put null value there
+        
+    ld      BC, $2005               ; velikost vyplnovaneho okna v sloupcich a radcich
+    ld      HL, $5A60               ; levy horni roh textoveho okna
+    call    FILL_ATTR_BLOCK
+
     call    HELP
     call    PLAYERS_WINDOW
 MAIN_LOOP:
@@ -98,14 +102,36 @@ MAIN_OTEVRENY_INVENTAR:
     ld      a,24
     call    AKTUALIZUJ_SIPKY            ; VSTUP: a = 0 dopredu, 4 dozadu , 8 vlevo, 12 vpravo, 16 otoceni doleva, 20 otoceni doprava, 24 jen sipky
     call    TIME_SCROLL
-    call    KEYPRESSED
-    call    PROHOD_SKRETA
+    call    KEYPRESSED                  ; obsahuje EXIT_PROGRAM
     jp      MAIN_LOOP
 
 
 ; ===================================
 
+INCLUDE input.h
+INCLUDE move.h
+INCLUDE objects.h
 INCLUDE strings.h
+INCLUDE table.h
+
+
+CARKY:
+defb    $00     ; 0000 0000
+defb    $80     ; 1000 0000
+defb    $C0     ; 1100 0000
+defb    $E0     ; 1110 0000
+defb    $F0     ; 1111 0000
+defb    $F8     ; 1111 1000 
+defb    $FC     ; 1111 1100
+defb    $FE     ; 1111 1110
+defb    $FF     ; 1111 1111
+CARKY_END:
+
+
+INCLUDE sprite2buffer.asm
+INCLUDE input.asm
+INCLUDE move.asm
+
 
 ; Nastavi zero flag kdyz nejsme v inventari
 ; Do akumulatoru vlozi kurzor      v inventari
@@ -169,112 +195,7 @@ POP_ALL:
     ei
     ret
 
-; -----------------------
 
-FLOP_BIT_ATTACK     equ     $40
-
-KEY_DOPREDU         equ     119     ; w
-KEY_DOZADU          equ     115     ; s
-KEY_VLEVO           equ     97      ; a
-KEY_VPRAVO          equ     100     ; d
-KEY_DOLEVA          equ     113     ; q
-KEY_DOPRAVA         equ     101     ; e
-KEY_SPACE           equ     32      ; mezernik
-KEY_INVENTAR        equ     105     ; i
-KEY_VEZMI           equ     111     ; o
-KEY_POLOZ           equ     112     ; p
-
-
-KEYPRESSED:
-    ld      de,TIMER_ADR
-    ld      a,(de)
-    and     FLOP_BIT_ATTACK/2
-    ld      b,a
-    ld      hl,LAST_KEY_ADR         ; 10:3 23560 = LAST K system variable.
-KEYPRESSED_NO:
-
-    ld      a,(de)
-    and     FLOP_BIT_ATTACK/2
-    xor     b
-    ret     nz
-    
-    ld      a,(hl)                  ;  7:1 a = LAST K
-    or      a                       ;  4:1 nula?
-    push    hl
-    push    bc
-    call    z,TEST_KEMPSTON
-    pop     bc
-    pop     hl
-    
-    jr      z,KEYPRESSED_NO         ;12/7:2 v tehle smycce bude Z80 nejdelsi dobu... 
-
-    ld      b,0                     ;  7:2  br 0x9434
-    ld      (hl),b                  ;  7:1 smazem, LAST K = 0
-
-    ld      hl,(LOCATION)           ; 16:3 l=LOCATION, h=VECTOR
-    ld      c,h                     ;  4:1 (VECTOR)
-    ld      h,DUNGEON_MAP/256       ;  7:2 HL = aktualni pozice na mape 
-
-;        b = 0 = stisknuto_dopredu = offset radku tabulky VEKTORY_POHYBU
-    cp      KEY_DOPREDU             ;  7:2, "w" = dopredu
-    jp      z,POSUN
-
-    ld      b,stisknuto_dozadu      ;  7:2, offset radku tabulky VEKTORY_POHYBU
-    cp      KEY_DOZADU              ;  7:2, "s" = dozadu
-    jp      z,POSUN
-
-    ld      b,stisknuto_vlevo       ;  7:2, offset radku tabulky VEKTORY_POHYBU
-    cp      KEY_VLEVO               ;  7:2, "a" = vlevo
-    jp      z,POSUN
-
-    ld      b,stisknuto_vpravo      ;  7:2, offset radku tabulky VEKTORY_POHYBU
-    cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
-    jp      z,POSUN
-
-    ld      b,-1                    ;  7:2, pouzito pro VECTOR += b
-    cp      KEY_DOLEVA              ;  7:2, "q" = otoc se vlevo
-    jr      z,OTOC_SE
-    
-    ld      b,1                     ;  7:2, pouzito pro VECTOR += b
-    cp      KEY_DOPRAVA             ;  7:2, "e" = otoc se vpravo
-    jr      z, OTOC_SE
-
-    cp      KEY_SPACE               ;  7:2, "mezernik/asi space" = prepnuti paky
-    jp      z, PREHOD_PREPINAC
-
-    cp      KEY_INVENTAR            ;  7:2 "i" = inventar / hraci
-    jp      z,SET_RIGHT_PANEL
-
-    cp      55                      ;  7:2 
-    jr      nc,KEYPRESSED_NO_NUMBER_1_6     ; vetsi nebo rovno jak hodnota znaku "7"
-    cp      49                      ;  7:2 
-    jr      c,KEYPRESSED_NO_NUMBER_1_6      ; mensi jak hodnota znaku "1"
-    jp      NEW_PLAYER_ACTIVE
-KEYPRESSED_NO_NUMBER_1_6:
-
-    cp      42                      ;  7:2 "*" = ctrl+b ( nastavi border pro test synchronizace obrazu )
-    jp      z,SET_BORDER
-    
-    cp      KEY_POLOZ               ;  7:2 "p"
-    jp      z,VLOZ_ITEM_NA_POZICI
-
-    cp      KEY_VEZMI               ;  7:2 "o"
-    jp      z,VEZMI_ITEM_Z_POZICE
-    
-    cp      96                      ; ctrl+x
-    jp      nz,HELP                 ; jina klavesa? zobraz napovedu! Pozor      tohle musi byt posledni test klavesy, protoze pokracovani je ukonceni programu
-    
-;EXIT_PROGRAM:
-    pop     hl                      ; zrusim ret
-    call    POP_ALL
-    ret                             ; do BASICu
-;------
-
-SET_BORDER:
-    ld      a, (BORDER)
-    xor     $07
-    ld      (BORDER), a
-    ret
 
 
 
@@ -296,241 +217,8 @@ TIME_SCROLL_LAST:
 
     
 
-; VSTUP: b = -1 otoceni doleva, +1 otoceni doprava
-OTOC_SE:
-    ld      a,c                     ;  4:1 (VECTOR)
-    add     a,B                     ;  4:1
-    and     MASKA_NATOCENI          ;  7:2
-    ld      hl,VECTOR               ; 10:3
-    ld      (hl),a                  ;  7:1 ulozi novy VECTOR pohledu
-    
-    call    INC_POCITADLO_POHYBU_A_ZVUK     ; zvedne "pocitadlo pohybu/otoceni"
-    
-; PRUMER        equ        ( SIPKA_OTOCDOLEVA + SIPKA_OTOCDOPRAVA ) /2
-;         ld      a,PRUMER
-    ld      a,SIPKA_OTOCDOLEVA/2 + SIPKA_OTOCDOPRAVA/2
-    add     a,b
-    add     a,b
-    call    AKTUALIZUJ_SIPKY        ; a = 16 otoceni doleva, 20 = otoceni doprava
-    call    AKTUALIZUJ_RUZICI
-    ret
-;------
-
-; ulozi do registru "l" novou pozici 
-; VSTUP: hl = aktualni pozice, c = (VECTOR), a = { 0 dopredu, 4 dozadu, 8 vlevo, 12 vpravo }
-; VYSTUP: hl = nova pozice
-; MENI: de,a
-DO_HL_NOVA_POZICE:
-    ld      d,VEKTORY_POHYBU/256    ;  7:2
-    add     a,c                     ;  4:1 (VECTOR) = {0, 1, 2, 3} = sloupec
-    ld      e,a                     ;  4:1 de = @(VECTORY_POHYBU[radek][sloupec])
-
-    ld      a,(de)                  ;  7:1 o kolik zmenit LOCATION pro pohyb danym smerem
-    add     a,l                     ;  4:1 ZMENIT POKUD BUDE MAPA 16bit!!! ( ..a nejen to, pozice predmetu, dveri atd. )
-    ld      l,a                     ;  4:1 hl = pozice na mape po presunu
-    ret
-
-;--------
 
 
-; VSTUP:         nic
-; NEMENI:        b ( protoze nesmi )
-INC_POCITADLO_POHYBU_A_ZVUK:
-      ld      hl,POHYB              ; 10:3
-      inc     (hl)
-      
-      ld      hl,1000
-IPPAZ_LOOP: 
-      ld      a,(hl)
-      and     248
-      out     (254),a
-      dec     hl
-      ld      a,h
-      or      l
-      jr      nz,IPPAZ_LOOP
-      ret
-
-
-
-    
-    
-; Cte se z portu 31
-; D0- joy RIGHT
-; D1- joy LEFT
-; D2- joy DOWN
-; D3- joy UP
-; D4- joy FIRE 1
-; D5- joy FIRE 2 (podporovano jen u K-MOUSE interface, kde je podpora vsech trech tlacitek joysticku)
-; D6- joy FIRE 3 (podporovano jen u K-MOUSE interface, kde je podpora vsech trech tlacitek joysticku)
-; D7- nepouzito, obycejne zde vraci log.0
-DATA_KEMPSTON:
-;       right       left        up+r        up+l        down        up          fire        down+r      down+l      up+l+f
-defb    $01,        $02,        $09,        $0a,        $04,        $08,        $10,        $05,        $06,        $1a 
-defb    KEY_VPRAVO, KEY_VLEVO,  KEY_DOPRAVA,KEY_DOLEVA, KEY_DOZADU, KEY_DOPREDU,KEY_SPACE,  KEY_POLOZ,  KEY_VEZMI,  KEY_INVENTAR
-; VYSTUP:         v "a" ascii kod stisknute klavesy 
-;                 vraci zero flag kdyz nic...
-TEST_KEMPSTON:
-    xor     a                       ;cbb2   a = 0 
-    ld      h,a                     ;cbb3   h = stav joystiku
-    ld      l,a                     ;cbb4   hl = 0 
-TK_NOVY_STAV:
-    ld      b,6                     ;cbb5   pocet opakovani cteni stavu joysticku po kazde zmene
-    or      h                       ;cbb7   pridame k puvodnimu stavu novy
-    ld      h,a                     ;cbb8   ulozime do puvodniho
-TK_LOOP:
-    halt                            ;cbb9
-    in      a,(31)                  ;cbba   cteme stav joysticku
-    and     31                      ;cbbc   odmazem sum v hornich bitech, krome spodnich 5
-    cp      31                      ;cbbe   je neco stisknuto? 
-    ret     z                       ;cbc0
-    cp      l                       ;cbc1   lisi se nove cteni od predchoziho? 
-    ld      l,a                     ;cbc2   posledni cteni do registru "l"
-    jr      nz,TK_NOVY_STAV         ;cbc3   lisi se 
-    djnz    TK_LOOP                 ;cbc5   nelisilo se, snizime pocitadlo
-    
-    ld      a,h                     ;cbc7   vysledny stav do akumulatoru
-    ld      hl,DATA_KEMPSTON        ;cbc8 21 9e cb         ! . . 
-    ld      b,00ah                  ;cbcb 06 0a         . . 
-    ld      c,B                     ;cbcd 48         H 
-TK_TEST_STAVU:
-    cp      (hl)                    ;cbce be         . 
-    jr      z,TK_SHODNY_STAV        ;cbcf 28 27         ( ' 
-    inc     hl                      ;cbd1 23         # 
-    djnz    TK_TEST_STAVU           ;cbd2 10 fa         . .
-    
-    inc     b                       ;cbd4   b = 1 
-    cp      011h                    ;cbd5   fire+right
-    jr      z,TK_ZMENA_AKT_POSTAVY  ;cbd7 
-    ld      b,0ffh                  ;cbd9   b = -1 
-    cp      012h                    ;cbdb   fire+left 
-    jr      z,TK_ZMENA_AKT_POSTAVY  ;cbdd 
-    xor     a                       ;cbdf af         . 
-    ret                             ;cbe0 c9         . 
-    
-TK_ZMENA_AKT_POSTAVY:
-    ld      c,031h                  ;cbe1   znak "1" 
-    ld      hl,AKTIVNI_POSTAVA      ;cbe3         
-    ld      a,(hl)                  ;cbe6        
-    add     a,B                     ;cbe7   aktivni postava +- 1 
-    dec     hl                      ;cbe8   nemeni priznaky, hl = adresa MAX_POSTAVA_PLUS_1 
-    jp      m,TK_PODTECENI          ;cbe9   mozne podteceni v pripade 0-1
-    cp      (hl)                    ;cbec   porovnani s MAX_POSTAVA_PLUS_1
-    jr      z,TK_PRETECENI          ;cbed   mozna shoda s MAX_POSTAVA+1 = MAX_POSTAVA_PLUS_1
-    add     a,c                     ;cbef   + znak "1" a nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbf0        
-    
-TK_PRETECENI:
-    ld      a,c                     ;cbf1   a = znak "1"
-    or      a                       ;cbf2   nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbf3         
-    
-TK_PODTECENI:
-    ld      a,(hl)                  ;cbf4         
-    dec     a                       ;cbf5   a = MAX_POSTAVA
-    add     a,c                     ;cbf6   + znak "1" a nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbf7
-
-TK_SHODNY_STAV:
-    ld      b,0                     ;cbf8
-    add     hl,BC                   ;cbfa   offset + 10 
-    ld      a,(hl)                  ;cbfb   nahradi stav joysticku ekvivalentnim znakem klavesnice 
-    or      a                       ;cbfc   nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbfd 
-
-; =======================
-POSUN:
-    ; Pokud je aktivni panel s inventarem, tak sipky pohybuji s kurzorem v inventari
-    call    TEST_OTEVRENY_INVENTAR      ;
-    jp      z,POSUN_NEJSEM_V_INVENTARI
-    ; jsme v inventari
-    dec     b                           ;  4:1 "b" obsahuje hodnotu { stisknuto_dopredu = 0,stisknuto_dozadu = 1,stisknuto_vlevo = 2,stisknuto_vpravo = 3 }
-    ld      c,B                         ;  4:1 (dopredu=nahoru=0 - 1) = -1
-    jp      m,POSUN_PRICTI                        ; 10:3
-    ld      c,1                         ;  7:2 dozadu = dolu = +1, nelze pouzit "inc     c" protoze by to zrusilo zero flag...
-    jr      z,POSUN_PRICTI              ;12/7:2
-
-    ld      hl,POSUN_VLEVO_INVENTAREM-1 ; 10:3
-    dec     b                           ;  4:1 puvodni - 2        
-    jr      z, POSUN_LOOP               ;12/7:2
-    ld      l,POSUN_VPRAVO_INVENTAREM-1 ;  7:2
-
-POSUN_LOOP:                             ; prochazeni pole POSUN_VLEVO_INVENTAREM nebo POSUN_VPRAVO_INVENTAREM a hledani spravneho rozsahu
-    inc     l                           ;  4:1
-    cp      (hl)                        ;  7:1
-    inc     l                           ;  4:1 carry flag nebude zmenen
-    jr      nc,POSUN_LOOP               ;12/7:2
-    
-    ld      c,(hl)                      ;  7:1
-                                        ;   : 26+26 tabulky=52
-POSUN_PRICTI:
-    add     a,c                         ; 4:1
-    ld      b,MAX_ITEM
-    jp      p,POSUN_NEZAPORNY
-    add     a,B                         ; k zapornemu kurzoru prictu MAX_ITEM
-POSUN_NEZAPORNY:
-    cp      b
-    jr      c,POSUN_V_MEZICH
-    sub     b                           ; u kurzoru co pretekl odectu MAX_ITEM
-POSUN_V_MEZICH:
-    ld      (KURZOR_V_INVENTARI),a      ; opraveny zmeneny ulozim
-    jp      INVENTORY_WINDOW_KURZOR
-
-    
-POSUN_VLEVO_INVENTAREM:
-; rozsah do+1        posun o
-defb        2,          -11
-defb        5,          -6
-defb        7,          -7
-defb        8,          -12
-defb        21,         -8
-defb        23,         -7
-defb        MAX_ITEM,   -5
-POSUN_VPRAVO_INVENTAREM:
-; rozsah do        posun o
-defb        13,         8
-defb        17,         7
-defb        18,         6
-defb        22,         5
-defb        23,         4
-defb        MAX_ITEM,   7
-POSUN_VLEVO_INVENTAREM_END:
-
-if (POSUN_VLEVO_INVENTAREM/256) != (POSUN_VLEVO_INVENTAREM_END/256)
-    .error      'Seznam POSUN_VLEVO_INVENTAREM prekracuje 256 bajtovy segment!'
-endif
-
-
-
-; ==============================
-POSUN_NEJSEM_V_INVENTARI:
-
-    ld      a,b
-    add     a,a                         ; 4:1 2x
-    add     a,a                         ; 4:1 4x
-    push    af                          ; uchovam smer kvuli sipkam
-
-    call    DO_HL_NOVA_POZICE
-; test steny
-    bit     0,(hl)                      ; 12:2 self-modifying pokud meni patra
-    jr      nz,POSUN_ZABLOKOVAN         ;12/7:1 Pokud tam je stena opust fci
-    
-    call    JE_POZICE_BLOKOVANA         ; vraci carry priznak kdyz je zablokovana
-    jr      c,POSUN_ZABLOKOVAN
-
-    ld      a,l
-    ld      (LOCATION),a                ; 13:3 ulozi novou pozici
-
-    call    INC_POCITADLO_POHYBU_A_ZVUK ;zvedne "pocitadlo pohybu/otoceni"
-    jr      EXIT_POSUN
-    
-POSUN_ZABLOKOVAN:
-    ld      ix,VETA_NO_WAY
-    call    PRINT_MESSAGE
-    
-EXIT_POSUN:
-    pop     af
-    call    AKTUALIZUJ_SIPKY
-    ret
 ;------
 
 ; Stisknut SPACE
@@ -567,20 +255,34 @@ PREHOD_PREPINAC:
 PP_NEJSME_V_INVENTARI:
     xor     a                           ; posun vpred
     call    DO_HL_NOVA_POZICE           ; hl = hledana lokace = aktualni + vpred
-    call    FIND_FIRST_OBJECT
-    ret        nz                       ;11/5:1 nenalezena
     
-PP_NALEZEN_OBJEKT:                      ; na lokaci lezi nejaky predmet
-    ld      a,(de)                      ;  7:1 typ
-    and     MASKA_TYP
-    cp      TYP_PREPINAC                ;  7:2
-    jr      nz,PP_MESSAGE               ;12/7:3
+    ld      A, TYP_PREPINAC             ;  7:2
+    add     A, C                        ;  4:1
+    ld      B, A                        ;  4:1 spravne natoceny prepinac ktery hledame
+    
+    ; HL lokace pred nama
+    call    FIND_FIRST_OBJECT
+    ; DE = @(TABLE_ITEM[?].prepinace+typ)
 
-; je to prepinac ( paka, tlacitko, zamek, ...), ale je natocen k nam?
+PP_NALEZEN_OBJEKT:                      ; na lokaci lezi nejaky objekt
+    ret     nz                          ;11/5:1 nenalezena
+
     ld      a,(de)                      ;  7:1 typ
-    and     MASKA_NATOCENI              ;  7:2 vynulujeme bity pro polohu paky
-    cp      c                           ;  4:1 pohledy musi sedet
-    jr      nz,PP_NEXT_OBJECT           ; 12/7:2
+    and     MASKA_TYP + MASKA_NATOCENI  ;  7:2
+    cp      B                           ;  4:1 je to spravne natoceny prepinac?
+
+    jr      z, PP_PROHOD_PAKU           ;12/7:2
+    
+    and     MASKA_TYP
+    cp      TYP_DEKORACE
+    
+    call    z, PRINT_DEKORACE           ; vypisi jen pokud je to dekorace
+    
+    call    FFO_NEXT
+    jr      PP_NALEZEN_OBJEKT
+
+
+PP_PROHOD_PAKU:
 
 ; nalezen spravny prepinac pred nama!
     ld      a,(de)                      ;  7:1 typ
@@ -588,7 +290,10 @@ PP_NALEZEN_OBJEKT:                      ; na lokaci lezi nejaky predmet
     ld      (de),a                      ;  7:1 typ
     
 ; zjistime co paka prehazuje a prehodime VSECHNY dalsi
-    inc     de                          ;  6:1 de: "typ"->"dodatecny"
+    inc     de                          ;  6:1 DE = @(TABLE_ITEM[?].dodatecny)
+
+    call    PRINT_PREPINAC              ;   
+    
 PP_LOOP:
 
     inc     de                          ;  6:1 de: "dodatecny"->"lokace"
@@ -606,548 +311,12 @@ PP_LOOP:
     call    PREPNI_OBJECT
     jp      PP_LOOP
     
-PP_MESSAGE:
-    cp      TYP_DEKORACE
-    call    z,MSG_DEKORACE
-
-PP_NEXT_OBJECT:
-    call    FFO_NEXT                    ; "de" ukazuje stale na "typ"
-    jr      z,PP_NALEZEN_OBJEKT
-    ret
-
-
-MSG_DEKORACE:
-    call    PUSH_ALL
-
-    inc     de
-    ld      a,(de)
-    and     MASKA_PODTYP
     
-    ld      ix,VETA_FLOOR
-    cp      PODTYP_KANAL
-    jr      z,MSG_DEKORACE_VIEW
-    
-    ld      ix,VETA_RUNE
-    cp      PODTYP_RUNA
-    jr      nz,MSG_DEKORACE_EXIT
-    
-MSG_DEKORACE_VIEW:
-    ld      a,%00000101                 ; azurova
-    call    PRINT_MESSAGE_COLOR
-MSG_DEKORACE_EXIT:
-    call    POP_ALL
-    ret
-    
-; =============================
-
-; VSTUP: hl = hledana lokace
-; VYSTUP: Z = nalezen ( "a" = offset lokace = "l" ), NZ = nenalezen ( "a" > "l" a je roven nasledujici nebo zarazce ), CARRY vzdy 0
-; MENI: de = ukazuje na typ, a
-; tabulka predmetu je definovna jako seznam "defb lokace, typ, dodatecny"
-FIND_FIRST_OBJECT:
-    ld      de,TABLE_ITEM-2             ; 10:3 de: "typ"
-FFO_NEXT:
-    inc     de                          ;  6:1 de: "typ"->"dodatecny"
-FIND_NEXT_OBJECT:
-    inc     de                          ;  6:1 de: "dodatecny"->"lokace"
-    ld      a,(de)                      ;  7:1
-    inc     de                          ;  6:1 de: "lokace"->"typ"
-    cp      l                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
-    jp      c,FFO_NEXT                  ; 10:3 carry flag = zaporny = jsme pod lokaci
-    ret                                 ; 10:1 Z = jsme na hledane lokaci, NZ = jsme ze ni, a nenasli jsme
-
-;----------------------
-; VSTUP:        de = TABLE_ITEM-2
-;                b = hledane natoceni ( kdyz se rovna 4 tak pretika do dalsiho policka )
-; VYSTUP:        de = ukazuje na typ v prvnim radku se shodnym natocenim (= za poslednim s nizsim natocenim) nebo vyssi lokaci
-;                 carry = 0
-FIND_LAST_OBJECT:
-    inc     de                          ;  6:1 de: "typ"->"dodatecny"
-    inc     de                          ;  6:1 de: "dodatecny"->"lokace"
-    ld      a,(de)                      ;  7:1
-    inc     de                          ;  6:1 de: "lokace"->"typ"
-    cp      l                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
-    jp      c,FIND_LAST_OBJECT          ; 10:3 carry flag = zaporny = jsme pod lokaci
-    ret     nz                          ; jsme za polickem
-    ld      a,(de)                      ; typ + natoceni
-    and     MASKA_NATOCENI              ; jen natoceni
-    cp      b                           ; 
-    jp      c,FIND_LAST_OBJECT
-    
-    ret
-; ------------------------------------------------------
-; a zbytek posun dolu
-; VSTUP: HL = lokace kam vkladam
-;        c = (vector)
-; Je to komplikovanejsi fce nez sebrani, protoze musi najit to spravne misto kam to vlozit.
-; Polozky jsou razeny podle lokace a nasledne podle natoceni.
-; Pak existuji polozky ktere maji dodatecne radky zacinajici nulou.
-VLOZ_ITEM_NA_POZICI:
-    ld              de,DRZENY_PREDMET
-    ld      a,(de)
-    or      a
-    ld      ix,VETA_NEDRZI
-    jp      z,PRINT_MESSAGE             ; nic nedrzi, fce volana pomoci "jp" misto "call" = uz se nevrati
-    
-    ld      ixh,a
-    xor     a
-    ld      (de),a
-    
-    ld      a,c
-    inc     a
-    and     MASKA_NATOCENI
-    add     a,TYP_ITEM        
-    ld      ixl,a                       ; 2 bajt v radku obsahuje TYP + NATOCENI
-
-    ld      de,TABLE_ITEM-2
-    ld      a,c
-    inc     a
-    and     MASKA_NATOCENI
-    inc     a                           ; 0->2,1->3,2->4,3->1
-    ld      b,a
-    call    FIND_LAST_OBJECT
-    dec     de                          ; vratime se na prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
-;..............
-    push    hl                          ; uchovame offset lokace
-    
-    ld      hl,(ADR_ZARAZKY)            ; 16:3
-    push    hl
-    push    hl
-    sbc     hl,de                       ; 15:2
-    ld      b,h                         ;  4:1
-    ld      c,l                         ;  4:1 o kolik bajtu
-    inc     bc                          ; pridame zarazku a odstranime problem kdy bc = 0
-    pop     hl
-    inc     hl
-    inc     hl
-    inc     hl
-    ld      (ADR_ZARAZKY),hl            ; 16:3
-    pop     de
-    ex      de,hl
-    lddr                                ;         "LD (DE),(HL)", DE--, HL--, BC--
-    
-; pokud je predmet posledni tak se presune o 3 bajty jen zarazka
-    ld      a,ixh
-    ld      (de),a
-    dec     de
-    
-    ld      a,ixl
-    ld      (de),a
-    dec     de
-    
-    pop     hl                          ; nacteme offset lokace
-    ld      a,l
-    ld      (de),a
-    
-    jp      INVENTORY_WINDOW_KURZOR
-;         ret
-
-;-----------------------------------------------------------
-
-; a zbytek posun dolu
-; VSTUP: HL = lokace kam vkladam
-;        c = (vector)
-VEZMI_ITEM_Z_POZICE:
-    ld      a,(DRZENY_PREDMET)
-    or      a
-    ld      ix,VETA_DRZI
-    jp      nz,PRINT_MESSAGE            ; uz neco drzi, fce volana pomoci "jp" misto "call" = uz se nevrati
-
-    ld      de,TABLE_ITEM-2
-    ld      b,c
-    inc     b                           ; 0->1,1->2,2->3,3->4
-    call    FIND_LAST_OBJECT
-    dec     de                          ; vratime se na prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
-;..............
-    
-    ld      a,TYP_ITEM
-    add     a,c
-    ld      c,a
-    
-    ld      a,l
-    ld      h,d
-    ld      l,e                         ; hl = lokace za
-    
-; VIZP_LOOP:
-    dec     hl                          ; MASKA_PODTYP
-    ld      e,(hl)
-    dec     hl                          ; MASKA_TYP + MASKA_NATOCENI
-    ld      d,(hl)
-    dec     hl                          ; lokace
-    cp      (hl)
-    
-    ld      ix,VETA_NIC
-    jp      nz,PRINT_MESSAGE            ; nic nenasel, fce volana pomoci "jp" misto "call" = uz se nevrati
-;         ret        nz
-    
-    ld      a,d
-    cp      c                           ; je tam zvednutelny predmet?
-;         ld      a,(hl)                ; vratime offset lokace do akumulatoru
-    jp      nz,PRINT_MESSAGE
-
-; hl adresa mazaneho tribajtoveho prvku
-; e = podtyp
-; d = TYP_ITEM + natoceni
-
-    ld      a,e
-    ld      (DRZENY_PREDMET),a
-    push    af
-    
-    ld      d,h
-    ld      e,l                         ; kam ukladat
-    inc     hl
-    inc     hl
-    inc     hl                          ; odkud brat
-VIZP_PRESUN:
-    ld      a,(hl)
-    ldi                                 ; (de) = (hl) lokace
-    cp      TYP_ZARAZKA
-    
-    jr      z,VIZP_EXIT
-    
-    ldi                                 ; (de) = (hl) typ
-    ldi                                 ; (de) = (hl) podtyp
-    jp      VIZP_PRESUN
-    
-VIZP_EXIT:
-    dec     de                          ; zrusime +1 z ldi
-    ld      (ADR_ZARAZKY),de            ; 
-
-    pop     bc                          ; b = a = (DRZENY_PREDMET)
-    call    ITEM_TAKEN
-; otevri inventar
-    ld      hl,PRIZNAKY                 ; 10:3
-    ld      a,(hl)                      ; 7:1
-    or      PRIZNAK_OTEVRENY_INVENTAR   ; 7:2
-    ld      (hl),a                      ; 7:1
-    
-    jp      INVENTORY_WINDOW_KURZOR
-;         ret
-;----------------------------------------------
-
-
-PREPNI_OBJECT:
-; fce prepne dvere nebo paku, bez ohledu na natoceni
-; v "h" je "typ"
-; v "l" je hledana lokace
-    push    de
-    call    FIND_FIRST_OBJECT
-    jr      nz, PO_EXIT
-
-PO_NALEZEN_OBJECT:
-; na lokaci lezi nejaky predmet
-    ld      a,(de)                      ;  7:1 typ
-    sub     h
-    and     MASKA_TYP + MASKA_NATOCENI
-    jr      nz,PO_NEXT_OBJECT           ;12/7:2       ??? pokud je horni bit nastaven tak to bude blbnout?
-
-; je to hledany predmet AKTUALIZOVAT
-    ld      a,h
-    and     MASKA_PREPINACE
-    ex      de,hl                       ;  4:1
-    xor     (hl)                        ;  7:1 xorujeme flagy v horni casti "typ"
-    ld      (hl),a                      ;  7:1
-    ex      de,hl                       ;  4:1 
-            
-PO_NEXT_OBJECT:
-    call    FFO_NEXT
-    jr      z,PO_NALEZEN_OBJECT
-    
-PO_EXIT:
-    pop     de
-    ret
-
-; ====================================
-
-; Prohleda seznam predmetu zda na dane pozici ( ulozene v registru "l" ) nelezi nepruchozi predmet ( = aspon jeden z hornich bajtu "typ" je nenulovy ) 
-; VSTUP: v "hl" je hledana lokace
-; VYSTUP: vraci carry priznak pokud najde
-; MENI: de,l,a
-JE_POZICE_BLOKOVANA:
-    call    FIND_FIRST_OBJECT
-    ret     nz                          ;11/5:1 nenalezena
-    
-JPB_NALEZEN_OBJECT:                     ; na lokaci lezi nejaky predmet
-    ld      a,(de)                      ;  7:1 typ
-    add     a,MASKA_PREPINACE
-    ret     c                           ; blokovany?
-    
-    call    FFO_NEXT                    ; hledej dalsi
-    jr      z,JPB_NALEZEN_OBJECT        ; 10:1 nalezen dalsi objekt na lokaci
-    ret
-
-
-; ====================================
-
-VIEW:        ; 0xd1f7
-
-    ; vykresleni pozadi ( strop a podlaha )
-    ld      bc,$1100                    ; 17. sloupec
-POZADI:
-    ld      de,H5
-    ld      a,(POHYB)                   ; 13:3
-    and     1
-    jr      z,V_H5
-    ld      c,$FF
-V_H5:
-    push    bc
-    push    de
-    call    COPY_SPRITE2BUFFER
-    pop     de
-    pop     bc
-    djnz    POZADI
-    call    COPY_SPRITE2BUFFER
-    ; vykresli dno bufferu
-    ld      de,dno_bufferu
-    ld      bc,$000E                    ;
-    call    COPY_SPRITE2BUFFER        
-
-    ld      h,VEKTORY_POHYBU/256        ;  7:2
-    ld      a,(VECTOR)                  ; 13:3 {0, 1, 2, 3}
-    ld      l,a                         ;  4:1
-    ld      c,(hl)                      ;  7:1 modifikator      pro posun vpred
-    add     a,12                        ;  7:2                        
-    ld      l,a                         ;  4:1
-    ld      a,(hl)                      ;  7:1 modifikator      pro posun vpravo
-    ld      e,a                         ;  4:1 "e" obsahuje "o 1 vpravo" 
-    add     a,a                         ;  4:1 2 * vpravo
-    add     a,a                         ;  4:1 4 * vpravo
-    ld      d,a                         ;  4:1 "d" obsahuje "max vpravo"
-
-    ld      h,DUNGEON_MAP/256           ;  7:2 
-    ld      a,(LOCATION)                ; 13:3        
-    ld      b,6                         ;  7:2
-NULA:
-    ld      l,a                         ;  4:1
-    push    hl                          ; 11:1
-    add     a,c                         ;  4:1 c = modifikator      pro posun vpred
-    djnz    NULA                        ; 13/8:2
-
-
-    pop     ix                          ; do IX nactem nejvzdalenejsi pozici co vidim pred sebou
-    push    de
-    ld      hl,TABLE_VIEW_9_DEPTH_4
-    ld      b,-1                        ; hloubka
-    call    PROHLEDEJ_PROSTOR_VPREDU    ; -40 H4
-    pop     de
-    ld      a,d
-    sub     e
-    ld      d,a
-
-    pop     ix
-    push    de
-    ld      hl,TABLE_VIEW_7_DEPTH_3
-    ld      b,48                        ; hloubka
-    call    PROHLEDEJ_PROSTOR_VPREDU    ; -32 H3
-    pop     de
-    ld      a,d
-    sub     e
-    ld      d,a
-
-    pop     ix
-    push    de
-    ld      hl,TABLE_VIEW_5_DEPTH_2
-    ld      b,36                        ; hloubka
-    call    PROHLEDEJ_PROSTOR_VPREDU    ; -24 H2
-    pop     de
-    ld      a,d
-    sub     e
-    ld      d,a
-
-    pop     ix
-    push    de
-    ld      hl,TABLE_DEPTH_1
-    ld      b,24                        ; hloubka
-    call    PROHLEDEJ_PROSTOR_VPREDU    ;  -16 H1
-    pop     de
-
-    pop     ix
-    push    de
-    ld      hl,TABLE_DEPTH_0
-    ld      b,12                        ; hloubka
-    call    PROHLEDEJ_PROSTOR_VPREDU    ;  -8 H0
-    pop     de
-
-    pop     ix
-    ld      hl,TABLE_DEPTH_x
-    ld      b,0
-    call    PROHLEDEJ_PROSTOR_VPREDU
-    
-    call    VYKRESLI_AKTIVNI_PREDMET
-
-    ret
-
 ; --------------------------------
-
-; RADOBY_TIMER:
-; defb        0                ; nepouzit
-; SMAZ!!!
-PROHOD_SKRETA:
-;         ld              hl,(TIMER_ADR) 
-;         ld      a,l
-;         or      a
-;         jp      m,ATTACK
-;         ld      hl,ES1
-;         ld      bc,$0305
-;         jr      PREPIS
-;         
-; ATTACK:
-;         ld      hl,ESA1
-;         ld      bc,$0102
-;         
-; PREPIS:
-; 
-;         ld      (ENEMY_GROUP+24),bc
-;         ld      (ENEMY_TABLE+2),hl
-    ret
-    
-CARKY:
-defb    $00     ; 0000 0000
-defb    $80     ; 1000 0000
-defb    $C0     ; 1100 0000
-defb    $E0     ; 1110 0000
-defb    $F0     ; 1111 0000
-defb    $F8     ; 1111 1000 
-defb    $FC     ; 1111 1100
-defb    $FE     ; 1111 1110
-defb    $FF     ; 1111 1111
-CARKY_END:
-
-INCLUDE table.h
-
-
-
-; -------------------------------------
-; ix obsahuje pozici na mape kterou vykresluji
-; hl obsahuje odkaz do tabulky sten
-; d obsahuje index "+max. vpravo", e obsahuje "o 1 vpravo"
-; b obsahuje hloubku/vzdalenost pro zjisteni jakou verzi spritu nakreslit v objektech
-PROHLEDEJ_PROSTOR_VPREDU:
-    ld      c,ixl                   ; ulozime offset pozice
-    ld      a,d
-PPV_LOOP:
-    add     a,c
-    ld      ixl,a                   ; ix = max. vpravo
-; test steny
-    bit     1,(ix)
-
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER
-    call    INIT_COPY_PATTERN2BUFFER        
-    pop     de
-    pop     bc
-    
-    ld      a,d
-    cp      e
-    jr      nz,PPV_NEKRESLI_VPRAVO
-    ; jsme o 1 vpravo
-    ld      a,4                     ; primy pohled, o 1 vpravo, o 1 vlevo
-    call    INIT_FIND_OBJECT
-PPV_NEKRESLI_VPRAVO:
-    
-    ld      a,c
-    sub     d
-    ld      ixl,a                   ; ix = max. vlevo
-; test steny
-    bit     1,(ix)
-
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER        
-    call    INIT_COPY_PATTERN2BUFFER
-    pop     de
-    pop     bc
-
-    ld      a,d
-    cp      e
-    jr      nz,PPV_NEKRESLI_VLEVO
-    ; jsme o 1 vlevo
-    ld      a,8                     ; primy pohled, o 1 vpravo, o 1 vlevo
-    call    INIT_FIND_OBJECT
-PPV_NEKRESLI_VLEVO:
     
 
-    ld      a,d
-    sub     e
-    ld      d,a
-    jr      nz,PPV_LOOP
-
-    ld      ixl,c
-; test steny
-    bit     1,(ix)
-
-    push    bc
-    call    INIT_COPY_PATTERN2BUFFER
-    pop     bc
-    ; divame se vpred
-    xor     a                       ; primy pohled, o 1 vpravo, o 1 vlevo
-    call    INIT_FIND_OBJECT
-    ret
-
-;
-INIT_FIND_OBJECT:
-
-    bit     7,B                     ; zaporna hloubka, nekreslim, usetrim si radek s nulama v kazde tabulce
-    ret     nz
-
-    push    hl
-    push    de
-    push    bc
-    
-    add     a,b
-    ld      c,a
-    ld      b,0                     ; bc ted dela index pro danou hloubku a kolmici
-    
-    call    FIND_OBJECT
-    pop     bc
-    pop     de
-    pop     hl
-    ret
-    
-
-
-; -----------------------------
-
-; SMAZ!!!!!!!
-; vzdy posune hl o 4, i kdyz nekresli
-; ochrani "a","ix"
-INIT_COPY_PATTERN2BUFFER_ver2:
-
-    jr      nz,IC_KRESLIME          ; zero flag = je tam chodba, nekreslime
-
-    inc     hl
-    inc     hl
-IC_NEKRESLIME:
-    inc     hl
-    inc     hl
-    ret
-
-IC_KRESLIME:
-
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)
-    inc     hl
-
-    dec     d
-    jr      c,IC_NEKRESLIME         ; adresa obrazku je na prvni strance? nekreslime 
-    inc     d
-
-    ld      c,(hl)
-    inc     hl
-    ld      b,(hl)
-    inc     hl
-
-    push    af
-    push    hl
-    push    ix
-    call    COPY_SPRITE2BUFFER
-    pop     ix
-    pop     hl
-    pop     af
-
-    ret
+INCLUDE objects.asm
+INCLUDE draw3D.asm
 
 
 ; =====================================================
@@ -1157,9 +326,11 @@ IC_KRESLIME:
 ; VYSTUP: HL = HL + 4 i kdyz se nic nekreslilo
 INIT_COPY_PATTERN2BUFFER_NOZEROFLAG:
     or      1                       ; reset zero flag
-; vzdy posune hl o 4, i kdyz nekresli
-; pokud je nastaven ZERO priznak nekresli, pokud je segment obrazku nula nekresli taky
-; zachova ix a akumulator
+; VYSTUP:
+;   HL = HL+4
+;   not zero flag a nenulovy segment adresy spritu znamena ze bude sprite vykreslen
+; NEMENI:
+;   IX, A
 INIT_COPY_PATTERN2BUFFER:
     ld      e,(hl)
     inc     hl
@@ -1180,7 +351,6 @@ INIT_COPY_PATTERN2BUFFER:
     push    hl
     push    ix
 
-
     call    COPY_SPRITE2BUFFER
 
     pop     ix
@@ -1196,473 +366,10 @@ INIT_COPY_PATTERN2BUFFER:
 
 
 
-; v IX je zkoumana lokace
-; v BC je hloubka * 12 = radek v DOOR_TABLE/RAM_TABLE/...
-FIND_OBJECT:        ; 0xd4b5
-
-    inc     ixl
-    ret     z                       ; !!!!! drobny bug .) $ff lokace nesmi byt totiz ani v dohledu
-    dec     ixl
-;         ret        z              ; $0
-    
-    ld      de,TABLE_ITEM-2         ; 10:3 "defb lokace, typ, dodatecny"
-FI_LOOP:
-    inc     de                      ;  6:1 de: "typ"->"dodatecny"
-FI_LOOP2:
-    inc     de                      ;  6:1 de: "dodatecny"->"lokace"
-    ld      a,(de)                  ;  7:1
-    inc     de                      ;  6:1 de: "lokace"->"typ"
-    sub     ixl                     ;  8:2 "lokace predmetu" - "nase hledana lokace"
-    jp      c,FI_LOOP               ; 10:2 carry flag?
-    ret     nz                      ;11/5:1 lezi na lokaci "hl"?
-
-; na lokaci lezi nejaky predmet
-    ld      a,(de)                  ;  7:1 typ
-    and     MASKA_TYP               ;  7:2
-
-if ( TYP_PREPINAC != 0 )
-    cp      TYP_PREPINAC            ;  7:2 
-    
-    .warning 'Delsi kod, protoze TYP_PREPINAC != 0'
-else
-    or      a                       ;  4:1
-endif
-    
-    jr      z,FI_PREPINAC           ;12/7:2
-
-    cp      TYP_DVERE               ;  7:2
-    jr      z,FI_DOOR               ;12/7:2
-
-    cp      TYP_ENEMY               ;  7:2
-    jr      z,FI_ENEMY              ;12/7:2
-
-    cp      TYP_ITEM                ;  7:2
-    jp      z,FI_ITEM               ;12/7:2
-    
-    cp      TYP_DEKORACE            ; musi byt posledni varianta
-    jr      nz,FI_LOOP
-    
-    inc     de                      ; typ -> podtyp
-    ld      a,(de)
-    and     MASKA_PODTYP
-TEST:
-;         cp      PODTYP_WALL          ;  7:2 pruchozi steny
-;         jp      z,FI_WALL            ;10:3
-    
-    ld      hl,RUNE_TABLE
-    cp      PODTYP_RUNA             ;  7:2 
-    jp      z,FI_DEKORACE           ;10:2
-    
-    ld      hl,KANAL_TABLE
-    cp      PODTYP_KANAL            ;  7:2 
-    jp      z,FI_DEKORACE           ;10:2
-    
-    ; sem by jsem se nikdy nemel dostat...
-
-    jp      FI_LOOP2                ; 10:3 "de" ted ukazuje na "dodatecny"
-FI_EXIT:
-    ret
-
-; ------------ aktualni adresa podfce je v test.asm
-
-FI_DOOR:
-    ; vsechny dvere maji ram
-    ld      a,(de)                  ;  7:1 typ
-
-    inc     c
-    dec     c
-    jr      nz,FI_VIEW_RAM
-    ; jsme uvnitr otevrenych dveri = nejnizsi bit u "dodatecny" je = { 0 = dvere pro pruchod N-S, 1 dvere pro pruchod W-E }
-    ld      hl,VECTOR               ; 10:3
-    add     a,(hl)                  ;  7:1 0 = N, 1 = E, 2 = S, 3 = W
-    bit     0,a                     ; pokud je nejnizsi bit nastaven ziram kolmo na chodbu ( pruchod ) na ram
-    jr      z,FI_LOOP               ; return
-
-FI_VIEW_RAM:                        ; vykresli ram
-    ld      hl,RAM_TABLE
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
-    
-    add     a,MASKA_PREPINACE       ; nektere dvere jsou otevrene, AKTUALIZOVAT!!!
-    jr      nc,FI_LOOP              ; return
-
-    ld      hl,DOOR_TABLE
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
-
-    jr      FI_LOOP                 ; return
-
-; ------------ aktualni adresa podfce je v test.asm
-
-FI_PREPINAC:
-    push    bc
-
-    ld      a,(de)                  ;  7:1 "typ"
-    and     MASKA_NATOCENI          ;  7:2
-    
-    ld      hl,VECTOR               ; 10:3
-    ld      l,(hl)                  ;  "l": 0 = N, 1 = E, 2 = S, 3 = W
-    sub     l                       ; pohledy musi sedet
-                                    
-    ld      hl,PAKY_TABLE           ; "l" uz nebudem potrebovat
-    add     hl,bc
-
-    and     3                       ; protoze nekdy potrebujeme aby sever byl 4 tak jsou validni jen posledni 2 bity
-                                    ; pak 3-0 = -1 (000000-11) a 0-3 = 1 (111111-01)
-    jr      z,FI_PREPINAC_INIT      ; z oci do oci
-
-    ld      bc,NEXT_PAKA
-    add     hl,BC                   ; leve paky
-    cp      3                       ; 3 = -1 ve 2 bitech
-    jr      z,FI_PREPINAC_INIT      ; leva paka trci doprava ( kdybych byl natocen doleva tak se shoduji nase smery )
-
-    add     hl,BC                   ; prave paky
-    cp      1                       ; 
-    jr      nz,FI_PREPINAC_EXIT     ; je tu moznost paky co je za stenou a trci ode mne a tu nevidim...
-    
-    ; zero flag = prava paka trci doleva ( kdybych byl natocen doprava tak se shoduji nase smery )
-
-FI_PREPINAC_INIT:
-
-    ld      a,(de)                  ; "typ"
-    or      a
-    jp      p,FI_PREPINAC_VIEW      ; kladne = paka je nahore
-    
-    ld      bc,PAKA_DOWN
-    add     hl,bc
-
-FI_PREPINAC_VIEW:
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-
-FI_PREPINAC_EXIT:
-    pop     bc
-    jp      FI_LOOP        
-
-
-
-; ------------ aktualni adresa podfce je v test.asm
-
-FI_ENEMY:
-    push    de
-    push    ix
-    push    bc
-
-    ld      a,ENEMY_ATTACK_DISTANCE     ; 7:2
-    cp      c
-    jr      nz,FI_ENEMY_FAR
-; vzdalenost 1, levy predni skret...
-    ld      a,(TIMER_ADR)               ; timer
-    and     FLOP_BIT_ATTACK
-    ld      a,2
-    jp      z,FI_ENEMY_FAR
-    ld      a,1
-FI_ENEMY_FAR:
-    ld      (FI_ENEMY_SELFMODIFIYNG2+1),a
-
-
-    ld      a,(de)                      ;  7:1 typ
-    and     MASKA_PREPINACE             ;  7:2
-    rlca                                ;  4:1
-    rlca                                ;  4:1
-    rlca                                ;  4:1
-    
-    ld      ixl,a                       ; pocet nepratel
-    
-    rlca                                ;  4:1 pocet nepratel ve skupine * 2
-    add     a,c                         ;  4:1
-    add     a,c                         ;  4:1
-    add     a,ENEMY_GROUP % 256         ;  7:2
-    ld      l,a                         ;  4:1
-    adc     a,ENEMY_GROUP / 256         ;  7:2
-    sub     l                           ;  4:1
-    ld      h,a                         ;  4:1 v hl je adresa kde je ulozena spravna pozice spritu s poslednim nepritelem
-                                        ; [64]:[16]
-
-    inc     de                          ; dodatecny, na zasobniku je puvodni hodnota
-    ld      a,(de)                      ;  7:1 dodatecny
-    ex      de,hl
-    
-    ld      hl,DIV_6                    ; 10:3
-    add     hl,BC                       ; 11:1
-    ld      c,(hl)                      ;  7:1 z bc chceme jen hloubku * 2 = bc / ( 6 * 2 )
-    ld      hl,ENEMY_TABLE+1            ; 10:3
-    add     hl,BC                       ; 11:1 HL je index+1 do tabulky adres spritu nepratel pro danou hloubku, nepritel je zatim jen prvni podtyp
-
-    and     MASKA_PODTYP                ;  7:2        
-    jr      z,FI_ENEMY_VIEW
-    
-    ld      bc,NEXT_TYP_ENEMY           ; uz nebudem potrebovat puvodni hodnotu, pak obnovime ze zasobniku        
-FI_ENEMY_NEXT:
-    add     hl,BC                       ; 11:1 hledame sprite spravneho nepritele
-    dec     a                           ; snizime 
-    jr      nz,FI_ENEMY_NEXT
-    
-FI_ENEMY_VIEW:
-    ld      a,(hl)                      ;  7:1 segment
-    or      a                           ;  4:1
-    jp      z,FI_ENEMY_EXIT             ; v teto hloubce nebude sprite na zadne pozici = exit
-
-    dec     hl                          ;  6:1
-    ld      l,(hl)                      ;  7:1
-    ld      h,a                         ;  4:1
-    ld      (FI_ENEMY_SELFMODIFIYNG+1),hl   ; 16:3
-    ex      de,hl
-
-FI_ENEMY_LOOP:
-
-    dec     hl
-    ld      b,(hl)
-    dec     hl
-    ld      c,(hl)
-    inc     c                           ; ochranujem akumulator
-    dec     c
-    jp      z,FI_ENEMY_TEST_LOOP        ; sirka muze byt nula, ale vyska nula znamena nekreslit
-    
-FI_ENEMY_SELFMODIFIYNG:
-    ld      de,0                        ; 10:3 adresa spritu nepritele ve spravne hloubce
-
-FI_ENEMY_SELFMODIFIYNG2:
-    ld              a,0
-    cp      ixl
-    jp      nz,FI_ENEMY_CALL
-    
-    ld      de,ESA1
-    ld      a,b
-    add     a,-1
-    ld      b,a
-    ld      c,$03
-
-FI_ENEMY_CALL:
-    push    hl                          ; 11:1
-    push    ix                          ; 15:2
-    call    COPY_SPRITE2BUFFER
-    pop     ix                          ; 14:2
-    pop     hl                          ; 10:1
-    
-FI_ENEMY_TEST_LOOP:
-    dec     ixl                         ;  8:2
-    jr      nz,FI_ENEMY_LOOP
-    
-FI_ENEMY_EXIT:
-    pop     bc
-    pop     ix
-    pop     de
-    jp      FI_LOOP                     ; return
-    
-    
-; ------------ aktualni adresa podfce je v test.asm
-
-; FI_WALL:        ; pruchozi falesna zed
-; 
-;         ld      a,(de)                    ;  7:1 typ
-; 
-;         ld      hl,WALL_TABLE
-;         add     hl,bc
-;         add     hl,BC                     ; 2x ...        
-;         push    bc
-;         push    de
-;         call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-;         pop     de
-;         pop     bc
-;         push    bc                        ; 2x kvuli blbym V4p1 a V4m1,ktere nejsou krychle
-;         push    de
-;         call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-;         pop     de
-;         pop     bc
-;         
-;         jp      FI_LOOP2                  ; return
-    
-; ------------ aktualni adresa podfce je v test.asm
-
-; VSTUP:         bc = index v tabulce
-;                adresa tabulky spravne dekorace
-;                de = ukazuje na podtyp/dodatecny!!! proto se vracim pomoci FI_LOOP2
-FI_DEKORACE:
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
-    jp      FI_LOOP2                    ; return s de = dodatecny
-
-
-    
-    
-; ------------ aktualni adresa podfce je v test.asm
-;Sever  = 0     0 1
-;               2 3
-;Vychod = 1     1 3 =>
-;               0 2
-;Jih    = 2     3 2 => 3-Sever
-;               1 0
-;Zapad  = 3     2 0 =>
-;               3 1
-
-i_nw        equ     0       ; item north-west position
-i_ne        equ     1       ; item north-east position
-i_se        equ     2       ; item south-east position
-i_sw        equ     3       ; item south-west position
-
-
-i_lz        equ     0       ; predmet vidim jako levy-zadni
-i_pz        equ     2       ; predmet vidim jako pravy-zadni
-i_lp        equ     4       ; predmet vidim jako levy-predni
-i_pp        equ     6       ; predmet vidim jako pravy-predni
-
-
-ITEM_NATOCENI:
-;       vlevo   a vpravo dal,   vlevo   a vpravo bliz
-defb    i_lz,   i_pz,           i_pp,   i_lp        ; divam se na sever
-defb    i_lp,   i_lz,           i_pz,   i_pp        ; divam se na vychod
-defb    i_pp,   i_lp,           i_lz,   i_pz        ; divam se na jih
-defb    i_pz,   i_pp,           i_lp,   i_lz        ; divam se na zapad
-
-; VSTUP:        (di-1) = ixl, (di) = typ = TYP_ITEM prvniho objektu
-;                bc = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
-
-FI_ITEM:
-    ld      a,c
-    cp      MAX_VIDITELNOST_PREDMETU_PLUS_1
-    jp      nc,FI_LOOP                      ; return ( bohuzel tolikrat, kolikrat je predmetu na policku )
-
-    ld      (FI_ADR_PRETECENI+1),de
-    
-    ld      hl,VECTOR
-    ld      a,TYP_ITEM
-    add     a,(hl)                          ; 7:1 + vektor      natoceni
-    ld      h,a
-    ld      l,e                             ; l = adresa preteceni = prvni predmet
-
-FI_HLEDANI_NEJVZDALENEJSIHO:
-    ld      a,(de)                          ; typ + natoceni
-    cp      h                               ; roh - vektor      natoceni
-    jr      nc,FI_NEJVZDALENEJSI            ; roh je ten nejvzdalenejsi?
-FI_DALSI_RADEK:
-; prejdeme na dalsi predmet ( jsou razeny podle rohu )
-    inc     de                              ; typ -> podtyp
-    inc     de                              ; podtyp -> lokace
-    ld      a,(de)                          ; lokace ( muzem vytect do jine lokace, pak to znamena ze musime kreslit od ITEM_ADR_POCATKU )
-    inc     de                              ; lokace -> typ 
-    or      a
-    jr      z,FI_DALSI_RADEK                ; dodatecny radek ( preskocime )
-    
-    cp      ixl
-    jr      z,FI_HLEDANI_NEJVZDALENEJSIHO   ; neopustili jsme policko?
-    
-    ld      e,l
-FI_NEJVZDALENEJSI:
-    
-; mame levy zadni nebo pokud neni pozdejsi
-    ld      a,e
-    ld      (FI_ADR_NEJVZDALENEJSIHO+1),a
-    jr      FI_ZA_TESTEM_OPAKOVANI
-    
-FI_VYKRESLI_ITEM:
-FI_ADR_NEJVZDALENEJSIHO:
-    ld      a,0                         ; self-modifying
-    cp      e
-    ret     z                           ; ret ne jp, takze ukonci i nadrazenou fci
-
-FI_ZA_TESTEM_OPAKOVANI:
-    
-    ld      a,(VECTOR)                  ; a = (VECTOR)
-    add     a,a
-    add     a,a                         ; smer pohledu * 4
-    ld      l,a
-    ld      a,(de)                      ; typ
-    and     MASKA_NATOCENI
-    add     a,l
-    add     a,ITEM_NATOCENI % 256
-    ld      l,a
-    adc     a,ITEM_NATOCENI / 256
-    sub     l
-    ld      h,a                         ; hl = index odkud budu cist polohu predmetu
-    ld      a,(hl)
-    
-    push    de
-    push    ix
-    push    bc
-    
-    ld      ixh,a
-    
-    ld      hl,DIV_6                    ; 10:3
-    add     hl,BC                       ; 11:1
-    ld      a,(hl)                      ;  7:1 ziskame hloubku * 2
-    cp      6                           ; hloubku 3 a 4 ignorujeme
-    jr      nc,FI_ITEM_EXIT
-    ld      l,a
-
-    inc     de
-    ld      a,(de)
-    and     MASKA_PODTYP
-    add     a,a                         ; 2x
-    add     a,a                         ; 4x
-    add     a,a                         ; 8x
-    add     a,l                         ; pripoctem hloubku
-    add     a,ITEM_TABLE % 256
-    ld      l,a
-    adc     a,ITEM_TABLE / 256
-    sub     l
-    ld      h,a                         ; hl = adresa, kde je ulozena adresa spritu daneho predmetu v ITEM_TABLE vcetne hloubky
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)                      ; de = adr. spritu
-    
-    inc     d
-    dec     d
-    jr      z,FI_ITEM_EXIT              ; adresa je rovna nule, po dkonceni vsech nahledu snad nenastane... POZOR aktualizovat?
-
-    ld      a,c
-    add     a,a                         ; 2*c protoze radek ma 12 word polozek
-    add     a,ixh                       ; pridame spravny sloupec
-    add     a,ITEM_POZICE % 256         ; 
-    ld      l,a
-    adc     a,ITEM_POZICE / 256
-    sub     l
-    ld      h,a                         ; hl = adr. v ITEM_POZICE
-    ld      c,(hl)
-    inc     c
-    dec     c
-    jr      z,FI_ITEM_EXIT              ; sirka muze byt nula, ale vyska nula znamena nekreslit
-    inc     hl
-    ld      b,(hl)
-    call    COPY_SPRITE2BUFFER
-    
-            
-FI_ITEM_EXIT:
-    pop     bc
-    pop     ix
-    pop     de
-    
-    inc     de                          ; typ -> podtyp
-    inc     de                          ; podtyp -> lokace
-    ld      a,(de)
-    inc     de                          ; lokace -> podtyp
-    cp      ixl
-    jr      z,FI_VYKRESLI_ITEM
-; POZOR udelat test zda je to predmet??? Kolidovat muze jen enemy... Mel by ale byt vepredu? Ne..
-
-FI_ADR_PRETECENI:
-;        pretecem na zacatek
-    ld      de,0                        ; self-modifying
-    jr      FI_VYKRESLI_ITEM
-    
 
 
 ; =======================================================================
 
-INCLUDE sprite2buffer.asm
 
 
 
@@ -1871,7 +578,7 @@ defw        18*8+1,25*8+1,7*256+18*8+1,7*256+25*8+1,14*256+18*8+1,14*256+25*8+1
 COLOR_OTHER_PLAYERS     equ     %00000111        ; white ink + black paper
 COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
 
-; VSTUP: A = '1' .. '6'
+; VSTUP: A = znaky '1' .. '6'
 NEW_PLAYER_ACTIVE:
     sub     49                      ; odectem hodnotu znaku "1"
     ld      hl,MAX_POSTAVA_PLUS_1   ; 10:3
@@ -1913,6 +620,9 @@ NEW_PLAYER_ACTIVE:
 ; V panelu s nahledem vsech hracu nastavi atributy pod jmenem aktivniho hrace na COLOR_ACTIVE_PLAYER, ostatni nastavi na COLOR_OTHER_PLAYERS
 ; Pozor! Musi nasledovat hned za NEW_PLAYER_ACTIVE
 VIEW_PLAYER_ACTIVE:
+
+if (0)
+
     ld      de,(MAX_POSTAVA_PLUS_1)     ; 20:4 d = AKTIVNI_POSTAVA, e = MAX_POSTAVA_PLUS_1
     ld      a,e                         ; a = MAX_POSTAVA_PLUS_1 = citac
     dec     a
@@ -1935,7 +645,7 @@ SP_4:
     call    SET_COLOR_NAME
     ld      hl,Adr_Attr_Buffer + $12
     call    SET_COLOR_NAME
-
+endif
     ret
 
 ; Pomocna fce pro SET_PLAYER_ACTIVE, nastavi atribut 7 znaku na COLOR_OTHER_PLAYERS nebo COLOR_ACTIVE_PLAYER podle toho zda hodnota "a" == "d"
@@ -1995,29 +705,48 @@ PLAYERS_WINDOW:
     
     call    VIEW_PLAYER_ACTIVE
 
-    ld      ix,NAMES
-    ld      B,$03                       ;dc95   3x po dvou 
-    XOR     A                           ;dc97   af "a" = 0
+    ld      IX, NAMES                   ; 14:4
+    ld      BC,(MAX_POSTAVA_PLUS_1)     ; 20:4
+    ld      A, C
+    ld      C, B
+    ld      B, A
+    inc     C
+    
+    ld      HL, Adr_Attr_Buffer+$12     ; 10:3
+    ld      DE, Adr_Attr_Buffer+$19     ; 10:3
+
 PW_JMENA_LOOP:
-    ld      H, A                        ;dc98   b = radek
-    ld      L, $91                      ;dc99   c = pixel sloupec leveho jmena
-    push    HL                          ;dc9b
-    call    PRINT_STRING_OBAL           ;dc9c 
-    ld      L, $c9                      ;dc9f   c = pixel sloupec praveho jmena
-    push    HL                          ;dca1 
-    call    PRINT_STRING_OBAL           ;dca2
-    add     A, $07                      ;dca5   dalsi radek postav
-    djnz    PW_JMENA_LOOP               ;dca8
-            
-    ld      B, $06                      ;dcaa   inicializovat citac
-PW_HP_LOOP:
-    ld      ix,VETA_HP                  ;dcac dd 21 68 c9         . ! h . 
-    pop     HL                          ;dcb0   vyjmeme ze zasobniku souradnice jmena 
-    ld      A, H                        ;dcb1
-    add     A, $05                      ;dcb2   pricteme k radku 5 
-    ld      H, A                        ;dcb4
-    call    PRINT_STRING_OBAL           ;dcb5 
-    djnz    PW_HP_LOOP                  ;dcb9 
+    ld      A, COLOR_ACTIVE_PLAYER      ;  7:2
+    dec     C
+    jr      z, PW_AKTIVNI               ;12/7:2
+    ld      A, COLOR_OTHER_PLAYERS      ;  7:2
+PW_AKTIVNI:
+    push    AF                          ; 11:1 color    
+    call    PRINT_STRING_OBAL           ; 17:3
+    
+    ld      A, L                        ;  4:1
+    add     A, $A0                      ;  7:2
+    ld      L, A                        ;  4:1
+    adc     A, H                        ;  4:1
+    sub     L                           ;  4:1
+    ld      H, A                        ;  4:1
+    pop     AF                          ; 10:1
+    
+    push    IX                          ; 15:2
+    ld      IX, VETA_HP                 ; 14:4
+    call    PRINT_STRING_OBAL           ; 17:3
+    pop     IX                          ; 14:2
+    
+    ld      A, L                        ;  4:1
+    add     A, $40                      ;  7:2
+    ld      L, A                        ;  4:1
+    adc     A, H                        ;  4:1
+    sub     L                           ;  4:1
+    ld      H, A                        ;  4:1
+    
+    ex      DE, HL                      ;  4:1
+    djnz    PW_JMENA_LOOP               ;13/8:2
+
     
     call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
     ld      ix,INVENTORY_ITEMS          ;dcc1 dd 21 78 ce         . ! x . 
@@ -2103,8 +832,8 @@ IW_NEXT_NAME:
     jr      nz,IW_NEXT_NAME
     push    hl
     pop     ix                      ; ix <- hl
-    ld      hl,22*8+1
-    call    PRINT_STRING_BUF
+    ld      hl, Adr_Attr_Buffer + $16
+    call    PRINT_STRING
     
     pop     af                      ; nacteme aktivni postavu ze zasobniku
     add     a,a                     ; 2x
@@ -2512,23 +1241,29 @@ endif
     ret
 
     
+if (0)
 ; ---------------------------------------------
 ; Fce kresli plnou vodorovnou caru po znacich
 ; VSTUP:        HL = adresa odkud zacnem
 ;                b  = pocet znaku
-HORIZONTAL_LINE:
+HORIZONTAL_FULL_LINE:
     ld      a,$ff
 ; Fce kresli vodorovnou caru po znacich vyplnenou registrem "c"
 ; VSTUP:        HL = adresa odkud zacnem
 ;                b  = pocet znaku
 ;                a  = vypln
 ; VYSTUP: Meni l += b
-HORIZONTAL_LINE_LOOP:
+HORIZONTAL_MASK_LINE:
+
+HML_LOOP:
     ld      (hl),a
     inc     l
-    djnz    HORIZONTAL_LINE_LOOP
+    djnz    HML_LOOP
     ret
-
+    
+endif
+    
+    
 
 if ( 0 )
 ; ---------------------------------------------
@@ -2629,12 +1364,6 @@ FB_DALSI_SLOUPEC:
 ; 8,1,14 = 3365
 
 
-; VSTUP:    HL = adresa odkud zacnem
-;           ixh  = pocet znaku na sirku
-;           ixl  = pocet znaku na vysku
-;           d = pocet mikroradku
-;           e = vzor, kterym budeme plnit
-
 ; Vstup: B = sloupce 1..x
 ;        C = radky   1..y
 ;        HL = adresa atributu
@@ -2671,6 +1400,7 @@ endif
 ; VYSTUP:
 ; carry = 0
 ; H = $40, $48, $50 nebo $E3, $EB, $F3
+; offset atributu = offset zacatku znaku na obrazovce
 SEG_ATTR2SCREEN:
     ld      A, H                        ; do akumulatoru dame segment atributu
     ld      H, Adr_Buffer/256           ; H = $E3 = segment prvni tretiny buferu obrazovky
@@ -2703,21 +1433,23 @@ ZZ_LOOP:
     djnz    ZZ_LOOP                     ; 
     ret                                 ; 
 
+    
 ; VSTUP: DE = cas ukonceni krvaveho fleku
 VYKRESLI_KRVAVY_FLEK:
-    push    de                        ;dfe3        d5         . 
-    ld      a,(de)                ;dfe4        1a         . 
-    dec     de                        ; ukazatel na hodnotu posledniho zraneni 
-    ld      hl,TIMER_ADR                ;
+    push    de                          ;dfe3        d5         . 
+    ld      a, (de)                     ;dfe4        1a         . 
+    dec     de                          ; ukazatel na hodnotu posledniho zraneni 
+    ld      hl, TIMER_ADR               ;
     cp      (hl)                        ;dfe9        be         . 
-    jp p,VKF_POKRACUJ        ;dfea        f2 f1 df         . . . 
-    xor     a                        ; cas vyprsel 
-    ld      (de),a                ; vynulovani hodnoty posledniho zraneni
-    pop     de                        ;dfef        d1         . 
-    ret                        ;dff0        c9         . 
+    jp      p, VKF_POKRACUJ             ;dfea        f2 f1 df         . . . 
+    xor     a                           ; cas vyprsel 
+    ld      (de), a                     ; vynulovani hodnoty posledniho zraneni
+    pop     de                          ; dfef        d1         . 
+    ret                                 ;dff0        c9         . 
     
+
 DATA_ZIVOTY:
-;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas ukonceni krvaveho fleku
+;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas_ukonceni krvaveho fleku
 defb    132,    132,    $b4,    Adr_Attr_Buffer/256+0,  0,                  0
 defb    90,     90,     $bb,    Adr_Attr_Buffer/256+0,  0,                  0
 defb    64,     64,     $94,    Adr_Attr_Buffer/256+1,  0,                  0
@@ -2725,18 +1457,10 @@ defb    40,     40,     $9b,    Adr_Attr_Buffer/256+1,  0,                  0
 defb    46,     46,     $74,    Adr_Attr_Buffer/256+2,  0,                  0
 defb    40,     40,     $7b,    Adr_Attr_Buffer/256+2,  0,                  0
 DATA_ZIVOTY_END:
-
-
-;defb        $82,$84,$b4,$fb,0,$34 
-;defb        $58,$5a,$bb,$fb,0,$34
-;defb        $3e,$40,$94,$fc,0,$34
-;defb        $26,$28,$9b,$fc,0,$34
-;defb        $2c,$2e,$74,$fd,0,$34 
-;defb        $26,$28,$7b,$fd,0,$34
- 
  
 ; -----------------------------------------------------------
-; VSTUP: DE adresa na aktualni pocet zivotu
+; Zobrazi prouzek s zivoty
+; VSTUP: DE zacatek radku v DATA_ZIVOTY ( sloupec aktualni pocet zivotu)
 ; MENI:  HL, BC, A
 ; VYSTUP: DE = DE + 4 = adresa posledniho zraneni
 VYKRESLI_ZIVOTY:
@@ -2833,32 +1557,30 @@ VZ_LOOP_PX:
 VKF_POKRACUJ:
     dec     de                  ; adresa segmentu pocatku prouzku
     ld      a,(de)              ;
-    ld      c,a                 ; segment pocatku prouzku 
-    add     a,a                 ;dff4        87         . 
-    add     a,a                 ;dff5        87         . 
-    add     a,a                 ;dff6        87         . 
-    sub     c                   ;dff7        91         . 
-    sub     0d9h                ;dff8        d6 d9         . . 
-    ld      c,a                 ;dffa        4f         O 
-    dec     de                  ;dffb        1b         . 
-    ld      a,(de)              ;dffc        1a         . 
-    and     01fh                ;dffd        e6 1f         . . 
-    dec     a                   ;dfff        3d         = 
-    ld      B,a                 ;e000        47         G 
-    push    BC                  ;e001        c5         . 
-    ld      de,Flek             ;e002        11 1a 70         . . p 
-    call    OBAL_SPRITE2BUFFER  ;e005        cd 2d de         . - . 
-    pop     BC                  ;e008        c1         . 
-    ld      a,B                 ;e00c        78         x 
-    add     a,003h              ;e00d        c6 03         . . 
-    add     a,a                 ;e00f        87         . 
-    add     a,a                 ;e010        87         . 
-    add     a,a                 ;e011        87         . 
-    ld      h,c                 ;e012        41         A 
-    inc     h                   ;e013        04         . 
-    ld      l,a                 ;e014        4f         O 
-    ld      ix,JEDNA            ;e015        dd 21 21 e0         . ! ! . 
-    call    PRINT_STRING_BUF    ;e019        cd 0d db         . . . 
+    ld      H, A                ; segment pocatku prouzku 
+    add     a,a                 ;
+    add     a,a                 ;
+    add     a,a                 ; 
+    sub     H                   ;
+    sub     0d9h                ;
+    ld      c,a                 ;
+    dec     de                  ;
+    ld      a,(de)              ;
+    
+    ld      L, A                ;
+    push    HL                  ;
+    
+    and     01fh                ;
+    dec     a                   ;
+    ld      B,a                 ;
+    ld      de,Flek             ;
+    call    OBAL_SPRITE2BUFFER  ;
+    pop     HL                  ;
+    inc     L
+    inc     L
+    ld      ix,JEDNA            ; 
+    ld      A, $42              ; light red
+    call    PRINT_STRING_COLOR  ;e019        cd 0d db         . . . 
     pop     de                  ;e01f        d1         . 
     ret                         ;e020        c9         . 
     
@@ -2908,14 +1630,15 @@ ZP_EXIT:
 
 ; ????????????????????????????????????????
 PLAYERS_WINDOW_AND_DAMAGE:
-    ld      a,002h              ; hmm tady mela byt asi nula
+PWAD_SELF:
+    ld      a,$00               ; 
     ld      hl,TIMER_ADR        ; 1/50 vteriny citac
     xor     (hl)                ; je hornibit shodny s ulozenym 
-    and     080h                ; zajima nas jen horni bit
+    and     $80                 ; zajima nas jen horni bit
     jr      z,PWAD_NEZRANUJ     ; 
     
     ld      a,(hl)              ; ulozime horni bit
-    ld      (PLAYERS_WINDOW_AND_DAMAGE+1),a        ;e051        32 47 e0
+    ld      (PWAD_SELF+1),a     ;
     
     ld      de,$0100            ; D = 1 = zraneni, E = 0 = index postavy 
     ld      B,$06               ; citac = 6 
@@ -2924,8 +1647,8 @@ PWAD_LOOP:
     inc     e                   ; dalsi postava
     djnz    PWAD_LOOP           ;
 PWAD_NEZRANUJ:
-    call    PLAYERS_WINDOW      ;e05f        cd 67 dc 
-    ret                         ;e062        c9 
+    call    PLAYERS_WINDOW      ; 
+    ret                         ; 
 
 ; melo by byt posledni
 INCLUDE strings.asm

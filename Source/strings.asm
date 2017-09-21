@@ -1,65 +1,53 @@
-BIT_MASKA:
-defb	%10000000
-defb	%01000000
-defb	%00100000
-defb	%00010000
-defb	%00001000
-defb	%00000100
-defb	%00000010
-defb	%00000001
-BIT_MASKA_END:
-
 
 ; VSTUP: 
 ;   IX ukazatel na string zakonceny znakem mensim jak 32 a ktery neni vetsi jak 85+32
-;   H = radek (Y char), L = pixel sloupec (X px)
+;   HL = adresa atributu prvniho znaku
 ;   offset PISMO_5PX = 0
 ; VYSTUP: 
 ;   IX ukazuje na zacatek dalsiho retece
 ; MENI:
 ;   DE, HL, BC, A
-PRINT_STRING_BUF:                       ; ver 0.2
 
-PS_ADRESA_SEGMENTU:
-    ld      D, Adr_Buffer/256           ;  7:2
-    
+
+PRINT_STRING:                           ; ver 0.3
+    ld      A, $07                      ; white
+
 ; VSTUP:
-;   D = $40
-PRINT_STRING_SCREEN:                    ;
+;   A = color
+PRINT_STRING_COLOR:                     ;
 
-    ld      A, H                        ;  4:1
-    and     $F8                         ;  7:2
-    add     A, D                        ;  4:1
-    ld      D, A                        ;  4:1
-    ld      A, L                        ;  4:1
-    and     $07                         ;  7:2 do ktereho bitu znaku jsme se trefili
-
-    add     HL, HL                      ; 11:1
-    add     HL, HL                      ; 11:1
-    add     HL, HL                      ; 11:1
-    add     HL, HL                      ; 11:1
-    add     HL, HL                      ; 11:1 H = 32*(Y % 8) + X/8
-    ld      E, H                        ;  4:1
-    
-    ld      HL, BIT_MASKA               ; 10:3
-    add     A, L                        ;  4:1
+    ld      E, L                        ;  4:1
     ld      L, A                        ;  4:1
-    ld      C, (HL)                     ;  7:1
+    push    HL                          ; 11:1
 
-if (BIT_MASKA / 256 != BIT_MASKA_END / 256)
-    .error 'Pole BIT_MASKA prekracuje segment!'
-endif
+    call    SEG_ATTR2SCREEN             ; 17:3
+    ld      D, H                        ;  4:1
+    
+    ld      C, $40                      ;  7:2
 
-; DE adresa na obrazovce, 
-; C = kterym bitem zaciname
-; DE' adresa aktualniho znaku
 
 PS_NEXT_CHAR:
+    ; na zacatku a na konci obarvuji, takze i kdyz prekroci znak bude to spravne
+    pop     HL                          ; 10:1
+    
+; IX ukazatel na aktualni znak retezce
+; DE adresa znaku na obrazovce
+; C  maska bitu kde ve znaku zaciname
+; H segment atributu
+; L color
+PS_COLOR:
+    ld      A, L                        ;  4:1 color
+    ld      L, E                        ;  4:1
+    ld      (HL), A                     ;  7:1 set color
+    ld      L, A                        ;  4:1
+    
     ld      A, (IX+$00)                 ; 19:3
     inc     IX                          ; 10:2 pri ukonceni ukazuje na zacatek dalsiho retezce
     sub     32                          ;  7:2 z mezery udela nulu
     ret     c                           ;11/5:1  if ( char < 32 ) return
     
+    push    HL                          ; 11:1
+
     ; 5*char Funguje az do znaku char = (85+32), pak pretece 85*3=255
     ld      H, A                        ;  4:1 1x
     add     A, A                        ;  4:1 2x 0..128
@@ -113,17 +101,18 @@ PS_PX_RIGHT:
 
 ; ------------------------------------------
 ; VSTUP: 
-;	"b" =  radek, "c" pixel sloupec
-;	IX ukazatel na string zakonceny znakem mensim jak 32
+;   a color
+;   HL adresa atributu prvniho znaku
+;   IX ukazatel na string zakonceny znakem mensim jak 32
 PRINT_STRING_OBAL:
-	push	hl			;db94
-	push	af			;db95	 
-	push	bc			;db96	ulozi BC, "b" =  radek, "c" pixel sloupec
-	call	PRINT_STRING_BUF	;db97	 
-	pop	bc			;db9a	c1 	. 
-	pop	af			;db9b	f1 	. 
-	pop	hl			;db9c	e1 	. 
-	ret				;db9d	c9 	. 
+    push    HL                          ;
+    push    DE
+    push    BC                          ;
+    call    PRINT_STRING_COLOR          ; 
+    pop     BC                          ; 
+    pop     DE
+    pop     HL                          ; 
+    ret                                 ; 
 	
 ;------------------------------------
 
@@ -184,38 +173,87 @@ SCROLL_CLEAR_MICROLINE:
 ; zapisuje primo na obrazovku
 PRINT_MESSAGE:
     ld      a, %00000111                ; INK = 7 = bila
+    
+; VSTUP:
+;   a = color
 PRINT_MESSAGE_COLOR:
     call    SCROLL                      ; nemeni "IX" ani "a"
 
-    ld      hl, $5AE0                   ; 10:3 "l" = E0 = 256-32 
-PRINT_MESSAGE_SET_ATTR:
-    ld      (hl), a                     ;  7:1
-    inc     l
-    jr      nz, PRINT_MESSAGE_SET_ATTR
-
-    ld      HL, 23*256
-    ld      D, $40                      ; Screen segment
-    call    PRINT_STRING_SCREEN
+    ld      HL, $5AE0                   ; zacatek posledniho radku
+    call    PRINT_STRING_COLOR
     ret
-	
+    
+    
+    
+; VSTUP: 
+; B  = index vety
+; HL = je pocatecni veta
+PRINT_MESSAGE_ARRAY:
+
+    call    ADR_X_STRING    
+    ld      a,%00000101                 ; azurova
+    call    PRINT_MESSAGE_COLOR
+
+    ret
+    
+    
+PRINT_DEKORACE:
+    call    PUSH_ALL
+        
+    inc     DE                          ; DE = &(TABLE_ITEM[?].dodatecny)
+    ld      A, (DE)
+    and     MASKA_PODTYP
+    ld      B, A                        ; index vety
+    ld      HL, ARRAY_STRING_DEKORACE   ; pocatecni veta
+    call    PRINT_MESSAGE_ARRAY         ; 
+    
+    call    POP_ALL
+    ret
+
+PRINT_PREPINAC:
+    call    PUSH_ALL
+
+    ld      A, (DE)
+    and     MASKA_PODTYP
+    srl     A
+    srl     A                           ; odstranime natoceni
+    
+    ld      B, A                        ; index vety
+    ld      HL, ARRAY_STRING_PREPINACE  ; pocatecni veta
+    call    PRINT_MESSAGE_ARRAY         ; 
+
+    call    POP_ALL
+    ret
+
+
 ;------------------------------------
 
-
 ; Najde pocatek x-teho retezce zakonceny nulou od pocatecni adresy
-; VSTUP:    hl pocatecni adresa
-;           b kolikaty retezec hledam od nuly
-; VYSTUP:   IX = hl + b * delky_retezcu
+; VSTUP:
+;   HL pocatecni adresa
+;   B kolikaty retezec hledam od nuly
+; VYSTUP:
+;   IX = @(strings[B])
+;   A = 0
+;   B = 0
+AXS_NEXT_STRING:
+    dec     B                   ; 4:1
+    ld      c,$ff               ; pokud by byl retezec delsi jak 255 znaku tak mame smulu
+    cpir                        ; hl++, bc--
+
+; VSTUPNI_BOD FCE!!!
 ADR_X_STRING:
-    xor     a
-AXS_LOOP:
-    ld      c,$ff           ; pokud by byl retezec delsi jak 255 znaku tak mame smulu
-    cpir                    ; hl++, bc--
-    djnz    AXS_LOOP
+    xor     A                   ;
+    cp      B                   ;
+    jr      nz, AXS_NEXT_STRING
+
     push    hl
     pop     ix
     ret
 
+    
 
+if (0)
 ; VSTUP: hl = odkud, de = kam
 STRING_COPY:
 	ld	a,(hl)
@@ -225,30 +263,53 @@ STRING_COPY:
 	or	a
 	jr	nz,STRING_COPY
 	ret
+endif
+
+
+
+
+; VSTUP: 
+;   b index predmetu
+;   na zasobniku lezi ukazatel na pokracujici vetu
+ITEM_MAKE:
+    ld      hl,ARRAY_STRING_ITEMS
+    call    ADR_X_STRING
+
+    call    SCROLL
+    
+    ld      HL, $5AE0                   ; zacatek posledniho radku
+    call    PRINT_STRING
+
+    pop     IX
+    call    PS_COLOR
+
+    ret
+ITEM_END:
+
+
 
 ; VSTUP: b index predmetu
+; VYSTUP: 
+;   Vypiset NECO TAKEN na spodek obrazovky
 ITEM_TAKEN:
-	ld	hl,ARRAY_STRING_ITEMS
-	call	ADR_X_STRING
-	
-	ld	de,BUFF_STRING_ITEM
-	push	de
-	pop	ix
-	
-	call	STRING_COPY
-	ld	hl,VETA_TAKEN
-	dec	de			; zrusim nulu predchoziho retezce
-	call	STRING_COPY
-	
-	call	PRINT_MESSAGE
-	ret
-BUFF_STRING_ITEM:
+    ld      HL, VETA_TAKEN
+    push    HL                          ; ulozime na zasobnik aby to mohlo byt vybrano jako druha tisknuta veta
+    jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
 
+    
+ 
+; VSTUP: b index predmetu
+; VYSTUP: 
+;   Vypiset NECO PUT na spodek obrazovky
+ITEM_PUT:
+    ld      HL, VETA_PUT
+    push    HL                          ; ulozime na zasobnik aby to mohlo byt vybrano jako druha tisknuta veta
+    jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
+ 
+    
+END_CODE:
 
-
-
-
-if (BUFF_STRING_ITEM + 52) > ( pismoStart )
+if (END_CODE >= pismoStart )
     .error 'Data fontu prepisuji konec kodu... Sniz hodnotu progStart a nezapomen zmenit hodnotu RANDOMIZE USR.'
 endif
 
