@@ -1,35 +1,32 @@
 ; ------------ aktualni adresa podfce je v test.asm
+
+;              cisla rohu pri pohledu danym smerem
+;              levy zadni ma vzdy index stejny jako smer pohledu
 ;Sever  = 0     0 1
-;               2 3
-;Vychod = 1     1 3 =>
-;               0 2
-;Jih    = 2     3 2 => 3-Sever
-;               1 0
-;Zapad  = 3     2 0 =>
-;               3 1
+;              3   2
 
-i_nw        equ     0       ; item north-west position
-i_ne        equ     1       ; item north-east position
-i_se        equ     2       ; item south-east position
-i_sw        equ     3       ; item south-west position
+;Vychod = 1     1 2
+;              0   3
 
+;Jih    = 2     2 3
+;              1   0
 
-i_lz        equ     0       ; predmet vidim jako levy-zadni
-i_pz        equ     2       ; predmet vidim jako pravy-zadni
-i_lp        equ     4       ; predmet vidim jako levy-predni
-i_pp        equ     6       ; predmet vidim jako pravy-predni
+;Zapad  = 3     3 0
+;              2   1
+
+;VECTOR:
+;defb        north   ; 0 = N,1 = E,2 = S,3 = W 
 
 
-ITEM_NATOCENI:
-;       vlevo   a vpravo dal,   vlevo   a vpravo bliz
-defb    i_lz,   i_pz,           i_pp,   i_lp        ; divam se na sever
-defb    i_lp,   i_lz,           i_pz,   i_pp        ; divam se na vychod
-defb    i_pp,   i_lp,           i_lz,   i_pz        ; divam se na jih
-defb    i_pz,   i_pp,           i_lp,   i_lz        ; divam se na zapad
-
+if (0)
+i_ld        equ     0       ; predmet vidim jako levy-dal
+i_pd        equ     2       ; predmet vidim jako pravy-dal
+i_pb        equ     4       ; predmet vidim jako pravy-bliz
+i_lb        equ     6       ; predmet vidim jako levy-bliz
+endif
 
 ;SMAZ_NA_KONCI_AZ_NEBUDES_HYBAT_STALE_S_KODEM:
-REPT	160	; nejaka hodnota co posune sipky mimo zlom segmentu
+REPT	181	; nejaka hodnota co posune sipky mimo zlom segmentu
 defb	0
 ENDM
 
@@ -469,12 +466,13 @@ ITEM_POZICE:
 ; prvni je souradnice se znamenkem X (zleva doprava)
 ; druhe je kladna souradnice Y (shora dolu), pokud je zaporna, tak se ma sprite kreslit zprava doleva 
 ; 	primy smer			vpravo				vlevo                             sirka zadni
-;	l.dal	pr.dal	l.bliz	pr.bliz	l.dal	pr.dal	l.bliz	pr.bliz	l.dal	pr.dal	l.bliz	pr.bliz	  steny	
+;	l.dal	p.dal	p.bliz	l.bliz	l.dal	p.dal	p.bliz	l.bliz	l.dal	p.dal	p.bliz	l.bliz	  steny	
 defw	$000C,	$11F3,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	; 16
-defw	$040A,	$0DF5,	$030B,	$0EF4,	$100A,	0,	$110B,	0,	0,	$01F5,	0,	$00F4	; 10
-defw	$0608,	$0BF7,	$0509,	$0CF6,	$0D08,	$12F7,	$0E09,	$13F6,	$FF08,	$04F7,	$FE09,	$03F6	;  6
+defw	$040A,	$0DF5,	$0EF4,	$030B,	$100A,	0,	0,	$110B,	0,	$01F5,	$00F4,	0	; 10
+defw	$0608,	$0BF7,	$0CF6,	$0509,	$0D08,	$12F7,	$13F6,	$0E09,	$FF08,	$04F7,	$03F6,	$FE09	;  6
 defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;  4
 defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;
+
 
 
 MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*3	; (primy smer/vpravo/vlevo) * ( 2 * world ) * 3 radky

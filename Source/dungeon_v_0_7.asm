@@ -1757,7 +1757,7 @@ INCLUDE table.h                 ; tabulka veci roste dolu proti zasobniku
 END_CODE:
 
 if (END_CODE >= $fe00 )
-    .error 'Kod vteka do zasobniku.'
+    .error 'Kod preteka do zasobniku.'
 endif
 
 

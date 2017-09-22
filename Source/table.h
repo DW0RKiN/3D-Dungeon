@@ -1,3 +1,9 @@
+i_nw        equ     0       ; item north-west position
+i_ne        equ     1       ; item north-east position
+i_se        equ     2       ; item south-east position
+i_sw        equ     3       ; item south-west position
+
+
 ; lokace    = dolnich 8 bitu pozice na mape, pokud je nulova tak radek pridava dalsi informace k predchozimu
 ; typ       = bity 0,1 = dolni 2 bity natoceni v danem ctverci
 ; typ       = bity 2,3,4 = identifikace objektu: prepinac, enemy, dvere, wall (zrusit a pridat bit do mapy), runa... 
