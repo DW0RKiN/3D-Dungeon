@@ -1,16 +1,4 @@
-; Cte se z portu 31
-; D0- joy RIGHT
-; D1- joy LEFT
-; D2- joy DOWN
-; D3- joy UP
-; D4- joy FIRE 1
-; D5- joy FIRE 2 (podporovano jen u K-MOUSE interface, kde je podpora vsech trech tlacitek joysticku)
-; D6- joy FIRE 3 (podporovano jen u K-MOUSE interface, kde je podpora vsech trech tlacitek joysticku)
-; D7- nepouzito, obycejne zde vraci log.0
-DATA_KEMPSTON:
-;       right       left        up+r        up+l        down        up          fire        down+r      down+l      up+l+f
-defb    $01,        $02,        $09,        $0a,        $04,        $08,        $10,        $05,        $06,        $1a 
-defb    KEY_VPRAVO, KEY_VLEVO,  KEY_DOPRAVA,KEY_DOLEVA, KEY_DOZADU, KEY_DOPREDU,KEY_SPACE,  KEY_POLOZ,  KEY_VEZMI,  KEY_INVENTAR
+
 ; VYSTUP:         v "a" ascii kod stisknute klavesy 
 ;                 vraci zero flag kdyz nic...
 TEST_KEMPSTON:

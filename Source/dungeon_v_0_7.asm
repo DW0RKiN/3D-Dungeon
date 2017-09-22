@@ -98,10 +98,11 @@ MAIN_OTEVRENY_INVENTAR:
 org  progStart + $0300
 
 INCLUDE font.h
-INCLUDE	typy.h
+INCLUDE typy.h
+INCLUDE objects.h
 INCLUDE input.h
 INCLUDE move.h
-INCLUDE objects.h
+INCLUDE draw3D.h
 INCLUDE strings.h
 
 CARKY:

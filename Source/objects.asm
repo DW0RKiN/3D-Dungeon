@@ -27,34 +27,40 @@ FIND_NEXT_OBJECT:
 ;----------------------
 ; VSTUP:      
 ;   L = hledana lokace
-;   B = hledane natoceni ( kdyz se rovna 4 tak pretika do dalsiho policka )
+;   A = hledane natoceni ( kdyz se rovna 4 tak pretika do dalsiho policka )
 ; VYSTUP:  
 ;   de = ukazuje na typ v prvnim radku se shodnym nebo vyssim natocenim (= za poslednim s nizsim natocenim) nebo prvni predmet na vyssi lokaci
 ;   carry = 0
-FIND_LAST_OBJECT:
+;   H = A + 1
+; MENI:
+;   A, H, DE
+FIND_LAST_ITEM:
 
-    ld      de,TABLE_ITEM-2
+    ld      DE, TABLE_ITEM-2
+    add     A, TYP_ITEM+1               ; chceme posledni misto s danym natocenim, takze prvni s vyssim nebo pri rohu 3 dalsi lokaci
+    ld      H, A                        ;  4:1
+    
 FLO_LOOP
-    inc     de                          ;  6:1 de: "typ"->"dodatecny"
-    inc     de                          ;  6:1 de: "dodatecny"->"lokace"
-    ld      a,(de)                      ;  7:1
-    inc     de                          ;  6:1 de: "lokace"->"typ"
-    cp      l                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
+    inc     DE                          ;  6:1 de: "typ"->"dodatecny"
+    inc     DE                          ;  6:1 de: "dodatecny"->"lokace"
+    ld      A, (DE)                     ;  7:1
+    inc     DE                          ;  6:1 de: "lokace"->"typ"
+    cp      L                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
     jp      c,FLO_LOOP                  ; 10:3 carry flag = zaporny = jsme pod lokaci
     ret     nz                          ; jsme za polickem
-    ld      a,(de)                      ; typ + natoceni
-    and     MASKA_NATOCENI              ; jen natoceni
-    cp      b                           ; 
+    ld      A, (DE)                     ; typ + natoceni
+    and     MASKA_PODTYP                ; bez bitu s prepinaci (chceme byt totiz i za dverma)
+    cp      H                           ; 
     jp      c,FLO_LOOP
     
     ret
+
 ; ------------------------------------------------------
-; a zbytek posun dolu
 ; VSTUP: 
 ;   L = lokace kam vkladam
 ;   c = (vector)
 ; Je to komplikovanejsi fce nez sebrani, protoze musi najit to spravne misto kam to vlozit.
-; Polozky jsou razeny podle lokace a nasledne podle natoceni.
+; Polozky jsou razeny podle lokace a nasledne podle typu a natoceni (prepinace jsou ignorovany).
 ; Predmety musi byt posledni serazene podle natoceni (az za dverma)
 ; Pak existuji polozky ktere maji dodatecne radky zacinajici nulou.
 VLOZ_ITEM_NA_POZICI:
@@ -66,65 +72,59 @@ VLOZ_ITEM_NA_POZICI:
 
     
 VINP_BEZ_KONTROLY:
-    ld      ixh,a    
-    xor     a
-    ld      (de),a
+    push    DE                          ; adresa drzeneho predmetu
     
-    ld      a,c
-    inc     a
-    and     MASKA_NATOCENI
-    add     a,TYP_ITEM        
-    ld      ixl,a                       ; 2 bajt v radku obsahuje TYP + NATOCENI
-
-    ld      a,c
-    inc     a
-    and     MASKA_NATOCENI
-    inc     a                           ; 0->2,1->3,2->4,3->1
-    ld      b,a
-    call    FIND_LAST_OBJECT
-    dec     de                          ; vratime se na prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
-;..............
-    push    hl                          ; uchovame offset lokace
+    ld      A, C
+    inc     A
+    and     MASKA_NATOCENI              ; 0->1, 1->2, 2->3, 3->0 vkladam totiz "vzadu doprava"
+    call    FIND_LAST_ITEM
+    dec     de                          ; prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
+    dec     H                           ; byl zvednut o 1 ve FIND_LAST_OBJECT
+    push    HL                          ; uchovame TYP + NATOCENI a lokaci
     
     ld      hl,(ADR_ZARAZKY)            ; 16:3
     push    hl
-    push    hl
-    sbc     hl,de                       ; 15:2
+    sbc     hl,de                       ; 15:2 carry = 0 diky FIND_LAST_ITEM
     ld      b,h                         ;  4:1
     ld      c,l                         ;  4:1 o kolik bajtu
     inc     bc                          ; pridame zarazku a odstranime problem kdy bc = 0
     pop     hl
+    ld      d,h                         ;  4:1
+    ld      e,l                         ;  4:1
     inc     hl
     inc     hl
     inc     hl
-    ld      (ADR_ZARAZKY),hl            ; 16:3
-    pop     de
+    ld      (ADR_ZARAZKY),hl            ; 16:3    
     ex      de,hl
-    lddr                                ;         "LD (DE),(HL)", DE--, HL--, BC--
+    ; BC = velikost kopirovaneho bloku = 1 + ZARAZKA - DE ( pokud DE ukazuje na zarazku tak nepretecem )
+    ; HL = zdroj = ZARAZKA
+    ; DE = cil = ZARAZKA + 3
+    lddr                                ; "LD (DE),(HL)", DE--, HL--, BC--
     
-; pokud je predmet posledni tak se presune o 3 bajty jen zarazka
-    ld      a,ixh
-    ld      (de),a
-    dec     de
+    pop     BC                          ; TYP + NATOCENI a lokace
+    pop     HL                          ; adresa drzeneho predmetu
+
+    ld      A, (HL)                     ; drzeny predmet
+    ld      (DE), A                     ; dodatecny
+    ld      (HL), $00                   ; 10:2 vyprazdnime misto kde byl drzeny predmet
+
+    ex      DE, HL
     
-    ld      a,ixl
-    ld      (de),a
-    dec     de
+    dec     HL
+    ld      (HL), B                     ; TYP + NATOCENI
     
-    pop     hl                          ; nacteme offset lokace
-    ld      a,l
-    ld      (de),a
+    dec     HL
+    ld      (HL), C                     ; lokace
     
-    ld      B, IXh
+    ld      B, A
     call    ITEM_PUT    
     
     jp      INVENTORY_WINDOW_KURZOR
 ;         ret
 
-;-----------------------------------------------------------
 
-; a zbytek posun dolu
-; VSTUP: HL = lokace kam vkladam
+;-----------------------------------------------------------
+; VSTUP: L = odkud beru
 ;        c = (vector)
 VEZMI_ITEM_Z_POZICE:
     ld      a,(DRZENY_PREDMET)
@@ -132,69 +132,48 @@ VEZMI_ITEM_Z_POZICE:
     ld      ix,VETA_DRZI
     jp      nz,PRINT_MESSAGE            ; uz neco drzi, fce volana pomoci "jp" misto "call" = uz se nevrati
 
-    ld      b,c
-    inc     b                           ; 0->1,1->2,2->3,3->4
-    call    FIND_LAST_OBJECT
-    dec     de                          ; vratime se na prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
-;..............
-    
-    ld      a,TYP_ITEM
-    add     a,c
-    ld      c,a
-
-    ld      a,l                         ; pouzito az v cp (hl)
-if (0)
-    ld      h,d
-    ld      l,e                         ; hl = lokace za
-else
-    ex      DE, HL
-endif
-
-; VIZP_LOOP:
-    dec     hl                          ; MASKA_PODTYP
-    ld      e,(hl)
-    dec     hl                          ; MASKA_TYP + MASKA_NATOCENI
-    ld      d,(hl)
-    dec     hl                          ; lokace
-    cp      (hl)
-    
+    ld      A, C                        ; zvedneme pouze TYP_ITEM se spravnym natocenim
+    call    FIND_LAST_ITEM
+    dec     de                          ; prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
+    dec     H
     ld      ix,VETA_NIC
-    jp      nz,PRINT_MESSAGE            ; nic nenasel, fce volana pomoci "jp" misto "call" = uz se nevrati
+  
+    dec     DE                          ; MASKA_PODTYP
+    ld      A, (DE)
+    ld      B, A                        ; drzeny predmet
     
-    ld      a,d
-    cp      c                           ; je tam zvednutelny predmet?
-;         ld      a,(hl)                ; vratime offset lokace do akumulatoru
-    jp      nz,PRINT_MESSAGE
+    dec     DE                          ; MASKA_TYP + MASKA_NATOCENI
+    ld      A, (DE)
+    cp      H                           ; je to predmet se spravnym natocenim?
+    jp      nz, PRINT_MESSAGE           ; misto return
+    
+    dec     DE                          ; lokace
+    ld      A, (DE)    
+    cp      L                           ; sedi lokace?
+    jp      nz, PRINT_MESSAGE           ; misto return, carry = 0, zero = 1
+  
+    ld      A, B
+    ld      (DRZENY_PREDMET), A
 
-; hl adresa mazaneho tribajtoveho prvku
-; e = podtyp
-; d = TYP_ITEM + natoceni
+    ld      HL, (ADR_ZARAZKY)           ; 16:3
+    sbc     HL, DE                      ; carry = 0
+    inc     HL                          ; presunem i zarazku a vyresime preteceni pri BC = 0
+    ld      B, H
+    ld      C, L
+    ld      H, D
+    ld      L, E
+    inc     HL
+    inc     HL
+    inc     HL                          ; odkud brat
+    ; BC = velikost kopirovaneho bloku = 1 + ZARAZKA - DE ( pokud DE ukazuje na zarazku tak nepretecem )
+    ; HL = zdroj = DE + 3
+    ; DE = cil
+    ldir
 
-    ld      a,e
-    ld      (DRZENY_PREDMET),a
-    push    af
-    
-    ld      d,h
-    ld      e,l                         ; kam ukladat
-    inc     hl
-    inc     hl
-    inc     hl                          ; odkud brat
-VIZP_PRESUN:
-    ld      a,(hl)
-    ldi                                 ; (de) = (hl) lokace
-    cp      TYP_ZARAZKA
-    
-    jr      z,VIZP_EXIT
-    
-    ldi                                 ; (de) = (hl) typ
-    ldi                                 ; (de) = (hl) podtyp
-    jp      VIZP_PRESUN
-    
-VIZP_EXIT:
     dec     de                          ; zrusime +1 z ldi
-    ld      (ADR_ZARAZKY),de            ; 
-
-    pop     bc                          ; b = a = (DRZENY_PREDMET)
+    ld      (ADR_ZARAZKY),de            ;     
+    
+    ld      B, A                        ; b DRZENY_PREDMET
     call    ITEM_TAKEN
 ; otevri inventar
     ld      hl,PRIZNAKY                 ; 10:3

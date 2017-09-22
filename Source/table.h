@@ -20,7 +20,8 @@ ADR_ZARAZKY
 defw	ZARAZKA					; ma ukazovat adresu $ff zarazky v TABLE_ITEM, pouziva se pri brani/vkladani radku
 
 
-TABLE_ITEM:	; POZOR! Predmety neustale udrzuj ve vzestupne lokaci a nasledne ve vzestupnem natoceni
+TABLE_ITEM:	
+; POZOR! Predmety neustale udrzuj ve vzestupne lokaci a nasledne vzestupne podle prepinace+typ (horni 3 bity na prepinace se berou jako vynulovane)
 ;	lokace	prepinace+typ			dodatecny
 defb	1,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
