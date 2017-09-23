@@ -30,12 +30,6 @@ i_pb        equ     4       ; predmet vidim jako pravy-bliz
 i_lb        equ     6       ; predmet vidim jako levy-bliz
 endif
 
-;SMAZ_NA_KONCI_AZ_NEBUDES_HYBAT_STALE_S_KODEM:
-REPT	0	; nejaka hodnota co posune sipky mimo zlom segmentu
-defb	0
-ENDM
-
-
 
 ; vvvv -----------------
 HLAVNI_POSTAVA:
@@ -56,9 +50,7 @@ BORDER:
 defb	0
 
 
-
 MAX_ITEM	equ	27
-
 
 ; vvvv ----------------- zacatek souvisleho bloku
 POZICE_RUKOU:
@@ -77,6 +69,9 @@ POZICE_RUKOU:
 POZICE_RUKOU_END:
 ; ^^^^ ----------------- konec souvisleho bloku
 
+
+
+
 AVATARS:
 defw	MFace02,	$1201,	FFace02,	$1901
 defw	FFace03,	$1208,	FFace04,	$1908
@@ -86,7 +81,7 @@ defw	MFace01,	$120F,	FFace01,	$190F
 KOMPAS:
 defw	Kompas,		$070F
 
-; musi navazovat viz 
+; vvvv ----------------- zacatek souvisleho bloku
 SIPKY:
 defw	S_vsechny,	$000F		; 
 STISKNUTA_SIPKA:
@@ -98,10 +93,7 @@ defw	S_doleva,	$010F		; 16 otoceni
 defw	S_doprava,	$050F		; 20 otoceni
 defw	0,		0		; 24
 SIPKY_END:
-
-if (SIPKY/256) != ((SIPKY_END-1)/256)
-    .error 'Seznam s sipkami nelezi na jednom 256 bajtovem segmentu!'
-endif
+; ^^^^ ----------------- konec souvisleho bloku
 
 
 SIPKA_DOPREDU		equ	0
@@ -173,14 +165,6 @@ defw	4,	4,	4,	4,	4,	4
 defw	6,	6,	6,	6,	6,	6
 defw	8,	8,	8,	8,	8,	8
 
-;	vpredu		vpravo		vlevo
-; defw	0,	0,	0,	0,	1,	10
-; defw	12,	14,	16,	18,	20,	22
-; defw	24,	26,	28,	30,	32,	34
-; defw	36,	38,	40,	42,	44,	46
-; defw	48,	50,	52,	54,	56,	58
-; defw	60,	62,	64,	66,	68,	70
-
 
 
 
@@ -197,10 +181,7 @@ defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;  4
 defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;
 
 
-
 MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*3	; (primy smer/vpravo/vlevo) * ( 2 * world ) * 3 radky
-
-
 
 
 INVENTORY_ITEMS:

@@ -164,9 +164,11 @@ defw	I_potion_b ; PODTYP_POTION_B	equ	30*POSUN_PODTYP
 ITEM2SPRITE_END:
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
-  
-; vvvvvvvvvvvvvvvvvvvvvvvvv zacatek souvisleho bloku vvvvvvvvvvvvvvvvvvvvvvvvv
+
+
 NEXT_TYP_ENEMY	equ	10
+
+; vvvvvvvvvvvvvvvvvvvvvvvvv zacatek souvisleho bloku vvvvvvvvvvvvvvvvvvvvvvvvv
 
 ENEMY_TABLE:
 ; 	primy smer	vpravo		vlevo

@@ -1,4 +1,3 @@
-
 ; volna pamet 0x5E00+
 spritesStart        equ        $5F00        ; 
 
@@ -17,11 +16,8 @@ endif
 
 org        progStart
 
-
-; 256 bajtu
-INCLUDE zrcadlovy.h
-; 16x16 = 256 bajtu
-INCLUDE        map.h
+INCLUDE zrcadlovy.h         ; 256 bajtu
+INCLUDE map.h               ; 16x16 = 256 bajtu
 
 
 dopredu             equ     0
@@ -99,11 +95,29 @@ org  progStart + $0300
 
 INCLUDE font.h
 INCLUDE typy.h
+; Bacha na poukovani z basicu do promenne LOCATION
+INCLUDE move.h
+
+if (0)
+;SMAZ_NA_KONCI_AZ_NEBUDES_HYBAT_STALE_S_KODEM:
+REPT    0       ; nejaka hodnota co posune data mimo zlom segmentu
+defb    0
+ENDM
+endif
+
 INCLUDE objects.h
 INCLUDE input.h
-INCLUDE move.h
 INCLUDE draw3D.h
 INCLUDE strings.h
+
+;SMAZ_NA_KONCI_AZ_NEBUDES_HYBAT_STALE_S_KODEM:
+REPT    0       ; nejaka hodnota co posune data mimo zlom segmentu
+defb    0
+ENDM
+
+
+
+
 
 CARKY:
 defb    $00     ; 0000 0000
@@ -311,14 +325,16 @@ PP_LOOP:
 
 ; =====================================================
 ; VSTUP: 
-;        HL adresa od ktere se budou cist data
-;        zero-flag = 0, nebude se kreslit, = 1 bude
+;   HL adresa od ktere se budou cist data ( adresa spritu a XY na obrazovce )
+;   zero-flag = 0, nebude se kreslit, = 1 bude
 ; VYSTUP: HL = HL + 4 i kdyz se nic nekreslilo
 INIT_COPY_PATTERN2BUFFER_NOZEROFLAG:
     or      1                       ; reset zero flag
 ; VYSTUP:
 ;   HL = HL+4
 ;   not zero flag a nenulovy segment adresy spritu znamena ze bude sprite vykreslen
+; MENI:
+;   BC, DE, HL=HL+4
 ; NEMENI:
 ;   IX, A
 INIT_COPY_PATTERN2BUFFER:
@@ -1241,7 +1257,7 @@ AKTUALIZUJ_RUZICI:
     add     a,RUZICE % 256              ;  7:2
     ld      l,a                         ;  4:1
 if (RUZICE/256) != (RUZICE_END/256)
-.warning 'O 2 bajty delsi kod, RUZICE a RUZICE_END lezi na dvou segmentech!'
+.warning 'Delsi kod o 2 bajty! RUZICE a RUZICE_END lezi na dvou segmentech!'
 
     adc     a,RUZICE / 256              ;  7:2 resi preteceni
     sub     l                           ;  7:2 
@@ -1249,7 +1265,6 @@ if (RUZICE/256) != (RUZICE_END/256)
 
 else
     ld      h,RUZICE / 256              ;  7:2 resi preteceni
-.warning 'Kratsi kod, RUZICE a RUZICE_END lezi na stejnem segmentu.'
 
 endif        
     call    SET_TARGET_SCREEN           ; prepis COPY_PATTERN2BUFFER na SCREEN
@@ -1262,25 +1277,31 @@ endif
 ; ----------------------------
 ; VSTUP: a = 0 dopredu, 4 dozadu , 8 vlevo, 12 vpravo, 16 otoceni doleva, 20 otoceni doprava, 24 jen sipky
 AKTUALIZUJ_SIPKY:
-
-if (SIPKY/256) != (SIPKY_END/256)
-    .error      'SIPKY nemaji shodny 256 bajtovy segment!'
-endif
-    add     a,STISKNUTA_SIPKA % 256     ; 7:2
-    ld      l,a                         ; 4:1
-    ld      h,STISKNUTA_SIPKA / 256     ; 7:2
-    push    hl
-
-    ld      l,SIPKY % 256
-
+    ld      L, A                        ; 4:1
     call    SET_TARGET_SCREEN           ; prepis INIT_COPY_PATTERN2BUFFER na SCREEN, meni jen akumulator
+    ld      A, L                        ; 4:1
+
+    ld      HL, SIPKY                   ;10:3
     di
-    call    INIT_COPY_PATTERN2BUFFER    ; samotne nestisknute sipky = smaze predchozi stisk
-    pop     hl
+    call    INIT_COPY_PATTERN2BUFFER    ; samotne nestisknute sipky = smaze predchozi stisk    
+    add     A, L                        ; 4:1
+    ld      L, A                        ; 4:1
+    
+if (SIPKY/256) != (SIPKY_END/256)
+    .warning    'Delsi kod o 3 bajty! Pole SIPKY preleza 256 bajtovy segment!'
+    
+    adc     A, H                        ; 4:1
+    sub     L                           ; 4:1
+    ld      H, A                        ; 4:1 H + carry
+endif
+
     call    INIT_COPY_PATTERN2BUFFER    ; konkretni stisknuta sipka
     ei
     call    SET_TARGET_BUFFER           ; vrat INIT_COPY_PATTERN2BUFFER na BUFFER
     ret
+
+
+    
 
     
 if (0)
