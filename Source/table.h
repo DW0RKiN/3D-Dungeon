@@ -51,7 +51,17 @@ defb	33,	TYP_ITEM + i_sw			, PODTYP_SHIELD
 
 defb	48,	TYP_ITEM			, PODTYP_SWORD
 
+defb	64,	TYP_ITEM			, PODTYP_BONE
+defb	64,	TYP_ITEM + i_ne			, PODTYP_BONE
+defb	64,	TYP_ITEM + i_se			, PODTYP_BONE
+defb	64,	TYP_ITEM + i_sw			, PODTYP_BONE
+
 defb	68,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
+
+defb	80,	TYP_ITEM			, PODTYP_BONE
+defb	80,	TYP_ITEM + i_ne			, PODTYP_BONE
+defb	80,	TYP_ITEM + i_se			, PODTYP_BONE
+defb	80,	TYP_ITEM + i_sw			, PODTYP_BONE
 
 defb	95,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
