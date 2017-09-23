@@ -121,46 +121,46 @@ defw	R4,	$0703,	R4,	$0B03,	R4,	$0303	; 4
 ; vvvvvvvvvvvvvvvvvvvvvvvvv zacatek souvisleho bloku vvvvvvvvvvvvvvvvvvvvvvvvv
 ; Tabulka prevodu jednobytove identifikace predmetu na jeho obrazek
 ITEM2SPRITE:
-defw	0
-defw	I_ring	; PODTYP_RING		equ	1*POSUN_PODTYP
-defw	I_ring_r; PODTYP_RING_R		equ	2*POSUN_PODTYP
-defw	I_ring_g; PODTYP_RING_G		equ	3*POSUN_PODTYP
-defw	I_ring_b; PODTYP_RING_B		equ	4*POSUN_PODTYP
-defw	I_ring_w; PODTYP_RING_W		equ	5*POSUN_PODTYP
-MAX_RING_PLUS_1		equ	(1+PODTYP_RING_W)
+defw    0
+defw    I_ring      ; PODTYP_RING		equ	1*POSUN_PODTYP
+defw    I_ring_r    ; PODTYP_RING_R		equ	2*POSUN_PODTYP
+defw    I_ring_g    ; PODTYP_RING_G		equ	3*POSUN_PODTYP
+defw    I_ring_b    ; PODTYP_RING_B		equ	4*POSUN_PODTYP
+defw    I_ring_w    ; PODTYP_RING_W		equ	5*POSUN_PODTYP
+MAX_RING_PLUS_1     equ (1+PODTYP_RING_W)
 ;---
-defw	I_helm     ; PODTYP_HELM	equ	6*POSUN_PODTYP
-defw	I_helm_d   ; PODTYP_HELM_D	equ	7*POSUN_PODTYP
-defw	I_necklace ; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
+defw    I_helm      ; PODTYP_HELM	equ	6*POSUN_PODTYP
+defw    I_helm_d    ; PODTYP_HELM_D	equ	7*POSUN_PODTYP
+defw    I_necklace  ; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
 ;--
-MIN_ARMOR	equ	PODTYP_ARMOR
-defw	0 ; PODTYP_ARMOR	equ	9*POSUN_PODTYP
-defw	I_armor_ch ; PODTYP_ARMOR_CH	equ	10*POSUN_PODTYP
-defw	I_armor_l  ; PODTYP_ARMOR_L	equ	11*POSUN_PODTYP
-defw	I_armor_p  ; PODTYP_ARMOR_P	equ	12*POSUN_PODTYP
-MAX_ARMOR_PLUS_1	equ	(1+PODTYP_ARMOR_P)
+MIN_ARMOR           equ PODTYP_ARMOR
+defw    0           ; PODTYP_ARMOR	equ	9*POSUN_PODTYP
+defw    I_armor_ch  ; PODTYP_ARMOR_CH	equ	10*POSUN_PODTYP
+defw    I_armor_l   ; PODTYP_ARMOR_L	equ	11*POSUN_PODTYP
+defw    I_armor_p   ; PODTYP_ARMOR_P	equ	12*POSUN_PODTYP
+MAX_ARMOR_PLUS_1    equ (1+PODTYP_ARMOR_P)
 ;--
-defw	0 ; PODTYP_ARROW	equ	13*POSUN_PODTYP
-defw	0 ; PODTYP_BRACERS	equ	14*POSUN_PODTYP
-defw	I_boots ; PODTYP_BOOTS	equ	15*POSUN_PODTYP
+defw    0           ; PODTYP_ARROW	equ	13*POSUN_PODTYP
+defw    0           ; PODTYP_BRACERS	equ	14*POSUN_PODTYP
+defw    I_boots     ; PODTYP_BOOTS	equ	15*POSUN_PODTYP
 ;---
-defw	I_ankh	; PODTYP_ANKH		equ	16*POSUN_PODTYP
-defw	I_axe	; PODTYP_AXE		equ	17*POSUN_PODTYP
-defw	I_book	; PODTYP_BOOK		equ	18*POSUN_PODTYP
-defw	I_bow	; PODTYP_BOW		equ	19*POSUN_PODTYP
-defw	I_dagger; PODTYP_DAGGER		equ	20*POSUN_PODTYP
-defw	I_mace	; PODTYP_MACE		equ	21*POSUN_PODTYP
-defw	I_shield; PODTYP_SHIELD		equ	22*POSUN_PODTYP
-defw	I_shield2; PODTYP_SHIELD2	equ	23*POSUN_PODTYP
-defw	I_sling	; PODTYP_SLING		equ	24*POSUN_PODTYP
-defw	I_sword	; PODTYP_SWORD		equ	25*POSUN_PODTYP
-defw	I_bone	; PODTYP_BONE		equ	26*POSUN_PODTYP
+defw    I_ankh      ; PODTYP_ANKH		equ	16*POSUN_PODTYP
+defw    I_axe       ; PODTYP_AXE		equ	17*POSUN_PODTYP
+defw    I_book      ; PODTYP_BOOK		equ	18*POSUN_PODTYP
+defw    I_bow       ; PODTYP_BOW		equ	19*POSUN_PODTYP
+defw    I_dagger    ; PODTYP_DAGGER		equ	20*POSUN_PODTYP
+defw    I_mace      ; PODTYP_MACE		equ	21*POSUN_PODTYP
+defw    I_shield    ; PODTYP_SHIELD		equ	22*POSUN_PODTYP
+defw    I_shield2   ; PODTYP_SHIELD2	equ	23*POSUN_PODTYP
+defw    I_sling     ; PODTYP_SLING		equ	24*POSUN_PODTYP
+defw    I_sword     ; PODTYP_SWORD		equ	25*POSUN_PODTYP
+defw    I_bone      ; PODTYP_BONE		equ	26*POSUN_PODTYP
 ;---
-MIN_FOOD		equ	PODTYP_FOOD
-defw	I_rations  ; PODTYP_FOOD	equ	27*POSUN_PODTYP
-defw	I_potion_r ; PODTYP_POTION_R	equ	28*POSUN_PODTYP
-defw	I_potion_g ; PODTYP_POTION_G	equ	29*POSUN_PODTYP
-defw	I_potion_b ; PODTYP_POTION_B	equ	30*POSUN_PODTYP
+MIN_FOOD            equ PODTYP_FOOD
+defw    I_rations  ; PODTYP_FOOD	equ	27*POSUN_PODTYP
+defw    I_potion_r ; PODTYP_POTION_R	equ	28*POSUN_PODTYP
+defw    I_potion_g ; PODTYP_POTION_G	equ	29*POSUN_PODTYP
+defw    I_potion_b ; PODTYP_POTION_B	equ	30*POSUN_PODTYP
 ITEM2SPRITE_END:
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
@@ -188,6 +188,7 @@ defw	0
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
 
+; Tabulka prevadejici predmet na 3D sprite
 ITEM_TABLE:
 ; 	16		10		6
 
@@ -198,14 +199,14 @@ defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_RING_G
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_RING_B
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_RING_W
 ;--
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_HELM		equ	6*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_HELM_D		equ	7*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_HELM		equ	6*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_HELM_D		equ	7*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
 ;--
-defw	0,		I1_unknwn,	I2_unknwn,	0	; PODTYP_ARMOR		equ	9*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_ARMOR_CH	equ	10*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_ARMOR_L	equ	11*POSUN_PODTYP
-defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_ARMOR_P	equ	12*POSUN_PODTYP
+defw	0,		I1_armor,	I2_armor,	0	; PODTYP_ARMOR		equ	9*POSUN_PODTYP  (neni nakreslen)
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_ARMOR_CH	equ	10*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_ARMOR_L	equ	11*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_ARMOR_P	equ	12*POSUN_PODTYP
 ;--
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_ARROW		equ	13*POSUN_PODTYP
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_BRACERS	equ	14*POSUN_PODTYP
@@ -217,8 +218,8 @@ defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_BOOK		equ	18*POSUN_PODTYP
 defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_BOW		equ	19*POSUN_PODTYP
 defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_DAGGER		equ	20*POSUN_PODTYP
 defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_MACE		equ	21*POSUN_PODTYP
-defw	I0_shield,	I1_shield,	I2_shield,	0	; PODTYP_SHIELD		equ	22*POSUN_PODTYP
-defw	I0_shield,	I1_shield,	I2_shield,	0	; PODTYP_SHIELD		equ	23*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_SHIELD		equ	22*POSUN_PODTYP
+defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_SHIELD2	equ	23*POSUN_PODTYP
 defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_SLING		equ	24*POSUN_PODTYP
 defw	I0_weapon,	I1_weapon,	I2_weapon,	0	; PODTYP_SWORD		equ	25*POSUN_PODTYP
 defw	I0_bone,	I1_bone,	I2_bone,	0	; PODTYP_BONE		equ	26*POSUN_PODTYP
@@ -227,9 +228,6 @@ defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_FOOD		equ	27*POSUN_PODTYP
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_POTION_R	equ	28*POSUN_PODTYP
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_POTION_G	equ	29*POSUN_PODTYP
 defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_POTION_B	equ	30*POSUN_PODTYP
-
-
-
 
 
 

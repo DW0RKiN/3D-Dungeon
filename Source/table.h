@@ -33,9 +33,9 @@ defb	16,	TYP_ITEM + i_se			, PODTYP_SWORD
 defb	16,	TYP_ITEM + i_sw			, PODTYP_SHIELD
 
 defb	17,	TYP_ITEM			, PODTYP_BONE
-defb	17,	TYP_ITEM + i_ne			, PODTYP_SHIELD
-defb	17,	TYP_ITEM + i_se			, PODTYP_SHIELD
-defb	17,	TYP_ITEM + i_sw			, PODTYP_SHIELD
+defb	17,	TYP_ITEM + i_ne			, PODTYP_SHIELD2
+defb	17,	TYP_ITEM + i_se			, PODTYP_ARMOR_CH
+defb	17,	TYP_ITEM + i_sw			, PODTYP_ARMOR_L
 
 defb	21,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
 
@@ -44,17 +44,26 @@ defb	32,	TYP_ITEM + i_ne			, PODTYP_BOW
 defb	32,	TYP_ITEM + i_se			, PODTYP_SLING
 defb	32,	TYP_ITEM + i_sw			, PODTYP_AXE
 
-defb	33,	TYP_ITEM			, PODTYP_SHIELD
-defb	33,	TYP_ITEM + i_ne			, PODTYP_SHIELD
-defb	33,	TYP_ITEM + i_se			, PODTYP_SHIELD
-defb	33,	TYP_ITEM + i_sw			, PODTYP_SHIELD
+defb	33,	TYP_ITEM			, PODTYP_ARMOR_P
+defb	33,	TYP_ITEM + i_ne			, PODTYP_HELM
+defb	33,	TYP_ITEM + i_se			, PODTYP_HELM_D
+defb	33,	TYP_ITEM + i_sw			, PODTYP_SHIELD2
 
 defb	48,	TYP_ITEM			, PODTYP_SWORD
+
+defb	50,	TYP_ITEM + i_se			, PODTYP_RING_B
+defb	50,	TYP_ITEM + i_sw			, PODTYP_RING_R
 
 defb	64,	TYP_ITEM			, PODTYP_BONE
 defb	64,	TYP_ITEM + i_ne			, PODTYP_BONE
 defb	64,	TYP_ITEM + i_se			, PODTYP_BONE
 defb	64,	TYP_ITEM + i_sw			, PODTYP_BONE
+
+
+defb	66,	TYP_ITEM			, PODTYP_ANKH
+defb	66,	TYP_ITEM + i_ne			, PODTYP_POTION_R
+defb	66,	TYP_ITEM + i_se			, PODTYP_POTION_G
+defb	66,	TYP_ITEM + i_sw			, PODTYP_POTION_B
 
 defb	68,	4 * 32 + TYP_ENEMY + east	, $80 + PODTYP_SKRET
 
@@ -62,6 +71,12 @@ defb	80,	TYP_ITEM			, PODTYP_BONE
 defb	80,	TYP_ITEM + i_ne			, PODTYP_BONE
 defb	80,	TYP_ITEM + i_se			, PODTYP_BONE
 defb	80,	TYP_ITEM + i_sw			, PODTYP_BONE
+
+defb	82,	TYP_ITEM			, PODTYP_BOOK
+defb	82,	TYP_ITEM + i_ne			, PODTYP_BRACERS
+defb	82,	TYP_ITEM + i_se			, PODTYP_FOOD
+defb	82,	TYP_ITEM + i_sw			, PODTYP_POTION_G
+
 
 defb	95,	$00 + TYP_DEKORACE		, PODTYP_KANAL
 
