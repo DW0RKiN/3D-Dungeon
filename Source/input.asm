@@ -98,7 +98,7 @@ KEYPRESSED_NO:
     
     jr      z,KEYPRESSED_NO         ;12/7:2 v tehle smycce bude Z80 nejdelsi dobu... 
 
-    ld      b,0                     ;  7:2  br 0x9434
+    ld      b,0                     ;  7:2 
     ld      (hl),b                  ;  7:1 smazem, LAST K = 0
 
     ld      hl,(LOCATION)           ; 16:3 l=LOCATION, h=VECTOR
@@ -106,6 +106,27 @@ KEYPRESSED_NO:
     ld      h,DUNGEON_MAP/256       ;  7:2 HL = aktualni pozice na mape 
 
 ;        b = 0 = stisknuto_dopredu = offset radku tabulky VEKTORY_POHYBU
+; !!! slo by optimalizovat na inc B
+
+if ( stisknuto_dopredu = 0 and stisknuto_dozadu = 1 and stisknuto_vlevo = 2 and stisknuto_vpravo = 3 )
+    cp      KEY_DOPREDU             ;  7:2, "w" = dopredu
+    jp      z,POSUN
+
+    inc     B                       ;  4:1 B = stisknuto_dozadu
+    cp      KEY_DOZADU              ;  7:2, "s" = dozadu
+    jp      z,POSUN
+
+    inc     B                       ;  4:1 B = stisknuto_vlevo
+    cp      KEY_VLEVO               ;  7:2, "a" = vlevo
+    jp      z,POSUN
+
+    inc     B                       ;  4:1 B = stisknuto_vpravo
+    cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
+    jp      z,POSUN
+else
+
+.warning 'Delsi kod o 4 bajty protoze stisknuto_dopredu..stisknuto_vpravo != 0..3'
+
     cp      KEY_DOPREDU             ;  7:2, "w" = dopredu
     jp      z,POSUN
 
@@ -120,7 +141,7 @@ KEYPRESSED_NO:
     ld      b,stisknuto_vpravo      ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
     jp      z,POSUN
-
+endif
     ld      b,-1                    ;  7:2, pouzito pro VECTOR += b
     cp      KEY_DOLEVA              ;  7:2, "q" = otoc se vlevo
     jr      z,OTOC_SE

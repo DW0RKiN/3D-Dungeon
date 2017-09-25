@@ -742,7 +742,7 @@ int main( int argc, char **argv ) {
  // File ---------------------
     FILE *inFile;
 
-    fprintf( stderr, "\t\tOpening file %s for reading.\n", argv[1] );
+    printf( "\t\tOpening file %s for reading.\n", argv[1] );
 
     inFile = fopen( argv[1], "rb" );
     if( !inFile ) {

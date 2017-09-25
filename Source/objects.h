@@ -36,21 +36,13 @@ HLAVNI_POSTAVA:
 defb	0	; 0..5
 SUM_POSTAV:
 defb	6	; 1..6 zpozor musi navazovat s HLAVNI_POSTAVA
-AKTIVNI_INVENTAR:
-defw	INVENTORY_ITEMS		
 ; ^^^^ ----------------- musi navazovat a byt v tomto poradi
 
-
-DRZENY_PREDMET:
-defb	0
-KURZOR_V_INVENTARI:
-defb	0
 
 BORDER:
 defb	0
 
 
-MAX_ITEM	equ	27
 
 ; vvvv ----------------- zacatek souvisleho bloku
 POZICE_RUKOU:
@@ -111,35 +103,6 @@ defw	Komp_S,		$080F
 defw	Komp_W,		$080F
 RUZICE_END:
 
-
-POZICE_PROSTIRANI	equ	$1904
-POZICE_HLAVA		equ	$1A07
-POZICE_NAHRDELNIK	equ	$1A09
-POZICE_BRNENI		equ	$1A0B
-POZICE_LPRSTEN		equ	$1810
-POZICE_BOTY		equ	$1A12
-POZICE_TOULEC		equ	$1D09
-POZICE_NATEPNIK		equ	$1D0B
-POZICE_PPRSTEN		equ	$1C10
-
-POZICE_V_INVENTARI:
-defw	$1204, $1206, $1208, $120A, $120C, $120E, $1210, $1212
-defw	$1504, $1506, $1508, $150A, $150C, $150E, $1510, $1512
-
-defw	POZICE_PROSTIRANI	; prostirani
-defw	POZICE_HLAVA		; hlava
-defw	POZICE_NAHRDELNIK	; nahrdelnik
-defw	POZICE_BRNENI		; brneni
-defw	$180D			; l.ruka
-defw	POZICE_LPRSTEN		; l.prsten
-defw	POZICE_BOTY		; boty
-
-defw	POZICE_TOULEC		; toulec
-defw	POZICE_NATEPNIK		; natepnik / chranic predlokti
-defw	$1C0D			; p.ruka
-defw	POZICE_PPRSTEN		; p.prsten
-
-
   
 
 ; index do tabulek, ktery znaci ze je nepritel primo pred nama 
@@ -184,31 +147,3 @@ defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;
 MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*3	; (primy smer/vpravo/vlevo) * ( 2 * world ) * 3 radky
 
 
-INVENTORY_ITEMS:
-;	0		1		2		3		4		5		6		7		8		9		10		11		12		13		14		15
-; player 0
-defb	PODTYP_ARMOR_P,	PODTYP_SHIELD,	PODTYP_FOOD,	PODTYP_FOOD,	PODTYP_ANKH,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
-;	prostirani	hlava		nahrdelnik	brneni		l.ruka		l.prsten	boty		toulec		chran.predlokti	p.ruka		p.prsten
-defb	0,		PODTYP_HELM_D,	0,		PODTYP_ARMOR_CH,PODTYP_AXE,	0,		PODTYP_BOOTS,	0,		0,		PODTYP_SHIELD,	PODTYP_RING_B		
-
-; player 1
-defb	PODTYP_FOOD,	PODTYP_DAGGER,	0,		0, 		PODTYP_ANKH,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
-defb	0,		PODTYP_HELM,	PODTYP_NECKLACE,PODTYP_ARMOR_P,	PODTYP_SWORD,	PODTYP_RING_R,	0,		0,		0,		PODTYP_SHIELD,	0		
-
-; player 2
-defb	PODTYP_POTION_R,PODTYP_POTION_R,PODTYP_POTION_G,PODTYP_POTION_B,PODTYP_ANKH,	0,		0,		0,		PODTYP_DAGGER,	0,		0,		0,		0,		0,		0,		0
-defb	0,		0,		PODTYP_NECKLACE,PODTYP_ARMOR_L,	PODTYP_MACE,	0,		PODTYP_BOOTS,	0,		0,		PODTYP_ANKH,	0		
-
-; player 3
-defb	PODTYP_DAGGER,	PODTYP_SHIELD2,	PODTYP_FOOD,	0,		PODTYP_SLING,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
-defb	0,		0,		0,		0,		PODTYP_DAGGER,	PODTYP_RING_W,	PODTYP_BOOTS,	0,		0,		PODTYP_DAGGER,	0		
-
-; player 4
-defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		PODTYP_BONE,	0,		0,		0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0
-defb	0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0,		0,		0		
-
-; player 5
-defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		0,		0,		0,		PODTYP_MACE,	0,		0,		0,		0,		0,		0,		0,		0
-defb	0,		0,		PODTYP_NECKLACE,0,		0,		PODTYP_RING_G,	0,		0,		0,		PODTYP_BOOK,	PODTYP_RING
-
-INVENTORY_ITEMS_END:

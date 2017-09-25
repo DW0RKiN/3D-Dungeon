@@ -39,9 +39,7 @@ TABLE_DEPTH_x:
 defw	V0m1,	$11FF,	0,	0,	V0m1,	$0000,	0,	0,	0,	0
 
 
-DODATECNE_V_INVENTARI:
-defw	Body_left,	$1907,	Body_left,	$1DF8
-defw	I_prostirani,	$1904,	I_toulec,	$1D09
+
 
   
 PAKY_TABLE:
@@ -117,52 +115,6 @@ defw	R4,	$0703,	R4,	$0B03,	R4,	$0303	; 4
 
 
 
-
-; vvvvvvvvvvvvvvvvvvvvvvvvv zacatek souvisleho bloku vvvvvvvvvvvvvvvvvvvvvvvvv
-; Tabulka prevodu jednobytove identifikace predmetu na jeho obrazek
-ITEM2SPRITE:
-defw    0
-defw    I_ring      ; PODTYP_RING		equ	1*POSUN_PODTYP
-defw    I_ring_r    ; PODTYP_RING_R		equ	2*POSUN_PODTYP
-defw    I_ring_g    ; PODTYP_RING_G		equ	3*POSUN_PODTYP
-defw    I_ring_b    ; PODTYP_RING_B		equ	4*POSUN_PODTYP
-defw    I_ring_w    ; PODTYP_RING_W		equ	5*POSUN_PODTYP
-MAX_RING_PLUS_1     equ (1+PODTYP_RING_W)
-;---
-defw    I_helm      ; PODTYP_HELM	equ	6*POSUN_PODTYP
-defw    I_helm_d    ; PODTYP_HELM_D	equ	7*POSUN_PODTYP
-defw    I_necklace  ; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
-;--
-MIN_ARMOR           equ PODTYP_ARMOR
-defw    0           ; PODTYP_ARMOR	equ	9*POSUN_PODTYP
-defw    I_armor_ch  ; PODTYP_ARMOR_CH	equ	10*POSUN_PODTYP
-defw    I_armor_l   ; PODTYP_ARMOR_L	equ	11*POSUN_PODTYP
-defw    I_armor_p   ; PODTYP_ARMOR_P	equ	12*POSUN_PODTYP
-MAX_ARMOR_PLUS_1    equ (1+PODTYP_ARMOR_P)
-;--
-defw    0           ; PODTYP_ARROW	equ	13*POSUN_PODTYP
-defw    0           ; PODTYP_BRACERS	equ	14*POSUN_PODTYP
-defw    I_boots     ; PODTYP_BOOTS	equ	15*POSUN_PODTYP
-;---
-defw    I_ankh      ; PODTYP_ANKH		equ	16*POSUN_PODTYP
-defw    I_axe       ; PODTYP_AXE		equ	17*POSUN_PODTYP
-defw    I_book      ; PODTYP_BOOK		equ	18*POSUN_PODTYP
-defw    I_bow       ; PODTYP_BOW		equ	19*POSUN_PODTYP
-defw    I_dagger    ; PODTYP_DAGGER		equ	20*POSUN_PODTYP
-defw    I_mace      ; PODTYP_MACE		equ	21*POSUN_PODTYP
-defw    I_shield    ; PODTYP_SHIELD		equ	22*POSUN_PODTYP
-defw    I_shield2   ; PODTYP_SHIELD2	equ	23*POSUN_PODTYP
-defw    I_sling     ; PODTYP_SLING		equ	24*POSUN_PODTYP
-defw    I_sword     ; PODTYP_SWORD		equ	25*POSUN_PODTYP
-defw    I_bone      ; PODTYP_BONE		equ	26*POSUN_PODTYP
-;---
-MIN_FOOD            equ PODTYP_FOOD
-defw    I_rations  ; PODTYP_FOOD	equ	27*POSUN_PODTYP
-defw    I_potion_r ; PODTYP_POTION_R	equ	28*POSUN_PODTYP
-defw    I_potion_g ; PODTYP_POTION_G	equ	29*POSUN_PODTYP
-defw    I_potion_b ; PODTYP_POTION_B	equ	30*POSUN_PODTYP
-ITEM2SPRITE_END:
-; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
 
 

@@ -2,24 +2,24 @@
 ; VSTUP: 
 ;   L = hledana lokace
 ; VYSTUP:
-;   DE = &(TABLE_ITEM[?].prepinace+typ) 
+;   DE = &(TABLE_OBJECTS[?].prepinace+typ) 
 ;   clear carry flag
 ;   zero flag       = nalezen ( A = L = offset lokace )
 ;   not zero flag   = nenalezen ( A > L a je roven nasledujici nebo zarazce )
 ; NEMENI:
 ;   HL, BC
 FIND_FIRST_OBJECT:
-    ld      DE, TABLE_ITEM-2            ; 10:3 DE = &(TABLE_ITEM[-1].prepinace+typ)
+    ld      DE, TABLE_OBJECTS-2         ; 10:3 DE = &(TABLE_OBJECTS[-1].prepinace+typ)
 ; VSTUP:
-;   DE = &(TABLE_ITEM[?].prepinace+typ)
+;   DE = &(TABLE_OBJECTS[?].prepinace+typ)
 FFO_NEXT:
-    inc     DE                          ;  6:1 DE = &(TABLE_ITEM[?].dodatecny)    
+    inc     DE                          ;  6:1 DE = &(TABLE_OBJECTS[?].dodatecny)    
 ; VSTUP:
-;   DE = &(TABLE_ITEM[?].dodatecny)
+;   DE = &(TABLE_OBJECTS[?].dodatecny)
 FIND_NEXT_OBJECT:
-    inc     DE                          ;  6:1 DE = &(TABLE_ITEM[?].lokace)
+    inc     DE                          ;  6:1 DE = &(TABLE_OBJECTS[?].lokace)
     ld      A, (DE)                     ;  7:1
-    inc     DE                          ;  6:1 DE = &(TABLE_ITEM[?].prepinace+typ)
+    inc     DE                          ;  6:1 DE = &(TABLE_OBJECTS[?].prepinace+typ)
     cp      L                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
     jp      c, FFO_NEXT                 ; 10:3 carry flag = zaporny = jsme pod lokaci
     ret                                 ; 10:1 zero = nasli jsme lokaci, not zero = presli jsme ji, neni tam
@@ -36,7 +36,7 @@ FIND_NEXT_OBJECT:
 ;   A, H, DE
 FIND_LAST_ITEM:
 
-    ld      DE, TABLE_ITEM-2
+    ld      DE, TABLE_OBJECTS-2
     add     A, TYP_ITEM+1               ; chceme posledni misto s danym natocenim, takze prvni s vyssim nebo pri rohu 3 dalsi lokaci
     ld      H, A                        ;  4:1
     
@@ -46,14 +46,14 @@ FLO_LOOP
     ld      A, (DE)                     ;  7:1
     inc     DE                          ;  6:1 de: "lokace"->"typ"
     cp      L                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
-    jp      c,FLO_LOOP                  ; 10:3 carry flag = zaporny = jsme pod lokaci
+    jp      c, FLO_LOOP                 ; 10:3 carry flag = zaporny = jsme pod lokaci
     ret     nz                          ; jsme za polickem
     ld      A, (DE)                     ; typ + natoceni
     and     MASKA_PODTYP                ; bez bitu s prepinaci (chceme byt totiz i za dverma)
     cp      H                           ; 
     jp      c,FLO_LOOP
     
-    ret
+    ret                                 ; not carry
 
 ; ------------------------------------------------------
 ; VSTUP: 
@@ -64,7 +64,7 @@ FLO_LOOP
 ; Predmety musi byt posledni serazene podle natoceni (az za dverma)
 ; Pak existuji polozky ktere maji dodatecne radky zacinajici nulou.
 VLOZ_ITEM_NA_POZICI:
-    ld      de,DRZENY_PREDMET
+    ld      de, PRESOUVANY_PREDMET
     ld      a,(de)
     or      a
     ld      ix,VETA_NEDRZI
@@ -127,7 +127,7 @@ VINP_BEZ_KONTROLY:
 ; VSTUP: L = odkud beru
 ;        c = (vector)
 VEZMI_ITEM_Z_POZICE:
-    ld      a,(DRZENY_PREDMET)
+    ld      a, (PRESOUVANY_PREDMET)
     or      a
     ld      ix,VETA_DRZI
     jp      nz,PRINT_MESSAGE            ; uz neco drzi, fce volana pomoci "jp" misto "call" = uz se nevrati
@@ -138,9 +138,11 @@ VEZMI_ITEM_Z_POZICE:
     dec     H
     ld      ix,VETA_NIC
   
+  
+if (0)
     dec     DE                          ; MASKA_PODTYP
     ld      A, (DE)
-    ld      B, A                        ; drzeny predmet
+    ld      B, A                        ; presouvany predmet
     
     dec     DE                          ; MASKA_TYP + MASKA_NATOCENI
     ld      A, (DE)
@@ -153,8 +155,24 @@ VEZMI_ITEM_Z_POZICE:
     jp      nz, PRINT_MESSAGE           ; misto return, carry = 0, zero = 1
   
     ld      A, B
-    ld      (DRZENY_PREDMET), A
-
+    ld      (PRESOUVANY_PREDMET), A
+else
+    ex      DE, HL
+    dec     HL                          ; MASKA_PODTYP
+    ld      A, (HL)                     ; presouvany predmet    
+    dec     HL                          ; MASKA_TYP + MASKA_NATOCENI
+    ld      B, (HL)
+    dec     HL                          ; lokace
+    ld      C, (HL)    
+    
+    ex      DE, HL    
+    sbc     HL, BC                      ; spravna lokace i spravny predmet s natocenim?
+    jp      nz, PRINT_MESSAGE           ; misto return
+    
+    ld      (PRESOUVANY_PREDMET), A
+endif
+    
+    
     ld      HL, (ADR_ZARAZKY)           ; 16:3
     sbc     HL, DE                      ; carry = 0
     inc     HL                          ; presunem i zarazku a vyresime preteceni pri BC = 0
@@ -250,7 +268,7 @@ FIND_OBJECT:
     ret     z                       ; !!!!! drobny bug .) $ff lokace nesmi byt totiz ani v dohledu
     dec     ixl
     
-    ld      de,TABLE_ITEM-2         ; 10:3 "defb lokace, typ, dodatecny"
+    ld      de,TABLE_OBJECTS-2      ; 10:3 "defb lokace, typ, dodatecny"
 FO_LOOP:
     inc     de                      ;  6:1 de: "typ"->"dodatecny"
 FO_LOOP_DODATECNY:
@@ -354,10 +372,10 @@ FOUND_PREPINAC:
     and     MASKA_NATOCENI          ;  7:2
     
     ld      hl,VECTOR               ; 10:3
-    ld      l,(hl)                  ;  "l": 0 = N, 1 = E, 2 = S, 3 = W
+    ld      l,(hl)                  ; 0 = N, 1 = E, 2 = S, 3 = W
     sub     l                       ; pohledy musi sedet
                                     
-    ld      hl,PAKY_TABLE           ; "l" uz nebudem potrebovat
+    ld      hl,PAKY_TABLE           ; L uz nebudem potrebovat
     add     hl,bc
 
     and     3                       ; protoze nekdy potrebujeme aby sever byl 4 tak jsou validni jen posledni 2 bity
@@ -547,8 +565,8 @@ FOUND_DEKORACE:
 
 
 ; VSTUP:        ;
-;   DE = @(TABLE_ITEM[?].prepinace+typ)
-;   IXl = TABLE_ITEM[?].lokace
+;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
+;   IXl = TABLE_OBJECTS[?].lokace
 ;   BC = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
 ; VYSTUP:
 ;   vraci se jen pokud je predmet prilis daleko aby byl videt, ale ne tak daleko aby se nevykreslovali dekorace atd.
@@ -587,10 +605,10 @@ FI_HLEDANI_NEJVZDALENEJSIHO:
     jr      nc,FI_NEJVZDALENEJSI            ; roh je ten nejvzdalenejsi?
 FI_DALSI_RADEK:
 ; prejdeme na dalsi predmet ( jsou razeny podle rohu )
-    inc     de                              ; @(TABLE_ITEM[?].podtyp)
-    inc     de                              ; @(TABLE_ITEM[?].lokace)
+    inc     de                              ; @(TABLE_OBJECTS[?].podtyp)
+    inc     de                              ; @(TABLE_OBJECTS[?].lokace)
     ld      a,(de)                          ; lokace ( muzem vytect do jine lokace, pak to znamena ze musime kreslit od ITEM_ADR_POCATKU )
-    inc     de                              ; @(TABLE_ITEM[?].prepinace+typ) 
+    inc     de                              ; @(TABLE_OBJECTS[?].prepinace+typ) 
     
     ; je to poteba? Muze byt na stejne lokaci predmet a prepinac?
     or      a

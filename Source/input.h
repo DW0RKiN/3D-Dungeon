@@ -16,6 +16,10 @@ KEY_INVENTAR        equ     105     ; i
 KEY_VEZMI           equ     111     ; o
 KEY_POLOZ           equ     112     ; p
 
+stisknuto_dopredu   equ     0
+stisknuto_dozadu    equ     1
+stisknuto_vlevo     equ     2
+stisknuto_vpravo    equ     3
 
 ; Cte se z portu 31
 ; D0- joy RIGHT

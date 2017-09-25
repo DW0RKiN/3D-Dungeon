@@ -15,10 +15,21 @@ gcc gif2bin.c -o gif2bin
 [ ! -d ./Bin ] && mkdir Bin
 rm ./Bin/*
 
+sirka=`tput cols`
+nyni=0
 
 for soubor in ${source}/*.gif
 do 
+	nyni=$(($nyni+20))
+	if [ $nyni -gt $sirka ]
+	then
+		echo
+		nyni=20
+	fi
+
 	naco=${soubor##*/}
-	naco="./Bin/${naco%.*}"  
+	printf "%20s" $naco
+	naco="./Bin/${naco%.*}" 
 	./gif2bin ${soubor} ${naco} 61 > /dev/null
 done 
+echo

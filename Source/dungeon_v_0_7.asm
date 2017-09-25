@@ -25,10 +25,7 @@ dozadu              equ     4
 vlevo               equ     8
 vpravo              equ     12
 
-stisknuto_dopredu   equ     0
-stisknuto_dozadu    equ     1
-stisknuto_vlevo     equ     2
-stisknuto_vpravo    equ     3
+
 
 
 VEKTORY_POHYBU:                ; musi byt na adrese delitelne 256
@@ -107,6 +104,7 @@ endif
 
 INCLUDE objects.h
 INCLUDE input.h
+INCLUDE inventory.h
 INCLUDE draw3D.h
 INCLUDE strings.h
 
@@ -138,14 +136,9 @@ INCLUDE move.asm
 INCLUDE strings.asm
 INCLUDE objects.asm
 INCLUDE draw3D.asm
+INCLUDE inventory.asm
 
-; Nastavi zero flag kdyz nejsme v inventari
-; Do akumulatoru vlozi kurzor      v inventari
-TEST_OTEVRENY_INVENTAR:
-    ld      a, (PRIZNAKY)               ;caa6        3a 13 c6 
-    and     PRIZNAK_OTEVRENY_INVENTAR   ;caa9        e6 01 
-    ld      a, (KURZOR_V_INVENTARI)     ;caab        3a 66 ce 
-    ret
+
 
 ; Vcetne hl
 PUSH_ALL:
@@ -232,29 +225,26 @@ TIME_SCROLL_LAST:
 ; v "hl" je aktualni lokace
 ; MENI: hl pri hledani dalsich objektu co se musi prepnout
 PREHOD_PREPINAC:
-    call    TEST_OTEVRENY_INVENTAR
-    jp      z,PP_NEJSME_V_INVENTARI
+    call    TEST_OTEVRENY_INVENTAR  
+    ; A = index kurzoru v inventari
+    jp      z, PP_NEJSME_V_INVENTARI
     ; jsme v inventari
-    ld      c,a
-    ld      b,0
-    ld      hl,(AKTIVNI_INVENTAR)
-    add     hl,BC                       ; hl ukazuje na predmet pod kurzorem
-    ld      b,(hl)                      ; "b" predmet pod kurzorem
-    
-    ld      de,DRZENY_PREDMET
-    
-    ld      a,(de)                      ; drzeny do "a"
 
-    ld      (hl),a                      ; drzeny ulozime
-    ld      a,b
-    ld      (de),a                      ; puvodni pod kurzorem do drzenych
+    ld      H, $00
+    ld      L, A
+    call    HLAVNI_RADEK_INVENTORY_ITEMS; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
+    add     HL, DE
 
-    or      a
-    jp      z,INVENTORY_WINDOW_KURZOR
+    ld      DE, PRESOUVANY_PREDMET    
+    ld      B, (HL)                     ; predmet ktery vymenime za presouvany
+    ld      A, (DE)                     ; A = presouvany predmet
+    ld      (HL), A                     ; puvodne presouvany ulozime
+    ld      A, B
+    ld      (DE), A                     ; nove presouvany
 
-    call    ITEM_TAKEN
-    
-; POZOR!!! pozdeji ohlidat zda ukladam na povolene misto ( toulec, prsteny atd )        
+    ; POZOR!!! pozdeji ohlidat zda ukladam na povolene misto ( toulec, prsteny atd )        
+    or      A
+    call    nz, ITEM_TAKEN
     jp      INVENTORY_WINDOW_KURZOR
 
 
@@ -268,35 +258,35 @@ PP_NEJSME_V_INVENTARI:
     
     ; HL lokace pred nama
     call    FIND_FIRST_OBJECT
-    ; DE = @(TABLE_ITEM[?].prepinace+typ)
-
+    ; DE = @(TABLE_OBJECTS[?].prepinace+typ)
+    ; zero nalezen, not zero nenalezen
 PP_NALEZEN_OBJEKT:                      ; na lokaci lezi nejaky objekt
     ret     nz                          ;11/5:1 nenalezena
 
     ld      a,(de)                      ;  7:1 typ
     and     MASKA_TYP + MASKA_NATOCENI  ;  7:2
     cp      B                           ;  4:1 je to spravne natoceny prepinac?
-
     jr      z, PP_PROHOD_PAKU           ;12/7:2
     
     and     MASKA_TYP
     cp      TYP_DEKORACE
-    
     call    z, PRINT_DEKORACE           ; vypisi jen pokud je to dekorace
     
     call    FFO_NEXT
+    ; DE = @(TABLE_OBJECTS[?].prepinace+typ)
+    ; zero nalezen, not zero nenalezen
     jr      PP_NALEZEN_OBJEKT
 
 
 PP_PROHOD_PAKU:
 
 ; nalezen spravny prepinac pred nama!
-    ld      a,(de)                      ;  7:1 typ
-    add     a,$80                       ;  7:2 prepneme paku / prohodime horni bit
+    ld      A, (DE)                     ;  7:1 typ
+    xor     ZAMCENO                     ;  7:2 prepneme paku / prohodime horni bit
     ld      (de),a                      ;  7:1 typ
     
 ; zjistime co paka prehazuje a prehodime VSECHNY dalsi
-    inc     de                          ;  6:1 DE = @(TABLE_ITEM[?].dodatecny)
+    inc     de                          ;  6:1 DE = @(TABLE_OBJECTS[?].dodatecny)
 
     call    PRINT_PREPINAC              ;   
     
@@ -578,531 +568,27 @@ HELP:
   
 
 
+
+
 COLOR_OTHER_PLAYERS     equ     %00000111        ; white ink + black paper
 COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
 
 ; VSTUP: A = znaky '1' .. '6'
 NEW_PLAYER_ACTIVE:
-    sub     49                      ; odectem hodnotu znaku "1"
-    ld      hl,SUM_POSTAV           ; 10:3
+    sub     '1'                     ; A = 0..5
+    ld      hl, SUM_POSTAV          ; 10:3
     cp      (hl)                    ;  7:1  0..5 - SUM_POSTAV
     ret     nc                      ; new >= SUM_POSTAV
                                     ; tohle muze nastat jen u 5. a 6. postavy pokud jeste nejsou v parte
     dec     hl                      ;  6:1 hl = HLAVNI_POSTAVA
     cp      (hl)                    ;  7:1
     ret     z                       ; nastavujeme uz aktivni, nebudeme vse znovu prekreslovat
-    ld      (hl),a                  ;  7:1 nova AKTIVNI_POSTAVA
-    
-    ; zmenime ukazatel ulozeny v AKTIVNI_INVENTAR
-    ; potrebujeme nasobit AKTIVNI_POSTAVA {0..5} * MAX_ITEM { = 27 }
-    
-    ld      e,a                     ; ulozim si 1x do "e"
-    add     a,a                     ; 2x 
-    add     a,e                     ; 3x
-    ld      d,a                     ; ulozim si 3x do "d"
-    add     a,a                     ; 6x
-    add     a,a                     ; 12x
-    add     a,a                     ; 24x
-    add     a,d                     ; 27x = MAX_ITEM * AKTIVNI_POSTAVA = 27 * AKTIVNI_POSTAVA
-
-    add     a,INVENTORY_ITEMS % 256 ;  7:2
-    ld      (AKTIVNI_INVENTAR), a   ; 13:3
-    
-if ( INVENTORY_ITEMS/256 != INVENTORY_ITEMS_END/256)
-    .error 'Pole INVENTORY_ITEMS = preleza segment!'
-endif
+    ld      (hl), A                 ;  7:1 nova HLAVNI_POSTAVA
     
     ; je nastaveny pravy panel na zobrazeni vsech hracu?
     call    TEST_OTEVRENY_INVENTAR  ;dc11
     jp      nz,INVENTORY_WINDOW_REFRESH ; uz se nevratime
     ; jinak pokracujem v SET_PLAYER_ACTIVE
-
-
-; ------------------------------------
-; V panelu s nahledem vsech hracu nastavi atributy pod jmenem aktivniho hrace na COLOR_ACTIVE_PLAYER, ostatni nastavi na COLOR_OTHER_PLAYERS
-; Pozor! Musi nasledovat hned za NEW_PLAYER_ACTIVE
-VIEW_PLAYER_ACTIVE:
-
-if (0)
-
-    ld      de,(MAX_POSTAVA_PLUS_1)     ; 20:4 d = AKTIVNI_POSTAVA, e = MAX_POSTAVA_PLUS_1
-    ld      a,e                         ; a = MAX_POSTAVA_PLUS_1 = citac
-    dec     a
-; kreslime odspodu nahoru, protoze citac zmensujeme smerem k nule
-    cp      4
-    jr      c,SP_4
-    cp      5
-    jr      c,SP_5
-    ld      hl,Adr_Attr_Buffer + $1D9
-    call    SET_COLOR_NAME
-SP_5:
-    ld      hl,Adr_Attr_Buffer + $1D2
-    call    SET_COLOR_NAME
-SP_4:
-    ld      hl,Adr_Attr_Buffer + $F9
-    call    SET_COLOR_NAME
-    ld      hl,Adr_Attr_Buffer + $F2
-    call    SET_COLOR_NAME
-    ld      hl,Adr_Attr_Buffer + $19
-    call    SET_COLOR_NAME
-    ld      hl,Adr_Attr_Buffer + $12
-    call    SET_COLOR_NAME
-endif
-    ret
-
-; Pomocna fce pro SET_PLAYER_ACTIVE, nastavi atribut 7 znaku na COLOR_OTHER_PLAYERS nebo COLOR_ACTIVE_PLAYER podle toho zda hodnota "a" == "d"
-; VSTUP:        HL adresa atributu
-;                "a" = citac = testovana postava
-;                "d" aktivni postava
-; VYSTUP:        a--
-;                 b=0
-;                e podle zapsane barvy
-;                HL+=7
-SET_COLOR_NAME:
-    ld      b,7
-    ld      e,COLOR_ACTIVE_PLAYER
-    cp      d                           ; aktualni-aktivni
-    jr      z,SP_NEXT_CHAR
-    ld      e,COLOR_OTHER_PLAYERS
-SP_NEXT_CHAR:
-    ld      (hl),e
-    inc     l
-    djnz    SP_NEXT_CHAR
-    dec     a
-    ret
-    
-; ----------------------------------
-SET_RIGHT_PANEL:
-    ld      hl,PRIZNAKY                 ; 10:3
-    ld      a,(hl)                      ; 7:1
-    xor     PRIZNAK_OTEVRENY_INVENTAR   ; 7:2
-    ld      (hl),a                      ; 7:1
-    and     PRIZNAK_OTEVRENY_INVENTAR   ; 7:2
-
-    jp      nz,INVENTORY_WINDOW_OPEN
-    jr      PLAYERS_WINDOW
-;         ret                                sem se uz nikdy nedostanu protoze volam fce pomoci jump
-; POZOR OPRAVIT ZBYTECNY SKOK
-
-
-
-; ----------------------------------
-PLAYERS_WINDOW:
-    ld      bc,$0E01                    ; blok o 14 sloupcich a 1 radku
-    ld      hl,Adr_Attr_Buffer + $12
-    call    FILL_ATTR_BLOCK
-
-    ld      bc,$0E03                    ; blok o 14 sloupcich a 3 radcich
-    ld      hl,Adr_Attr_Buffer + $B2
-    call    FILL_ATTR_BLOCK
-    
-    ld      bc,$0E03                    ; blok o 14 sloupcich a 3 radcich
-    ld      hl,Adr_Attr_Buffer + $192
-    call    FILL_ATTR_BLOCK
-
-    ld      bc,$0E01                    ; blok o 14 sloupcich a 1 radku
-    ld      hl,Adr_Attr_Buffer + $272
-    call    FILL_ATTR_BLOCK
-
-    
-    call    VIEW_PLAYER_ACTIVE
-
-    ld      IX, NAMES                   ; 14:4
-    
-if (1)
-    ld      BC,(HLAVNI_POSTAVA)         ; 20:4
-    inc     C                           ;  4:1
-    
-    ld      HL, Adr_Attr_Buffer+$12     ; 10:3
-    ld      DE, Adr_Attr_Buffer+$19     ; 10:3
-
-PW_JMENA_LOOP:
-    ld      A, COLOR_ACTIVE_PLAYER      ;  7:2
-    dec     C
-    jr      z, PW_AKTIVNI               ;12/7:2
-    ld      A, COLOR_OTHER_PLAYERS      ;  7:2
-PW_AKTIVNI:
-    push    AF                          ; 11:1 color    
-    call    PRINT_STRING_OBAL           ; 17:3
-    
-    ld      A, L                        ;  4:1
-    add     A, $A0                      ;  7:2
-    ld      L, A                        ;  4:1
-    adc     A, H                        ;  4:1
-    sub     L                           ;  4:1
-    ld      H, A                        ;  4:1
-    pop     AF                          ; 10:1
-    
-    push    IX                          ; 15:2
-    ld      IX, VETA_HP                 ; 14:4
-    call    PRINT_STRING_OBAL           ; 17:3
-    pop     IX                          ; 14:2
-    
-    ld      A, L                        ;  4:1
-    add     A, $40                      ;  7:2
-    ld      L, A                        ;  4:1
-    adc     A, H                        ;  4:1
-    sub     L                           ;  4:1
-    ld      H, A                        ;  4:1
-    
-    ex      DE, HL                      ;  4:1
-    djnz    PW_JMENA_LOOP               ;13/8:2
-    
-else
-
-    jr      ATR_SOURADNICE_END:
-ATR_SOURADNICE:
-defb        Adr_Attr_Buffer/256, $12-7
-defb        Adr_Attr_Buffer/256, $F2-7
-defb    1+(Adr_Attr_Buffer/256), $D2-7
-    
-ATR_SOURADNICE_END:
-
-    ld      BC,(MAX_POSTAVA_PLUS_1)     ; 20:4
-    ld      A, C                        ;  4:1
-    ld      C, B                        ;  4:1
-    ld      B, A                        ;  4:1
-    inc     C                           ;  4:1
-    
-    ld      DE, ATR_SOURADNICE          ; 10:3
-    ld      DE, Adr_Attr_Buffer+$19     ; 10:3
-
-PW_JMENA_LOOP:
-    bit     0, B                        ;
-    jr      z
-
-
-    ld      A, COLOR_ACTIVE_PLAYER      ;  7:2
-    dec     C
-    jr      z, PW_AKTIVNI               ;12/7:2
-    ld      A, COLOR_OTHER_PLAYERS      ;  7:2
-PW_AKTIVNI:
-    push    AF                          ; 11:1 color    
-    call    PRINT_STRING_OBAL           ; 17:3
-    
-    ld      A, L                        ;  4:1
-    add     A, $A0                      ;  7:2
-    ld      L, A                        ;  4:1
-    adc     A, H                        ;  4:1
-    sub     L                           ;  4:1
-    ld      H, A                        ;  4:1
-    pop     AF                          ; 10:1
-    
-    push    IX                          ; 15:2
-    ld      IX, VETA_HP                 ; 14:4
-    call    PRINT_STRING_OBAL           ; 17:3
-    pop     IX                          ; 14:2
-    
-    ld      A, L                        ;  4:1
-    add     A, $40                      ;  7:2
-    ld      L, A                        ;  4:1
-    adc     A, H                        ;  4:1
-    sub     L                           ;  4:1
-    ld      H, A                        ;  4:1
-    
-    ex      DE, HL                      ;  4:1
-    djnz    PW_JMENA_LOOP               ;13/8:2
-
-endif
-
-    
-    call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
-    ld      ix,INVENTORY_ITEMS          ;dcc1 dd 21 78 ce         . ! x . 
-    xor     a                           ;dcc5   a = 0 
-    ld      c,MAX_ITEM                  ;dcc6 
-PW_HANDS_LOOP:
-    ld      B,a                         ;dcc8   "b" = cislo ruky 0..11
-    ld      a,(ix+014h)                 ;dcc9   leva ruka
-    call    VYKRESLI_RUKU               ;dccc 
-    inc     B                           ;dccf 
-    ld      a,(ix+019h)                 ;dcd0   prava ruka 
-    call    VYKRESLI_RUKU               ;dcd3
-    inc     B                           ;dcd6
-    ld      a,B                         ;dcd7   schovame cislo ruky do akumulatoru 
-    ld      B,000h                      ;dcd8
-    add     ix,BC                       ;dcda   + MAX_ITEM = inventar dalsi postavy  
-    cp      12                          ;dcdc   pocet zobrazenych ruk
-    jp      nz,PW_HANDS_LOOP            ;dcde
-    
-    di                                  ;dce1        
-    ld      a,018h                      ;dce2   a = citac ulozenych obrazku na zasobniku ( vzdy po 2 word ) 
-    call    VYKRESLI_ZE_ZASOBNIKU       ;dce4
-    
-    ld      hl,AVATARS                  ;dce7   odkud se budou cist data
-    ld      B,006h                      ;dcea   citac 
-PW_AVATARS:
-    push    BC                          ;dcec   ochranime citac
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG ;dced        cd 9d d6         . . . 
-    pop     BC                          ;dcf0   vratime citac
-    djnz    PW_AVATARS                  ;dcf1
-    
-    call    SET_TARGET_SCREEN           ;dcf3 
-    ld      B,002h                      ;dcf6
-PW_KOMPAS_A_SIPKY:
-    push    BC                          ;dcf8
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG ;dcf9        cd 9d d6         . . . 
-    pop     BC                          ;dcfc 
-    djnz    PW_KOMPAS_A_SIPKY           ;dcfd 
-    
-    call    SET_TARGET_BUFFER           ;dcff cd 76 d8         . v . 
-    call    ZOBRAZ_ZIVOTY               ;dd02 cd 4b df         . K . 
-    ei                                  ;dd05 fb         . 
-    call    SET_MAX_17                  ;dd06 cd 95 d8         . . . 
-    call    AKTUALIZUJ_RUZICI           ;dd09 cd d6 de         . . . 
-    ret                                 ;dd0c c9         . 
-
-; ----------------------------------
-; Tento vstup se pouzije pokud predtim byl vykreslen jiny panel
-INVENTORY_WINDOW_OPEN:
-
-INVENTORY_WINDOW_KURZOR:
-INVENTORY_WINDOW_REFRESH:
-
-    ld      bc,$0804                ; blok o 8 sloupcich a 4 radcich
-    ld      hl,Adr_Attr_Buffer + $98
-    call    FILL_ATTR_BLOCK
-
-    ld      bc,$0808                ; blok o 8 sloupcich a 8 radcich
-    ld      hl,Adr_Attr_Buffer + $118
-    call    FILL_ATTR_BLOCK
-    
-    ld      bc,$0804                ; blok o 8 sloupcich a 4 radcich
-    ld      hl,Adr_Attr_Buffer + $218
-    call    FILL_ATTR_BLOCK
-
-
-; ---------------
-; Menime jen aktivni postavu
-; INVENTORY_WINDOW_REFRESH:
-    ; napravo od tvare, mazem jmeno predchozi postavy
-    ld      bc,$0A04        ; blok o 10 sloupcich a 4 radcich
-    ld      hl,Adr_Attr_Buffer + $16
-    call    FILL_ATTR_BLOCK
-
-    ld      a,(HLAVNI_POSTAVA)
-    push    af                      ; ulozime aktivni postavu na zasobnik
-    inc     a
-    ld      bc,NEXT_NAME
-    ld      hl,NAMES-NEXT_NAME
-IW_NEXT_NAME:        
-    add     hl,bc
-    dec     a
-    jr      nz,IW_NEXT_NAME
-    push    hl
-    pop     ix                      ; ix <- hl
-    ld      hl, Adr_Attr_Buffer + $16
-    call    PRINT_STRING
-    
-    pop     af                      ; nacteme aktivni postavu ze zasobniku
-    add     a,a                     ; 2x
-    add     a,a                     ; 4x
-    add     a,AVATARS % 256
-    ld      l,a
-    adc     a,AVATARS / 256
-    sub     l
-    ld      h,a                     ; hl = index na avatar aktivniho hrace
-
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)                  ; de = ukazatel na sprite avatara aktivniho hrace
-    
-    ld      bc,$1200
-    call    SET_MAX_31              ; meni jen akumulator
-    di
-    call    COPY_SPRITE2BUFFER
-    jr      INVENTORY_POKRACUJ
-
-; ---------------
-; Menime jen kurzor      
-; INVENTORY_WINDOW_KURZOR:
-    call    SET_MAX_31              ; meni jen akumulator
-    di
-INVENTORY_POKRACUJ:
-
-;--- Nastrkame spravna data (parametry dale volane fce) na zasobnik a protoze je to zasobnik, posledni kreslene napred.
-
-
-; ----- obrys postavy, toulec a prostirani
-    ld      hl,DODATECNE_V_INVENTARI
-    ld      b,4*2
-IW_NEXT_DODATECNE: 
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)
-    inc     hl
-    push    de
-    djnz    IW_NEXT_DODATECNE
-    
-; ----- vykresli podklad pod predmety v inventari
-
-
-    ld      a,(KURZOR_V_INVENTARI)  ; 13:3
-    ld      c,a                     ;  4:1 index predmetu s kurzorem
-    ld      b,MAX_ITEM              ;  7:2
-    xor     a                       ;  4:1 akumulator      pouzijeme jako citac protoze potrebujeme hlidat 2 stavy
-    ld      hl,POZICE_V_INVENTARI   ; 10:3 ukazatel na seznam pozic jednotlivych predmetu
-
-IW_SACHOVNICE_LOOP:
-
-    ld      de,I_bgm
-    cp      c                       ; jsme na kurzoru?
-    jr      z,IW_ULOZ
-    
-    ld      de,I_bg
-    cp      17                      ; jsme v dvousloupci predmetu
-    jr      c,IW_ULOZ
-    
-    ld      de,I_ram                ; jsme jeste na naznacene postave
-IW_ULOZ:
-    push    de                      ; adr. spritu
-    
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)
-    inc     hl
-    push    de                      ; pozice
-    
-    inc     a
-    djnz    IW_SACHOVNICE_LOOP
-
-; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
-    
-    ld      a,MAX_ITEM + 4          ; 2x postava, toulec a prostirani
-    call    VYKRESLI_ZE_ZASOBNIKU
-
-; ------- potrebujeme zrusit konturu postavy v mistech kde je predmet
-    
-
-; ------------------------------
-
-    
-if (ITEM2SPRITE/256) != (ITEM2SPRITE_END/256)
-    .error      'Seznam ITEM2SPRITE prekracuje 256 bajtovy segment!'
-endif
-    ld      de,(AKTIVNI_INVENTAR)   ; "de" predmety inventare aktivni postavy
-    ld      ixh,ITEM2SPRITE / 256
-    ld      b,MAX_ITEM              ;  7:2
-    ld      a,B                     ;  4:1
-    ld      hl,KURZOR_V_INVENTARI   ; 10:3
-    sub     (hl)                    ;  7:1 vykreslujeme odzadu kvuli citaci smycky, takze musime upravit index KURZOR_V_INVENTARI
-    ld      c,a
-    
-    exx
-    ld      hl,POZICE_V_INVENTARI   ; h'l'
-    exx
-IW_LOOP_INIT:
-
-    ld      a,(de)                  ; PODTYP predmetu z inventare
-    inc     de                      ; posunem ukazatel na dalsi predmet v danem inventari
-    add     a,a                     ; 2x
-    jr      nz,IW_OBSAZENO
-    
-    exx
-    ld      bc,0
-    push    bc
-    push    bc
-    push    bc
-    push    bc
-    inc     hl                      ; h'l' 
-    inc     hl                      ; h'l' posunem ukazatel na pozici x-teho predmetu v panelu 
-    exx
-    
-    jr      IW_NEXT_ITEM
-    
-IW_OBSAZENO:
-    add     a,ITEM2SPRITE % 256
-    ld      ixl,a
-    
-    ld      a,c
-    cp      b                       ; zero flag = pod kurzorem
-    
-    exx
-    
-    ld      c,(ix)
-    ld      b,(ix+1)
-    push    bc                      ; adresa spritu
-
-    ld      e,(hl)
-    inc     hl                      ; nemeni priznaky!
-    ld      d,(hl)                        ; pozice spritu
-    inc     hl                      ; nemeni prizaky!
-    push    de
-    
-    ld      bc,I_bg                 ; obsazene predmety maji zakryt konturu postavy ( bohuzel se kresli i tam kde nemusim )
-    jr      nz,IW_NENI_KURZOR
-    ld      bc,I_bgm                ; kurzor!!!
-IW_NENI_KURZOR:
-                    
-    push    bc
-    push    de
-    
-    exx
-    
-IW_NEXT_ITEM:
-    djnz    IW_LOOP_INIT
-
-
-; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
-    
-    ld      a,2*MAX_ITEM                ; predmety postavy
-    call    VYKRESLI_ZE_ZASOBNIKU
-    
-;        zjisti ktere pozice nejsou povolene a ty zamrizuj
-    call    ZESEDNI_NEPOVOLENE_POZICE
-    
-    call    VYKRESLI_AKTIVNI_PREDMET
-    
-    ei
-    call    SET_MAX_17                  ; 
-    
-    ret
-
-
-
-
-
-; -------------------------------------------------------
-VYKRESLI_AKTIVNI_PREDMET:
-    call    TEST_OTEVRENY_INVENTAR      ;ddf7        cd a6 ca
-    ret     z                           ; u zavreneho nebudem vykreslovat presah
-    
-    ld      a,(DRZENY_PREDMET)
-    or      a
-    ret     z                           ; nic nedrzi
-
-    ld      ixh,ITEM2SPRITE / 256
-    add     a,a                         ; 2x
-    add     a,ITEM2SPRITE % 256
-    ld      ixl,a
-    
-    
-    ld      a,(KURZOR_V_INVENTARI)
-    add     a,a
-    add     a,POZICE_V_INVENTARI % 256
-    ld      l,a
-    adc     a,POZICE_V_INVENTARI / 256
-    sub     l
-    ld      h,a
- 
-    ld      c,(hl)
-    inc     hl
-    ld      b,(hl)
-    dec     b                           ; posunem doleva
-    dec     c                           ; posunem nahoru
-
-    ld      e,(ix)
-    ld      d,(ix+1)
-    push    de
-    
-;         ld      bc,$1806
-    ld      de,I_bgm
-    
-    push    bc
-    call    COPY_SPRITE2BUFFER
-    pop     bc
-    pop     de
-    call    COPY_SPRITE2BUFFER
-    ret
 
 
 ; ----------------------
@@ -1117,135 +603,6 @@ OBAL_SPRITE2BUFFER:
     ret
 
 
-; -------------------------------------------------------
-ZESEDNI_NEPOVOLENE_POZICE:
-    ld      a,(DRZENY_PREDMET)
-    or      a
-    ret     z                           ; nic nedrzi = vse povolene
-    
-    ld      de,I_zakazano
-    
-    cp      MAX_RING_PLUS_1
-    jr      c,ZNP_PRSTEN
-    ld      bc,POZICE_PPRSTEN
-    call    OBAL_SPRITE2BUFFER
-    ld      bc,POZICE_LPRSTEN
-    call    OBAL_SPRITE2BUFFER        
-ZNP_PRSTEN:
-
-    cp      MIN_FOOD
-    jr      nc,ZNP_FOOD
-    ld      bc,POZICE_PROSTIRANI
-    call    OBAL_SPRITE2BUFFER        
-ZNP_FOOD:
-
-    cp      PODTYP_HELM
-    jr      z,ZNP_HELM
-    cp      PODTYP_HELM_D
-    jr      z,ZNP_HELM
-    ld      bc,POZICE_HLAVA
-    call    OBAL_SPRITE2BUFFER        
-ZNP_HELM:
-
-    cp      PODTYP_NECKLACE
-    jr      z,ZNP_NECKLACE
-    ld      bc,POZICE_NAHRDELNIK
-    call    OBAL_SPRITE2BUFFER        
-ZNP_NECKLACE:
-
-
-    cp      MIN_ARMOR
-    jr      c,ZNP_NENI_ARMOR
-    cp      MAX_ARMOR_PLUS_1
-    jr      c,ZNP_ARMOR
-ZNP_NENI_ARMOR:
-    ld      bc,POZICE_BRNENI
-    call    OBAL_SPRITE2BUFFER        
-ZNP_ARMOR:
-
-    cp      PODTYP_ARROW
-    jr      z,ZNP_ARROW
-    ld      bc,POZICE_TOULEC
-    call    OBAL_SPRITE2BUFFER        
-ZNP_ARROW:
-
-    cp      PODTYP_BRACERS
-    jr      z,ZNP_BRACERS
-    ld      bc,POZICE_NATEPNIK
-    call    OBAL_SPRITE2BUFFER        
-ZNP_BRACERS:
-
-    cp      PODTYP_BOOTS
-    jr      z,ZNP_BOOTS
-    ld      bc,POZICE_BOTY
-    call    OBAL_SPRITE2BUFFER        
-ZNP_BOOTS:
-
-    ret
-
-
-
-
-
-; ------------------------------
-; Fce kresli sprity s parametry tahajici ze zasobniku
-; VSTUP: a = pocet vykresleni ( = 2x pop     )
-;        na zasobniku lezi nahore pozice a pod ni lezi adresa spritu
-VYKRESLI_ZE_ZASOBNIKU:
-    pop     hl                  ; vytahni navratovou hodnotu
-VYKRESLI_ZE_ZASOBNIKU_LOOP:
-    pop     bc
-    pop     de
-    push    hl
-    push    af                  ; ochran citac
-    inc     d
-    dec     d
-    call    nz,COPY_SPRITE2BUFFER
-    pop     af
-    pop     hl
-    dec     a
-    jr      nz,VYKRESLI_ZE_ZASOBNIKU_LOOP
-    jp      (hl)
-    
-    
-    
-; VSTUP:    
-;        a = PODTYP predmetu
-;        b = cislo ruky od 0
-; MENI:
-;        a, hl, de
-; VYSTUP:   vraci zero-flag pokud je prazdna
-VYKRESLI_RUKU:
-    pop     hl                      ; vytahni navratovou adresu
-    ld      (VR_EXIT+1),hl          ; nastav "jp nn" na konci fce
-    add     a,a                     ; v tabulce jsou 16 bit hodnoty
-    add     a, ITEM2SPRITE % 256
-    ld      (VR_SELF_ITEM + 1),a    ;
-   
-if ( POZICE_RUKOU / 256 ) != ( POZICE_RUKOU_END / 256 )
-    .error      'Seznam POZICE_RUKOU prekracuje 256 bajtovy segment!'
-endif
-
-    ld      a,POZICE_RUKOU % 256
-    add     a,b
-    add     a,B                     ; protoze jde o 16 bit
-    ld      (VR_SELF_POZICE + 1),a  ;
-VR_SELF_ITEM:
-    ld      hl,(ITEM2SPRITE)        ; hl = adresa spravneho spritu
-    ld      a,h                     ; byl nulovy?
-    or      a
-    jr      nz,VR_DRZI
-    ld      hl,I_empty              ; obrazek prazdne dlane pokud nic nedrzi
-VR_DRZI:
-    push    hl                      ; ulozime na zasobnik adresu spritu
-VR_SELF_POZICE:
-    ld      hl,(POZICE_RUKOU)       ; 
-    push    hl                      ; prihodime na zasobnik i pozici
-    ld      de,I_bg                 ; prazdny podklad
-    push    de                      ; ulozime na zasobnik adresu podkladoveho spritu
-    push    hl                      ; prihodime na zasobnik i pozici  
-VR_EXIT:
-    jp      0                     ; self-modifying
 
 
 ; ----------------------------------
@@ -1662,28 +1019,12 @@ defb        "1",0
 VYHAZEJ_VSECHNO:
     push    BC
     push    DE
-
-    inc     E                   ; 1..7
+    
     ld      A, E
-    add     A, A                ; 2x
-    add     A, E                ; 3x
-    ld      E, A
-    add     A, A                ; 6x
-    add     A, A                ; 12x
-    add     A, A                ; 24x
-    add     A, E                ; 27x
-    add     A, INVENTORY_ITEMS%256
-    ld      E, A
-    ld      D, INVENTORY_ITEMS/256
-    
-if ( INVENTORY_ITEMS/256 != (INVENTORY_ITEMS_END+27)/256 )
-    .error 'INVENTORY_ITEMS!!!'
-endif
-    
-    ld      B, MAX_ITEM
+    call    RADEK_INVENTORY_ITEMS    
+    ld      B, MAX_INVENTORY
 
 VV_LOOP:    
-    dec     E
     push    DE
     push    BC
 
@@ -1693,14 +1034,19 @@ VV_LOOP:
 ;   L = lokace kam vkladam
 ;   C = vector
     ld      HL, (LOCATION)
-    ld      C,H
+    ld      C, H
     ld      A, (DE)
     or      A
     call    nz, VINP_BEZ_KONTROLY
-    
+
     pop     BC
     pop     DE
-    
+if ( INVENTORY_ITEMS / 256 != INVENTORY_ITEMS_END / 256 )
+    .warning 'Pomalejsi kod kvuli vicesegmentovemu INVENTORY_ITEMS'
+    inc     DE
+else
+    inc     E
+endif
     djnz    VV_LOOP
     
     pop     DE
@@ -1772,7 +1118,9 @@ PWAD_NEZRANUJ:
     call    PLAYERS_WINDOW      ; 
     ret                         ; 
 
-; melo by byt posledni
+    
+    
+; Musi byt posledni ( je to tabulka predmetu, bran, nepratel )
 INCLUDE table.h                 ; tabulka veci roste dolu proti zasobniku
 
 

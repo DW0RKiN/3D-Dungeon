@@ -200,7 +200,7 @@ PRINT_MESSAGE_ARRAY:
 PRINT_DEKORACE:
     call    PUSH_ALL
         
-    inc     DE                          ; DE = &(TABLE_ITEM[?].dodatecny)
+    inc     DE                          ; DE = &(TABLE_OBJECTS[?].dodatecny)
     ld      A, (DE)
     and     MASKA_PODTYP
     ld      B, A                        ; index vety

@@ -56,24 +56,31 @@ IPPAZ_LOOP:
 
     
     
-
-
 ; =======================
+; Pokud je aktivni panel s inventarem, tak sipky pohybuji s kurzorem v inventari
+; VSTUP
+;   B = stisknuto_dopredu..stisknuto_vpravo = { stisknuto_dopredu = 0,stisknuto_dozadu = 1,stisknuto_vlevo = 2,stisknuto_vpravo = 3 }
+;   A = KEY_DOPREDU (119), KEY_DOZADU (115), KEY_VLEVO (97), KEY_VPRAVO (100)
 POSUN:
-    ; Pokud je aktivni panel s inventarem, tak sipky pohybuji s kurzorem v inventari
     call    TEST_OTEVRENY_INVENTAR      ;
-    jp      z,POSUN_NEJSEM_V_INVENTARI
+    ; A = 0..MAX_INVENTORY-1
+    jp      z, POSUN_NEJSEM_V_INVENTARI
     ; jsme v inventari
-    dec     b                           ;  4:1 "b" obsahuje hodnotu { stisknuto_dopredu = 0,stisknuto_dozadu = 1,stisknuto_vlevo = 2,stisknuto_vpravo = 3 }
-    ld      c,B                         ;  4:1 (dopredu=nahoru=0 - 1) = -1
-    jp      m,POSUN_PRICTI                        ; 10:3
-    ld      c,1                         ;  7:2 dozadu = dolu = +1, nelze pouzit "inc     c" protoze by to zrusilo zero flag...
-    jr      z,POSUN_PRICTI              ;12/7:2
+    ld      C, B                        ;  4:1     
+    dec     B                           ;  4:1 
+    jr      z,POSUN_PRICTI              ;12/7:2 bylo to stisknuto_dozadu(=dolu)? pak C = 1
+    ld      C, B                        ;  4:1     
+    jp      m,POSUN_PRICTI              ; 10:3 bylo to stisknuto_dopredu(=nahoru)? pak C = -1
 
-    ld      hl,POSUN_VLEVO_INVENTAREM-1 ; 10:3
-    dec     b                           ;  4:1 puvodni - 2        
-    jr      z, POSUN_LOOP               ;12/7:2
-    ld      l,POSUN_VPRAVO_INVENTAREM-1 ;  7:2
+    
+if ((POSUN_VLEVO_INVENTAREM-1)/256) != (POSUN_VLEVO_INVENTAREM_END/256)
+    .error      'Seznam POSUN_VLEVO_INVENTAREM prekracuje 256 bajtovy segment!'
+endif
+
+    ld      HL, POSUN_VLEVO_INVENTAREM-1; 10:3
+    dec     B                           ;  4:1       
+    jr      z, POSUN_LOOP               ;12/7:2 bylo to stisknuto_vlevo?
+    ld      L, POSUN_VPRAVO_INVENTAREM-1;  7:2
 
 POSUN_LOOP:                             ; prochazeni pole POSUN_VLEVO_INVENTAREM nebo POSUN_VPRAVO_INVENTAREM a hledani spravneho rozsahu
     inc     l                           ;  4:1
@@ -83,15 +90,17 @@ POSUN_LOOP:                             ; prochazeni pole POSUN_VLEVO_INVENTAREM
     
     ld      c,(hl)                      ;  7:1
                                         ;   : 26+26 tabulky=52
+; VSTUP:
+;   C = o kolik mam zmenit aktualni index
 POSUN_PRICTI:
     add     a,c                         ; 4:1
-    ld      b,MAX_ITEM
+    ld      b,MAX_INVENTORY
     jp      p,POSUN_NEZAPORNY
-    add     a,B                         ; k zapornemu kurzoru prictu MAX_ITEM
+    add     a,B                         ; k zapornemu kurzoru prictu MAX_INVENTORY
 POSUN_NEZAPORNY:
     cp      b
     jr      c,POSUN_V_MEZICH
-    sub     b                           ; u kurzoru co pretekl odectu MAX_ITEM
+    sub     b                           ; u kurzoru co pretekl odectu MAX_INVENTORY
 POSUN_V_MEZICH:
     ld      (KURZOR_V_INVENTARI),a      ; opraveny zmeneny ulozim
     jp      INVENTORY_WINDOW_KURZOR

@@ -1,7 +1,20 @@
-MASKA_PREPINACE		equ	%11100000
-MASKA_TYP		equ	%00011100
-MASKA_NATOCENI		equ	%00000011
-MASKA_PODTYP		equ	%00011111
+MASKA_PREPINACE         equ     %11100000
+ZAM_1                   equ     $80             ; zamek c. 1 (bit 7)
+ZAM_2                   equ     $40             ; zamek c. 2 (bit 6)
+ZAM_3                   equ     $20             ; zamek c. 3 (bit 5)
+ZAM_12                  equ     $C0             ; (bity 7 a 6)
+ZAM_13                  equ     $A0             ; (bity 7 a 5)
+ZAM_23                  equ     $60             ; (bity 6 a 5)
+ZAM_123                 equ     $E0             ; (bity 7, 6 a 5)
+
+
+MASKA_TYP               equ     %00011100
+MASKA_NATOCENI          equ     %00000011
+MASKA_PODTYP            equ     %00011111
+
+
+
+ODEMCENO                equ     $00
 
 POSUN_TYP		equ	4
 POSUN_PODTYP		equ	1                 ; dokud je to jedna tak to pri nasobeni nic nedela
