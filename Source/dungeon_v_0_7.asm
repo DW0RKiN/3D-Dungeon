@@ -282,7 +282,7 @@ PP_PROHOD_PAKU:
 
 ; nalezen spravny prepinac pred nama!
     ld      A, (DE)                     ;  7:1 typ
-    xor     ZAMCENO                     ;  7:2 prepneme paku / prohodime horni bit
+    xor     ZAM_1                       ;  7:2 prepneme paku / prohodime horni bit
     ld      (de),a                      ;  7:1 typ
     
 ; zjistime co paka prehazuje a prehodime VSECHNY dalsi
