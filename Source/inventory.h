@@ -1,6 +1,7 @@
 MAX_INVENTORY	equ	27
 
-
+COLOR_OTHER_PLAYERS     equ     %00000111        ; white ink + black paper
+COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
 
 
 

@@ -586,25 +586,6 @@ HELP:
 
 
 
-COLOR_OTHER_PLAYERS     equ     %00000111        ; white ink + black paper
-COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
-
-; VSTUP: A = znaky '1' .. '6'
-NEW_PLAYER_ACTIVE:
-    sub     '1'                     ; A = 0..5
-    ld      hl, SUM_POSTAV          ; 10:3
-    cp      (hl)                    ;  7:1  0..5 - SUM_POSTAV
-    ret     nc                      ; new >= SUM_POSTAV
-                                    ; tohle muze nastat jen u 5. a 6. postavy pokud jeste nejsou v parte
-    dec     hl                      ;  6:1 hl = HLAVNI_POSTAVA
-    cp      (hl)                    ;  7:1
-    ret     z                       ; nastavujeme uz aktivni, nebudeme vse znovu prekreslovat
-    ld      (hl), A                 ;  7:1 nova HLAVNI_POSTAVA
-    
-    ; je nastaveny pravy panel na zobrazeni vsech hracu?
-    call    TEST_OTEVRENY_INVENTAR  ;dc11
-    jp      nz,INVENTORY_WINDOW_REFRESH ; uz se nevratime
-    ; jinak pokracujem v SET_PLAYER_ACTIVE
 
 
 ; ----------------------
