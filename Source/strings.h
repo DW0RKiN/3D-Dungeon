@@ -21,7 +21,14 @@ VETA_TAKEN:
 defb	" TAKEN.",0
 
 VETA_PUT:
-defb	" PUT",0
+defb	" BYL POLOZEN.",0
+
+VETA_DRINK:
+defb    " BYL VYPIT.",0
+
+VETA_EAT:
+defb    " BYL SNEZEN.",0
+
 
 
 ;	 0        1         2         3         4         5
@@ -89,12 +96,12 @@ defb	"HP",0
 
 ; pozpatku, kvuli vykresleni ve smycce
 NAMES:
-defb		"DOHRUM    ",0
-defb		"WYRD      ",0
-defb		"LINDA     ",0
-defb		"EITHNE    ",0
-defb		"TOD UPHILL",0
-defb		"IRIS      ",0
+defb "DOHRUM    ",0
+defb "WYRD      ",0
+defb "LINDA     ",0
+defb "EITHNE    ",0
+defb "TOD UPHILL",0
+defb "IRIS      ",0
 
 
 ARRAY_STRING_ITEMS:
@@ -132,8 +139,8 @@ defb	"SWORD",0
 defb	"BONE",0
 ;----- veci s hodnotou MIN_FOOD vcetne musi byt jedle
 defb	"RATIONS",0
-defb	"POTION_R",0
-defb	"POTION_G",0
+defb	"HEALING POTION",0
+defb	"ANTIDOTE POTION",0
 defb	"POTION_B",0
 
 ; RATIONS, CLERIC HOLY SYMBOL, LOCK PICKS, SHORT SWORD, HALFLING BONES

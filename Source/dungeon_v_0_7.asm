@@ -242,11 +242,7 @@ PREHOD_PREPINAC:
     
     ld      A, INDEX_PROSTIRANI
     sub     B
-    jr      nz, PP_NEJI
-    ; chci jen vymazat presouvany predmet
-    ld      C, A
-    ; POZOR!! vypsat tady hlasku ze neco snedl
-PP_NEJI:
+    call    z, EATING                   ; C = co ji/pije -> C = 0 (bude vynulovan)
 
     push    HL
     ld      H, $00
@@ -781,18 +777,67 @@ FB_DALSI_SLOUPEC:
 ; 8,1,14 = 3365
 
 
+; VSTUP:
+;   C = PODTYP_ITEM co ji/pije
+EATING:
+    push    AF 
+    push    BC
+    push    HL
+    push    DE
+    
+    ld      B, C
+    
+    ld      A, (HLAVNI_POSTAVA)
+    call    DATA_ZIVOTY_X
+    ; HL = DATA_ZIVOTY[HLAVNI_POSTAVA].nyni
+    
+    inc     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].max
+
+    ld      A, C
+    sub     PODTYP_FOOD
+    ld      C, A        
+    jr      nz, E_NO_FOOD
+    ld      DE, VETA_EAT
+    jr      E_PRINT
+E_NO_FOOD:
+
+    ld      DE, VETA_DRINK
+
+    dec     C
+    jr      nz, E_NO_R    
+    ; healing potion
+    ld      A, (HL)                 ; A = max
+    dec     HL                      ; nyni
+    ld      (HL), A                 ; nyni = max
+E_NO_R:
+    
+    dec     C
+    jr      nz, E_NO_G
+    ; antidote potion
+    inc     HL                      ; trvale
+    ld      (HL), C
+E_NO_G:
 
 
-DATA_ZIVOTY:
-;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas_ukonceni krvaveho fleku
-defb    132,    132,    $b4,    Adr_Attr_Buffer/256+0,  0,                  0
-defb    90,     90,     $bb,    Adr_Attr_Buffer/256+0,  0,                  0
-defb    64,     64,     $94,    Adr_Attr_Buffer/256+1,  0,                  0
-defb    40,     40,     $9b,    Adr_Attr_Buffer/256+1,  0,                  0
-defb    46,     46,     $74,    Adr_Attr_Buffer/256+2,  0,                  0
-defb    40,     40,     $7b,    Adr_Attr_Buffer/256+2,  0,                  0
-DATA_ZIVOTY_END:
+    dec     C
+    jr      nz, E_NO_B
+    ; blue potion
+E_NO_B:
 
+
+E_PRINT
+    ex      DE, HL
+    ; HL veta
+    ; B index predmetu
+    call    ITEM_MAKE
+    
+; !!!!! DODELEJ    
+    pop     DE
+    pop     HL
+    pop     BC
+    pop     AF
+    ld      C, $00
+    ret
 
 
 
@@ -854,55 +899,112 @@ SA_BUFF:
 
 
 ZOBRAZ_ZIVOTY:
-    ld      DE, DATA_ZIVOTY             ;
+    ld      HL, DATA_ZIVOTY             ;
     ld      B, $06                      ; 6 postav 
 ZZ_LOOP:
     push    BC                          ; 
+    ld      C, (HL)                     ; C = akt. pocet zivotu = DATA_ZIVOTY[x].nyni
+    inc     L                           ; DATA_ZIVOTY[x].max
+    ld      B, (HL)                     ; B = max. pocet zivotu 
+    inc     L                           ; DATA_ZIVOTY[x].trvale
+    inc     L                           ; DATA_ZIVOTY[x].offset
+    ld      E, (HL)                     ; E = offset
+    inc     L                           ; DATA_ZIVOTY[x].segment
+    ld      D, (HL)                     ; DE = adresa atr. zacatku prouzku
+    
     call    VYKRESLI_ZIVOTY             ;
-    ld      A, (DE)                     ; hodnota posledniho zraneni 
-    inc     DE                          ; adresa casu ukonceni krvaveho fleku
+    
+    inc     L                           ; DATA_ZIVOTY[x].konec
+    ld      C, (HL)                     ; cas ukonceni
+    inc     L                           ; DATA_ZIVOTY[x].zraneni 
+    
+    ld      A, (TIMER_ADR)              ; akt. cas
+    cp      C                           ; akt. cas - cas ukonceni
+    jr      c, ZZ_NEVYPRSEL    
+    xor     A                           ; cas vyprsel 
+    ld      (HL), A                     ; vynulovani hodnoty posledniho zraneni
+ZZ_NEVYPRSEL:
+
+    ld      A, (HL)                     ; A = posledni zraneni 
     or      A                           ; 
-    call    nz,VYKRESLI_KRVAVY_FLEK     ; 
-    inc     DE                          ; adresa aktualniho poctu zivotu dals postavy
+    jr      z, ZZ_BEZ_AKT_ZRANENI       ; 
+
+    ld      B, A                        ; velikost zraneni
+    call    VYKRESLI_KRVAVY_FLEK        ; 
+    
+ZZ_BEZ_AKT_ZRANENI:
+    inc     L                           ; DATA_ZIVOTY[x+1].nyni
     pop     BC                          ; 
     djnz    ZZ_LOOP                     ; 
     ret                                 ; 
 
-    
-; VSTUP: DE = cas ukonceni krvaveho fleku
-VYKRESLI_KRVAVY_FLEK:
-    push    de                          ;dfe3        d5         . 
-    ld      a, (de)                     ;dfe4        1a         . 
-    dec     de                          ; ukazatel na hodnotu posledniho zraneni 
-    ld      hl, TIMER_ADR               ;
-    cp      (hl)                        ;dfe9        be         . 
-    jp      p, VKF_POKRACUJ             ;dfea        f2 f1 df         . . . 
-    xor     a                           ; cas vyprsel 
-    ld      (de), a                     ; vynulovani hodnoty posledniho zraneni
-    pop     de                          ; dfef        d1         . 
-    ret                                 ;dff0        c9         . 
-    
 
+    
+; VSTUP: 
+; DE = adresa atr. pocatku prouzku
+; B = velikost zraneni
+VYKRESLI_KRVAVY_FLEK:
+    push    HL
+
+    ; prevod adresy atr. na Y = 7*segment + 4
+    ld      A, D                ; segment pocatku prouzku
+    add     A, A                ; 2x
+    add     A, A                ; 4x
+    add     A, A                ; 8x 
+    sub     D                   ; 7x
+Pomocny equ (Adr_Attr_Buffer/256)*7-4
+    sub     Pomocny             ; usetrim bajty 7*(D-seg Attr)+4 = 7*D - 7*seg Attr + 4 = 7*D - ( 7*seg Attr - 4)
+    ld      C, A                ; C = Y
+
+    ; prevod adresy atr. na X = offset % 32 - 1
+    ld      A, E                ; offset pocatku prouzku
+    and     $1f                 ; offset na sloupce
+    dec     A                   ; sprite zacina o znak vlevo nez prouzek
+    ld      B, A                ;
+    
+    push    DE                  ; budem jeste vypisovat hodnotu zraneni
+
+    ld      DE, Flek            ;
+    ; DE adresa spritu
+    ; BC ...B=sloupec {0..17+}, C=radek {0..13}
+    call    OBAL_SPRITE2BUFFER  ;
+    
+    pop     HL                  ;
+    inc     L                   ;
+    inc     L                   ; text zraneni chceme uprostred fleku
+    ld      ix, DAMAGE_BUF      ; 
+    ld      A, $42              ; light red
+    call    PRINT_STRING_COLOR  ;
+    
+    pop     HL                  ; 
+    ret                         ; 
+    
+DAMAGE_BUF:
+defb        "1",0
+
+
+    
 
  
 ; -----------------------------------------------------------
 ; Zobrazi prouzek s zivoty
-; VSTUP: DE zacatek radku v DATA_ZIVOTY ( sloupec aktualni pocet zivotu)
-; MENI:  HL, BC, A
-; VYSTUP: DE = DE + 4 = adresa posledniho zraneni
+; VSTUP: 
+;   C = aktulni pocet zivotu
+;   B = maximalni pocet zivotu
+;   DE = adresa atr. pocatku prouzku
+; MENI:  B = 0, C, AF
 VYKRESLI_ZIVOTY:
-    xor     A                   ;  4:1 A = 0
-    ex      DE, HL              ;  4:1
-    ld      C, (HL)             ;  7:1 C = aktualni pocet zivotu
-    inc     HL                  ;  6:1 ukazatel na max. pocet zivotu
-    ld      E, (HL)             ;  7:1 E = maximalni pocet zivotu
-    inc     HL                  ;  6:1 ukazatel na adresu pocatku prouzku
-    push    HL                  ; 11:1
+    push    HL                  ;    
+    push    DE                  ;
+    push    DE                  ; 11:1 adresa atr. pocatku prouzku
     
+    xor     A                   ;  4:1 A = 0
+    ld      H, A                ;  4:1
+    ld      L, C                ;  4:1 HL = aktualni pocet zivotu
+    ld      D, A                ;  4:1
+    ld      E, B                ;  4:1 DE = maximalni pocet zivotu
     ld      B, A                ;  4:1 BC = aktualni pocet zivotu
-    ld      L, C
-    ld      H, A                ;  4:1 HL = aktualni pocet zivotu
-    ld      D, A                ;  4:1 DE = maximalni pocet zivotu
+        
     add     HL, HL              ; 11:1 2x 
     add     HL, HL              ; 11:1 4x 
     add     HL, BC              ; 11:1 5x
@@ -922,45 +1024,42 @@ VZ_ZBYTEK:
     sbc     HL, DE              ; 15:2
     jr      nc, VZ_ZBYTEK       ; 12/7:2
     
-    pop     HL                  ; 10:1
-
     ; C = -(znaku+1) = -1..-5
     ; A = zbytek+1 = 1..9
-    
-    add     A,(CARKY-1)%256     ; offset + 1..8
-    ld      (VZ_LOOP_SELF+1),A  ; 
 
-    ; set color
-    ld      E, (HL)             ; offset zacatku prouzku
-    inc     HL                  ;
-    ld      D, (HL)             ; segment zacatku prouzku
-    inc     HL                  ;
-    ex      DE,HL               ;  4:1 DE = ukazatel na hodnotu posledniho zraneni, HL = adresa zacatku prouzku (attr)
+if ((CARKY-1) / 256) != ( CARKY_END / 256 )
+    .error      'Seznam CARKY prekracuje segment!'
+endif
+
+    add     A,(CARKY-1)%256     ; offset + 1..8
+    ld      L, A                ;  4:1
+    ld      H, CARKY / 256      ;  7:2
+    ld      D, (HL)             ;  7:1 D = maska znaku s koncem prouzku
+    
+    ; zjisteni barvy prouzku
     ld      A,C                 ;  4:1 zaporny pocet znaku prouzku  -5 = ..011, -4 = ..100, -3 = ..101, -2 = ..110, -1 = ..111
     inc     A                   ;  4:1  -4 = ..10., -3 = ..10., -2 = ..11., -1 = ..11.
     jr      nz, VZ_VICEZNAKOVY  ; 12/7:2
     ld      a, $42              ; light red = ..01.
 VZ_VICEZNAKOVY:
     and     $46                 ; 0100 0110 = BRIGHTNES + INK GREEN + INK RED
-    ld      (VZ_COL_SELF+1), A  ;
+    ld      E, A                ;  4:1 E = barva prouzku    
     
-    ld      B, $05              ; 5 znaku 
-
-if ((CARKY-1) / 256) != ( CARKY_END / 256 )
-    .error      'Seznam CARKY prekracuje segment!'
-endif
-    
+    ; zacatek smycky vykresleni prouzku
+    pop     HL                  ; adresa atr. pocatku prouzku
+    ld      B, $05              ; 5 znaku     
 VZ_LOOP_SELF:
-    ld      A, (CARKY)          ; 13:3 obsahuje znak predelu konce prouzku 
+    ld      A, D                ;  4:1 obsahuje masku konce prouzku 
     inc     C                   ;  4:1 zmensime zaporny pocet celych znaku
     jr      z, VZ_PREDEL        ;12/7:2 posledni znak? 
     ld      A, C                ;  4:1
     rla                         ;  4:1 carry kdyz C < 0
-    sbc     A,A                 ;  4:1 if (carry) A = $ff else A = $00
+    sbc     A, A                ;  4:1 if (carry) A = $ff else A = $00
 VZ_PREDEL:
 
+    ; A = $FF, $?? = D, $00
 VZ_COL_SELF:
-    ld      (HL), $00           ; barva prouzku 
+    ld      (HL), E             ; barva prouzku 
     push    HL                  ; uschovame adresu zacatku prouzku 
     push    BC                  ; uschovame hodnotu registru B
     ld      C, A                ; "prouzek" do C
@@ -976,49 +1075,12 @@ VZ_LOOP_PX:
     inc     L                   ; o znak doprava
 
     djnz    VZ_LOOP_SELF        ; 5x 
+    pop     DE                  ;
+    pop     HL                  ;
     ret                         ; 
 
 
     
-; VSTUP: DE = adresa posledniho zraneni
-VKF_POKRACUJ:
-    dec     de                  ; adresa segmentu pocatku prouzku
-    ld      a,(de)              ;
-    ld      H, A                ; segment pocatku prouzku
-    
-    add     a,a                 ;
-    add     a,a                 ;
-    add     a,a                 ; 8x 
-    sub     H                   ; 7x
-Pomocny equ (Adr_Attr_Buffer/256)*7-4
-    sub     Pomocny             ; usetrim bajty 7*(H-seg Attr)+4 = 7*H - 7*seg Attr + 4 = 7*H - ( 7*seg Attr - 4)
-    ld      c,a                 ;
-
-    dec     de                  ;
-    ld      a,(de)              ;
-    
-    ld      L, A                ;
-    push    HL                  ;
-    
-    and     $1f                 ; offset na sloupce
-    dec     A                   ;
-    ld      B, A                ;
-    ld      DE, Flek            ;
-    ; DE adresa spritu
-    ; BC ...b=sloupec {0..17+},c=radek {0..13}
-    call    OBAL_SPRITE2BUFFER  ; 
-    pop     HL                  ;
-    inc     L
-    inc     L
-    ld      ix,JEDNA            ; 
-    ld      A, $42              ; light red
-    call    PRINT_STRING_COLOR  ;e019        cd 0d db         . . . 
-    pop     de                  ;e01f        d1         . 
-    ret                         ;e020        c9         . 
-    
-JEDNA:
-defb        "1",0
-
 
 
 ; VSTUP:
@@ -1061,48 +1123,81 @@ endif
     ret
 
 
+; +1 aby slo dat index o 1 vyssi nez je pocet postav a pak ubirat
+if (DATA_ZIVOTY / 256) != ( (1+DATA_ZIVOTY_END) / 256 )
+    .error      'Seznam DATA_ZIVOTY prekracuje segment!'
+endif
 
+; VSTUP: 
+;   A = index postavy hrace 0..5(6)
+; VYSTUP:
+;   HL = DATA_ZIVOTY[A]
+DATA_ZIVOTY_X:
+    ld      L, A
+    add     A, A                ; 2x
+    add     A, A                ; 4x
+    add     A, A                ; 8x
+    sub     L                   ; 7x
+    add     A, DATA_ZIVOTY % 256;
+    ld      L, A
+    ld      H, DATA_ZIVOTY / 256
+    ret
+    
+
+    
 ; VSTUP: E = index postavy hrace 0..5
 ;        D = zraneni
 ZRAN_POSTAVU:
-    push    hl                  ;
+    push    DE                  ;
 
-    ld      a,e                 ;
-    add     a,a                 ; 2xE 
-    add     a,e                 ; 3xE
-    add     a,a                 ; 6xE 
-
-if (DATA_ZIVOTY / 256) != ( DATA_ZIVOTY_END / 256 )
-    .error      'Seznam DATA_ZIVOTY prekracuje segment!'
-endif
+    ld      A, E                ;
+    call    DATA_ZIVOTY_X
     
-    add     a,DATA_ZIVOTY % 256 ; 
-    ld      l,a                 ; 
-    ld      h,DATA_ZIVOTY / 256 ; 
-    ld      a,(hl)              ; aktualni pocet zivotu 
-    sub     d                   ; - zraneni 
-    jr      nc,ZP_ZIJE          ; 
-    xor     a                   ; zemrel, vynulujeme zaporne zivoty na nulu 
-    ld      (hl),a              ; ulozime nulu
+    ld      A, (HL)             ; DATA_ZIVOTY[E].nyni 
+    sub     D                   ; - zraneni 
+    jr      nc, ZP_ZIJE         ; 
+    xor     A                   ; zemrel, vynulujeme zaporne zivoty na nulu 
+    ld      (HL), A             ; ulozime nulu
     call    VYHAZEJ_VSECHNO
     
     jr      ZP_EXIT             ;
 ZP_ZIJE:
-    ld      (hl),a              ; ulozime zbyvajici pocet zivotu
-    inc     hl                  ; +1
-    inc     hl                  ; +2 
-    inc     hl                  ; +3 
-    inc     hl                  ; +4 
-    ld      (hl),d              ; ulozim hodnotu posledniho zraneni 
-    inc     hl                  ; +5 
-    ld      a,(TIMER_ADR)       ; 
-    add     a,032h              ; +50 = +1 vterina
-    ld      (hl),a              ; doba zobrazovani krvaveho fleku s hodnotou zraneni 
+    ld      (HL), A             ; ulozime zbyvajici pocet zivotu
+    
+    inc     HL                  ; max
+    inc     HL                  ; trvale
+    inc     HL                  ; offset
+    inc     HL                  ; segment
+    inc     HL                  ; konec
+    
+    ld      A, (TIMER_ADR)      ; 
+    add     A, $32              ; +50 = +1 vterina
+    ld      (HL), A             ; doba zobrazovani krvaveho fleku s hodnotou zraneni 
+    
+    inc     HL                  ; zraneni
+    ld      (HL), D             ; ulozim hodnotu posledniho zraneni 
 ZP_EXIT:
-    pop     hl                  ;e044        e1         . 
-    ret                         ;e045        c9         . 
+    pop     DE                  ;
+    ret                         ; 
 
 
+; VSTUP: E = index postavy hrace 0..5
+;        D = zraneni
+OTESTUJ_TRVALE_ZRANENI:
+    push    DE
+    ld      A, E
+    call    DATA_ZIVOTY_X
+    
+    inc     HL                  ; max
+    inc     HL                  ; trvale
+    ld      A, (HL)             ;
+    or      A
+    ld      D, A
+    call    nz, ZRAN_POSTAVU
+    pop     DE
+    ret    
+    
+    
 ; ????????????????????????????????????????
 PLAYERS_WINDOW_AND_DAMAGE:
 PWAD_SELF:
@@ -1118,7 +1213,7 @@ PWAD_SELF:
     ld      de,$0100            ; D = 1 = zraneni, E = 0 = index postavy 
     ld      B,$06               ; citac = 6 
 PWAD_LOOP:
-    call    ZRAN_POSTAVU        ; 
+    call    OTESTUJ_TRVALE_ZRANENI   ; 
     inc     e                   ; dalsi postava
     djnz    PWAD_LOOP           ;
 PWAD_NEZRANUJ:

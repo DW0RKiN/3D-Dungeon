@@ -83,6 +83,11 @@ defb	0,		0,		PODTYP_NECKLACE,0,		0,		PODTYP_RING_G,	0,		0,		0,		PODTYP_BOOK,	POD
 INVENTORY_ITEMS_END:
 
 
+
+
+
+
+
 PRESOUVANY_PREDMET:
 defb	0
 KURZOR_V_INVENTARI:
@@ -172,3 +177,23 @@ defb    INDEX_PROSTIRANI; PODTYP_POTION_G   equ 29*POSUN_PODTYP
 defb    INDEX_PROSTIRANI; PODTYP_POTION_B   equ 30*POSUN_PODTYP
 POVOLENE_POZICE_END:
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
+
+
+DATA_ZIVOTY:
+; aktualni pocet zivotu, 
+; maximalni pocet zivotu, 
+; trvale zraneni, 
+; offset atributu prouzku, 
+; segment atributu prouzku, 
+; velikost posledniho zraneni, 
+; cas ukonceni zobrazeni krvaveho fleku
+
+;       nyni    max     trvale  offset  segment                 konec   zraneni
+defb    132,    132,    1,      $b4,    Adr_Attr_Buffer/256+0,  0,      0
+defb    90,     90,     1,      $bb,    Adr_Attr_Buffer/256+0,  0,      0
+defb    64,     64,     1,      $94,    Adr_Attr_Buffer/256+1,  0,      0
+defb    40,     40,     1,      $9b,    Adr_Attr_Buffer/256+1,  0,      0
+defb    46,     46,     1,      $74,    Adr_Attr_Buffer/256+2,  0,      0
+defb    40,     40,     1,      $7b,    Adr_Attr_Buffer/256+2,  0,      0
+DATA_ZIVOTY_END:
+

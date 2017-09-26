@@ -310,10 +310,3 @@ ITEM_PUT:
     ld      HL, VETA_PUT
     jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
  
-    
-
-
-
-
-
-

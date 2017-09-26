@@ -130,7 +130,6 @@ defw	8,	8,	8,	8,	8,	8
 
 
 
-
 ITEM_POZICE:
 ; dvoubajtove cislo oznacuje levy horni roh odkud kreslit sprite
 ; prvni je souradnice se znamenkem X (zleva doprava)
