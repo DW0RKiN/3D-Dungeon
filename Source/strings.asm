@@ -270,8 +270,14 @@ endif
 
 ; VSTUP: 
 ;   b index predmetu
-;   na zasobniku lezi ukazatel na pokracujici vetu
+;   HL ukazatel na pokracujici vetu
 ITEM_MAKE:
+    dec     B
+    inc     B
+    ret     z
+
+    push    HL                          ; ulozime na zasobnik aby to mohlo byt vybrano jako druha tisknuta veta
+    
     ld      hl,ARRAY_STRING_ITEMS
     call    ADR_X_STRING
 
@@ -288,12 +294,11 @@ ITEM_END:
 
 
 
-; VSTUP: b index predmetu
+; VSTUP: B index predmetu
 ; VYSTUP: 
 ;   Vypiset NECO TAKEN na spodek obrazovky
 ITEM_TAKEN:
     ld      HL, VETA_TAKEN
-    push    HL                          ; ulozime na zasobnik aby to mohlo byt vybrano jako druha tisknuta veta
     jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
 
     
@@ -303,7 +308,6 @@ ITEM_TAKEN:
 ;   Vypiset NECO PUT na spodek obrazovky
 ITEM_PUT:
     ld      HL, VETA_PUT
-    push    HL                          ; ulozime na zasobnik aby to mohlo byt vybrano jako druha tisknuta veta
     jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
  
     

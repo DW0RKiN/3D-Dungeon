@@ -243,143 +243,171 @@ endif
 
 ;--- Nastrkame spravna data (parametry dale volane fce) na zasobnik a protoze je to zasobnik, posledni bude prvni kreslene.
 
+; Vykresleni v poradi:
+; 2 x pul silueta postavy
+; toulec
+; pokud je predmet a nebo mensi jak 17 tak modre pozadi
+; pokud kurzor tak vzdy pozadi a to fialove
+; ram
+; kdyz je na pozici predmet tak vykresleni predmetu
+; prostirani
+; kdyz je presouvany predmet a nesmi tam tak mrizka
+
+; kdyz je presouvany predmet tak najit pozici a posunout ji o jedno nahoru a doleva
+; nakreslit podklad
+; nakreslit ram
+; nakreslit presouvany predmet
+
+    xor     A
+    push    AF                      ; zarazka na zasobnik
 
 
-; ----- 2 polovicni obrys postavy, toulec a prostirani
-    ld      HL, DODATECNE_V_INVENTARI
-    ld      b,4*2
-IW_NEXT_DODATECNE: 
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)
-    inc     hl
-    push    de
-    djnz    IW_NEXT_DODATECNE
-; ----- vykresli podklad pod predmety v inventari
-    ; HL = POZICE_V_INVENTARI = 16 + DODATECNE_V_INVENTARI
-    ld      A, (KURZOR_V_INVENTARI) ; 13:3
-    ld      C, A                    ;  4:1 index predmetu s kurzorem
-    xor     A                       ;  4:1 akumulator pouzijeme jako citac protoze potrebujeme hlidat 2 stavy
+
+    exx
+    ld      HL, POZICE_V_INVENTARI_END
+    exx
+    ld      HL, MAX_INVENTORY       ; 10:3 
+    call    HLAVNI_RADEK_INVENTORY_ITEMS; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
+    add     HL, DE
+
     ld      B, MAX_INVENTORY        ;  7:2
-IW_SACHOVNICE_LOOP:
+IW_LOOP:
+    exx
+    dec     HL
+    ld      D, (HL)
+    dec     HL
+    ld      E, (HL)                 ; DE = pozice
+    exx
 
-    ld      de,I_bgm                ; pozadi pro kurzor
-    cp      c                       ; pozice kurzoru?
-    jr      z,IW_ULOZ
+    ; vykresleni mrizky
+    ld      A, (PRESOUVANY_PREDMET) ; 13:3
+    ld      C, A                    ;  4:1
+    call    TEST_NEPOVOLENE_POZICE  ; 17:3
     
-    ld      de,I_bg                 ; normalni pozadi
-    cp      17                      ; jsme v dvousloupci predmetu + prostirani?
-    jr      c,IW_ULOZ
-    
-    ld      de,I_ram                ; prazdny ram protoze jsme jeste (B klesa) na naznacene postave
-IW_ULOZ:
-    push    de                      ; adr. spritu
-    
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)
-    inc     hl
-    push    de                      ; pozice
-    
-    inc     a
-    djnz    IW_SACHOVNICE_LOOP
+    jr      z, IW_BEZ_MRIZKY
+    ld      DE, I_zakazano          ; vykresleni mrizky
+    push    DE                      ; ulozeni souradnic
+    exx                 
+    push    DE                      ; ulozeni pozice
+    exx
+IW_BEZ_MRIZKY:
 
-; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
-    ld      a,MAX_INVENTORY + 4          ; 2x postava, toulec a prostirani
-    call    VYKRESLI_ZE_ZASOBNIKU
 
-    
-    
-    
-; ------- potrebujeme zrusit konturu postavy v mistech kde je predmet
-    
+    ; vykresleni prostirani 
+    ld      A, B
+    cp      INDEX_PROSTIRANI
+    jr      nz, IW_NENI_PROSTIRANI
+    ld      DE, I_prostirani
+    push    DE
+    exx                 
+    push    DE                      ; ulozeni pozice
+    exx
+IW_NENI_PROSTIRANI:
 
-; ------------------------------
 
-    
-if (ITEM2SPRITE/256) != (ITEM2SPRITE_END/256)
-    .error      'Seznam ITEM2SPRITE prekracuje 256 bajtovy segment!'
+    ; vykresleni predmetu
+    ld      C, B                ; C = B = priznak ze je prazdne policko;
+if (INVENTORY_ITEMS/256 != INVENTORY_ITEMS_END/256)
+    .warning 'Pomalejsi kod, INVENTORY_ITEMS preleza segment!'
+    dec     HL
+else
+    dec     L
 endif
-
-    call    HLAVNI_RADEK_INVENTORY_ITEMS    ; DE ukazatel na radek aktivni postavy v INVENTORY_ITEMS
-    ld      ixh, ITEM2SPRITE / 256
-    ld      B, MAX_INVENTORY        ;  7:2
-    ld      A, B                    ;  4:1
-    ld      hl, KURZOR_V_INVENTARI  ; 10:3
-    sub     (hl)                    ;  7:1 vykreslujeme odzadu kvuli citaci smycky, takze musime upravit index KURZOR_V_INVENTARI
-    ld      c, a
+    ld      A, (HL)
+    add     A, A
+    jr      z, IW_PRAZDNE_POLICKO
     
+    push    HL
+    add     A, ITEM2SPRITE % 256
+    ld      L, A
+if (ITEM2SPRITE/256 != ITEM2SPRITE/256)
+    .warning 'ITEM2SPRITE preleze segment!'
+    adc     A, ITEM2SPRITE / 256
+    sub     L
+    ld      H, A
+    ld      E, (HL)
+    inc     HL
+else
+    ld      H, ITEM2SPRITE / 256
+    ld      E, (HL)
+    inc     L
+endif
+    ld      D, (HL)
+    pop     HL
+    push    DE                      ; ulozeni predmetu
     exx
-    ld      hl,POZICE_V_INVENTARI   ; h'l'
-    exx
-IW_LOOP_INIT:
-
-    ld      a,(de)                  ; PODTYP predmetu z inventare
-    inc     de                      ; posunem ukazatel na dalsi predmet v danem inventari
-    add     a,a                     ; 2x
-    jr      nz,IW_OBSAZENO
-    
-    exx
-    ld      bc,0
-    push    bc
-    push    bc
-    push    bc
-    push    bc
-    inc     hl                      ; h'l' 
-    inc     hl                      ; h'l' posunem ukazatel na pozici x-teho predmetu v panelu 
-    exx
-    
-    jr      IW_NEXT_ITEM
-    
-IW_OBSAZENO:
-    add     a,ITEM2SPRITE % 256
-    ld      ixl,a
-    
-    ld      a,c
-    cp      b                       ; zero flag = pod kurzorem
-    
-    exx
-    
-    ld      c,(ix)
-    ld      b,(ix+1)
-    push    bc                      ; adresa spritu
-
-    ld      e,(hl)
-    inc     hl                      ; nemeni priznaky!
-    ld      d,(hl)                        ; pozice spritu
-    inc     hl                      ; nemeni prizaky!
-    push    de
-    
-    ld      bc,I_bg                 ; obsazene predmety maji zakryt konturu postavy ( bohuzel se kresli i tam kde nemusim )
-    jr      nz,IW_NENI_KURZOR
-    ld      bc,I_bgm                ; kurzor!!!
-IW_NENI_KURZOR:
-                    
-    push    bc
-    push    de
-    
-    exx
-    
-IW_NEXT_ITEM:
-    djnz    IW_LOOP_INIT
+    push    DE                      ; ulozeni pozice
+    exx    
+    dec     C                       ; zrusime priznak prazdneho policka
+IW_PRAZDNE_POLICKO:
 
 
+    ; vykresleni ramu
+    ld      de, I_ram               ; prazdny ram protoze jsme jeste (B klesa) na naznacene postave
+    push    DE
+    exx
+    push    DE                      ; ulozeni pozice
+    exx    
+    
+    
+    ; vykresleni podkladu pod kurzorem
+    ld      A, (KURZOR_V_INVENTARI)
+    inc     A
+    cp      B
+    jr      nz, IW_NEJSME_NA_KURZORU
+    ld      DE, I_bgm               ; fialovy podklad pro kurzor
+    push    DE
+    exx
+    push    DE                      ; ulozeni pozice
+    exx    
+IW_NEJSME_NA_KURZORU:
+
+
+    ; vykresleni mozneho podkladu
+    ld      A, B
+    cp      C
+    jr      nz, IW_PREDMET_OBSAZEN
+    cp      1+INDEX_PROSTIRANI
+    jr      nc, IW_NEKRESLI_PODKLAD 
+IW_PREDMET_OBSAZEN:
+    ld      DE, I_bg                ; modry podklad
+    push    DE
+    exx
+    push    DE                      ; ulozeni pozice
+    exx 
+IW_NEKRESLI_PODKLAD:
+
+    djnz    IW_LOOP
+
+    ld      DE, I_toulec
+    push    DE
+    ld      DE, POZICE_TOULEC
+    push    DE
+    ld      DE, Body_left
+    push    DE
+    ld      DE, $1907
+    push    DE
+    ld      DE, Body_left
+    push    DE
+    ld      DE, $1DF8               ; 7bit znaci zrcadlove kresleni
+    push    DE
+    
 ; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
-    
-    ld      a,2*MAX_INVENTORY       ; predmety postavy
-    call    VYKRESLI_ZE_ZASOBNIKU
-    
-;        zjisti ktere pozice nejsou povolene a ty zamrizuj
-    call    ZESEDNI_NEPOVOLENE_POZICE
-    
+IW_ZE_ZASOBNIKU:
+    pop     bc
+    inc     B
+    dec     B
+    jr      z, IW_EXIT    
+    pop     de
+    call    COPY_SPRITE2BUFFER
+    jr      IW_ZE_ZASOBNIKU
+IW_EXIT:        
+
     call    VYKRESLI_AKTIVNI_PREDMET
-    
     ei
     call    SET_MAX_17                  ; 
     
     ret
-
-
 
 
 
@@ -428,75 +456,49 @@ VYKRESLI_AKTIVNI_PREDMET:
 
     
 
+    
 ; -------------------------------------------------------
-ZESEDNI_NEPOVOLENE_POZICE:
-    ld      a, (PRESOUVANY_PREDMET)
-    or      a
-    ret     z                           ; nic nedrzi = vse povolene
+; VSTUP:
+;   C = PODTYP_ITEM testovaneho predmetu ( 0 = povolen vzdy )
+;   B = index testovane pozice 1..MAX_INVENTORY
+; VYSTUP:
+;   zero = povoleno
+;   not zero = zakazano
+; MENI:
+;   AF
+TEST_NEPOVOLENE_POZICE:
+    ld      A, B
+    dec     A                       ; 1..16 -> 0..15
+    and     $F0                     ; cokoliv na mensi pozici je povoleno
+    ret     z
+
+    ld      A, C
+    or      A
+    ret     z
     
-    ld      de,I_zakazano
-    
-    cp      MAX_RING_PLUS_1
-    jr      c,ZNP_PRSTEN
-    ld      bc,POZICE_PPRSTEN
-    call    OBAL_SPRITE2BUFFER
-    ld      bc,POZICE_LPRSTEN
-    call    OBAL_SPRITE2BUFFER        
-ZNP_PRSTEN:
+POZICE_M1   equ POVOLENE_POZICE-1
+    push    HL
+    add     A, POZICE_M1 % 256
+    ld      L, A
+    adc     A, POZICE_M1 / 256
+    sub     L
+    ld      H, A
 
-    cp      MIN_FOOD
-    jr      nc,ZNP_FOOD
-    ld      bc,POZICE_PROSTIRANI
-    call    OBAL_SPRITE2BUFFER        
-ZNP_FOOD:
+    ld      A, B
+    cp      INDEX_PPRSTEN
+    jr      nz, TNP_NENI_PRSTEN
+    ld      A, INDEX_LPRSTEN        ; tabulka ukazuje jen na levy prst
+TNP_NENI_PRSTEN:
 
-    cp      PODTYP_HELM
-    jr      z,ZNP_HELM
-    cp      PODTYP_HELM_D
-    jr      z,ZNP_HELM
-    ld      bc,POZICE_HLAVA
-    call    OBAL_SPRITE2BUFFER        
-ZNP_HELM:
+    cp      INDEX_PRUKA
+    jr      nz, TNP_NENI_RUKA
+    ld      A, INDEX_LRUKA          ; tabulka obsahuje jen na levou ruku
+TNP_NENI_RUKA:
 
-    cp      PODTYP_NECKLACE
-    jr      z,ZNP_NECKLACE
-    ld      bc,POZICE_NAHRDELNIK
-    call    OBAL_SPRITE2BUFFER        
-ZNP_NECKLACE:
-
-
-    cp      MIN_ARMOR
-    jr      c,ZNP_NENI_ARMOR
-    cp      MAX_ARMOR_PLUS_1
-    jr      c,ZNP_ARMOR
-ZNP_NENI_ARMOR:
-    ld      bc,POZICE_BRNENI
-    call    OBAL_SPRITE2BUFFER        
-ZNP_ARMOR:
-
-    cp      PODTYP_ARROW
-    jr      z,ZNP_ARROW
-    ld      bc,POZICE_TOULEC
-    call    OBAL_SPRITE2BUFFER        
-ZNP_ARROW:
-
-    cp      PODTYP_BRACERS
-    jr      z,ZNP_BRACERS
-    ld      bc,POZICE_NATEPNIK
-    call    OBAL_SPRITE2BUFFER        
-ZNP_BRACERS:
-
-    cp      PODTYP_BOOTS
-    jr      z,ZNP_BOOTS
-    ld      bc,POZICE_BOTY
-    call    OBAL_SPRITE2BUFFER        
-ZNP_BOOTS:
-
-    ret
-
-
-
-
+    cp      (HL)                    ; jedina povolena pozice
+    pop     HL
+    ret     
+ 
 
 ; ------------------------------
 ; Fce kresli sprity s parametry tahajici ze zasobniku
@@ -556,4 +558,4 @@ VR_SELF_POZICE:
     push    de                      ; ulozime na zasobnik adresu podkladoveho spritu
     push    hl                      ; prihodime na zasobnik i pozici  
 VR_EXIT:
-    jp      0                     ; self-modifying
+    jp      0                       ; self-modifying

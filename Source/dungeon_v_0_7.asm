@@ -230,21 +230,37 @@ PREHOD_PREPINAC:
     jp      z, PP_NEJSME_V_INVENTARI
     ; jsme v inventari
 
+    ; ohlidani zda ukladam na povolene misto ( toulec, prsteny atd )        
+    ld      B, A
+    inc     B                           ; INDEX
+    ld      HL, PRESOUVANY_PREDMET    
+    ld      C, (HL)                     ; C = presouvany predmet
+    call    TEST_NEPOVOLENE_POZICE
+    
+    ld      IX, VETA_NO_PUT
+    jp      nz, PRINT_MESSAGE           ; misto return, nepovoleno
+    
+    ld      A, INDEX_PROSTIRANI
+    sub     B
+    jr      nz, PP_NEJI
+    ; chci jen vymazat presouvany predmet
+    ld      C, A
+    ; POZOR!! vypsat tady hlasku ze neco snedl
+PP_NEJI:
+
+    push    HL
     ld      H, $00
-    ld      L, A
+    ld      L, B
+    dec     L
     call    HLAVNI_RADEK_INVENTORY_ITEMS; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
     add     HL, DE
-
-    ld      DE, PRESOUVANY_PREDMET    
+    
     ld      B, (HL)                     ; predmet ktery vymenime za presouvany
-    ld      A, (DE)                     ; A = presouvany predmet
-    ld      (HL), A                     ; puvodne presouvany ulozime
-    ld      A, B
-    ld      (DE), A                     ; nove presouvany
+    ld      (HL), C                     ; puvodne presouvany ulozime
+    pop     HL
+    ld      (HL), B                     ; nove presouvany
 
-    ; POZOR!!! pozdeji ohlidat zda ukladam na povolene misto ( toulec, prsteny atd )        
-    or      A
-    call    nz, ITEM_TAKEN
+    call    ITEM_TAKEN
     jp      INVENTORY_WINDOW_KURZOR
 
 
@@ -784,6 +800,25 @@ FB_DALSI_SLOUPEC:
 ; 8,1,14 = 3365
 
 
+
+
+DATA_ZIVOTY:
+;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas_ukonceni krvaveho fleku
+defb    132,    132,    $b4,    Adr_Attr_Buffer/256+0,  0,                  0
+defb    90,     90,     $bb,    Adr_Attr_Buffer/256+0,  0,                  0
+defb    64,     64,     $94,    Adr_Attr_Buffer/256+1,  0,                  0
+defb    40,     40,     $9b,    Adr_Attr_Buffer/256+1,  0,                  0
+defb    46,     46,     $74,    Adr_Attr_Buffer/256+2,  0,                  0
+defb    40,     40,     $7b,    Adr_Attr_Buffer/256+2,  0,                  0
+DATA_ZIVOTY_END:
+
+
+
+
+
+
+
+
 ; Vstup: B = sloupce 1..x
 ;        C = radky   1..y
 ;        HL = adresa atributu
@@ -837,7 +872,6 @@ SA_BUFF:
     ret                                 ;
 
 
-
 ZOBRAZ_ZIVOTY:
     ld      DE, DATA_ZIVOTY             ;
     ld      B, $06                      ; 6 postav 
@@ -868,15 +902,7 @@ VYKRESLI_KRVAVY_FLEK:
     ret                                 ;dff0        c9         . 
     
 
-DATA_ZIVOTY:
-;       nyni    max     offset  segment pocatku prouzku posledni zraneni    cas_ukonceni krvaveho fleku
-defb    132,    132,    $b4,    Adr_Attr_Buffer/256+0,  0,                  0
-defb    90,     90,     $bb,    Adr_Attr_Buffer/256+0,  0,                  0
-defb    64,     64,     $94,    Adr_Attr_Buffer/256+1,  0,                  0
-defb    40,     40,     $9b,    Adr_Attr_Buffer/256+1,  0,                  0
-defb    46,     46,     $74,    Adr_Attr_Buffer/256+2,  0,                  0
-defb    40,     40,     $7b,    Adr_Attr_Buffer/256+2,  0,                  0
-DATA_ZIVOTY_END:
+
  
 ; -----------------------------------------------------------
 ; Zobrazi prouzek s zivoty

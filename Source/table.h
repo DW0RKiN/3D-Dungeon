@@ -80,7 +80,7 @@ defb     80,               TYP_ITEM + i_se,                      PODTYP_BONE
 defb     80,               TYP_ITEM + i_sw,                      PODTYP_BONE
 
 defb     82,                      TYP_ITEM,                      PODTYP_BOOK
-defb     82,               TYP_ITEM + i_ne,                   PODTYP_BRACERS
+defb     82,               TYP_ITEM + i_ne,                  PODTYP_NECKLACE
 defb     82,               TYP_ITEM + i_se,                      PODTYP_FOOD
 defb     82,               TYP_ITEM + i_sw,                  PODTYP_POTION_G
 

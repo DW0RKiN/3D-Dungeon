@@ -153,7 +153,7 @@ defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_RING_W
 ;--
 defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_HELM		equ	6*POSUN_PODTYP
 defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_HELM_D		equ	7*POSUN_PODTYP
-defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
+defw	I0_unknwn,	I1_unknwn,	I2_unknwn,	0	; PODTYP_NECKLACE	equ	8*POSUN_PODTYP
 ;--
 defw	0,		I1_armor,	I2_armor,	0	; PODTYP_ARMOR		equ	9*POSUN_PODTYP  (neni nakreslen)
 defw	I0_armor,	I1_armor,	I2_armor,	0	; PODTYP_ARMOR_CH	equ	10*POSUN_PODTYP

@@ -99,24 +99,75 @@ POZICE_NATEPNIK		equ	$1D0B
 POZICE_PPRSTEN		equ	$1C10
 
 ; vvvv ----------------- zacatek souvisleho bloku
-DODATECNE_V_INVENTARI:
-defw	Body_left,	$1907,	Body_left,	$1DF8
-defw	I_prostirani,	$1904,	I_toulec,	$1D09
-
 POZICE_V_INVENTARI:
 defw	$1204, $1206, $1208, $120A, $120C, $120E, $1210, $1212
 defw	$1504, $1506, $1508, $150A, $150C, $150E, $1510, $1512
-
+PROSTIRANI:
 defw	POZICE_PROSTIRANI	; prostirani
-defw	POZICE_HLAVA		; hlava
+defw    POZICE_HLAVA		; hlava
 defw	POZICE_NAHRDELNIK	; nahrdelnik
 defw	POZICE_BRNENI		; brneni
 defw	$180D			; l.ruka
 defw	POZICE_LPRSTEN		; l.prsten
 defw	POZICE_BOTY		; boty
-
 defw	POZICE_TOULEC		; toulec
 defw	POZICE_NATEPNIK		; natepnik / chranic predlokti
 defw	$1C0D			; p.ruka
 defw	POZICE_PPRSTEN		; p.prsten
+POZICE_V_INVENTARI_END:
 ; ^^^^ ----------------- konec souvisleho bloku
+
+
+; INDEXY pocitane od 1 do MAX_INVENTORY
+INDEX_PROSTIRANI    equ     17
+INDEX_HLAVA         equ     18
+INDEX_NAHRDELNIK    equ     19
+INDEX_BRNENI        equ     20
+INDEX_LRUKA         equ     21
+INDEX_LPRSTEN       equ     22
+INDEX_BOTY          equ     23
+INDEX_TOULEC        equ     24
+INDEX_NATEPNIK      equ     25
+INDEX_PRUKA         equ     26
+INDEX_PPRSTEN       equ     27
+
+; vvvvvvvvvvvvvvvvvvvvvvvvv zacatek souvisleho bloku vvvvvvvvvvvvvvvvvvvvvvvvv
+; Tabulka pro zjistni zda muze byt predmet ulozen na dane pozici
+POVOLENE_POZICE:
+defb    INDEX_LPRSTEN   ; PODTYP_RING       equ 1*POSUN_PODTYP
+defb    INDEX_LPRSTEN   ; PODTYP_RING_R     equ 2*POSUN_PODTYP
+defb    INDEX_LPRSTEN   ; PODTYP_RING_G     equ 3*POSUN_PODTYP
+defb    INDEX_LPRSTEN   ; PODTYP_RING_B     equ 4*POSUN_PODTYP
+defb    INDEX_LPRSTEN   ; PODTYP_RING_W     equ 5*POSUN_PODTYP
+;---
+defb    INDEX_HLAVA     ; PODTYP_HELM       equ 6*POSUN_PODTYP
+defb    INDEX_HLAVA     ; PODTYP_HELM_D     equ 7*POSUN_PODTYP
+defb    INDEX_NAHRDELNIK; PODTYP_NECKLACE   equ 8*POSUN_PODTYP
+;--
+defb    INDEX_BRNENI    ; PODTYP_ARMOR      equ 9*POSUN_PODTYP
+defb    INDEX_BRNENI    ; PODTYP_ARMOR_CH   equ 10*POSUN_PODTYP
+defb    INDEX_BRNENI    ; PODTYP_ARMOR_L    equ 11*POSUN_PODTYP
+defb    INDEX_BRNENI    ; PODTYP_ARMOR_P    equ 12*POSUN_PODTYP
+;--
+defb    INDEX_TOULEC    ; PODTYP_ARROW      equ 13*POSUN_PODTYP
+defb    INDEX_NATEPNIK  ; PODTYP_BRACERS    equ 14*POSUN_PODTYP
+defb    INDEX_BOTY      ; PODTYP_BOOTS      equ 15*POSUN_PODTYP
+;---
+defb    INDEX_LRUKA     ; PODTYP_ANKH       equ 16*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_AXE        equ 17*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_BOOK       equ 18*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_BOW        equ 19*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_DAGGER     equ 20*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_MACE       equ 21*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_SHIELD     equ 22*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_SHIELD2    equ 23*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_SLING      equ 24*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_SWORD      equ 25*POSUN_PODTYP
+defb    INDEX_LRUKA     ; PODTYP_BONE       equ 26*POSUN_PODTYP
+;---
+defb    INDEX_PROSTIRANI; PODTYP_FOOD       equ 27*POSUN_PODTYP
+defb    INDEX_PROSTIRANI; PODTYP_POTION_R   equ 28*POSUN_PODTYP
+defb    INDEX_PROSTIRANI; PODTYP_POTION_G   equ 29*POSUN_PODTYP
+defb    INDEX_PROSTIRANI; PODTYP_POTION_B   equ 30*POSUN_PODTYP
+POVOLENE_POZICE_END:
+; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
