@@ -22,7 +22,7 @@ OTOC_SE:
 ; VSTUP: hl = aktualni pozice, c = (VECTOR), a = { 0 dopredu, 4 dozadu, 8 vlevo, 12 vpravo }
 ; VYSTUP: hl = nova pozice
 ; MENI: de,a
-DO_HL_NOVA_POZICE:
+HL_NOVA_POZICE:
     ld      d,VEKTORY_POHYBU/256    ;  7:2
     add     a,c                     ;  4:1 (VECTOR) = {0, 1, 2, 3} = sloupec
     ld      e,a                     ;  4:1 de = @(VECTORY_POHYBU[radek][sloupec])
@@ -118,7 +118,7 @@ POSUN_NEJSEM_V_INVENTARI:
     add     a,a                         ; 4:1 4x
     push    af                          ; uchovam smer kvuli sipkam
 
-    call    DO_HL_NOVA_POZICE
+    call    HL_NOVA_POZICE
 ; test steny
     bit     0,(hl)                      ; 12:2 self-modifying pokud meni patra
     jr      nz,POSUN_ZABLOKOVAN         ;12/7:1 Pokud tam je stena opust fci

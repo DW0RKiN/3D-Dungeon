@@ -242,27 +242,29 @@ PREHOD_PREPINAC:
     
     ld      A, INDEX_PROSTIRANI
     sub     B
+    push    HL                          ; PRESOUVANY_PREDMET
+    ; potrebuji uchovat uz jen BC    
+    ; pokud je zero flag tak do C dat nulu
     call    z, EATING                   ; C = co ji/pije -> C = 0 (bude vynulovan)
 
-    push    HL
     ld      H, $00
     ld      L, B
     dec     L
-    call    HLAVNI_RADEK_INVENTORY_ITEMS; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
+    call    DE_INVENTORY_ITEMS_AKTIVNI  ; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
     add     HL, DE
     
-    ld      B, (HL)                     ; predmet ktery vymenime za presouvany
+    ld      A, (HL)                     ; predmet ktery vymenime za presouvany
     ld      (HL), C                     ; puvodne presouvany ulozime
     pop     HL
-    ld      (HL), B                     ; nove presouvany
+    ld      (HL), A                     ; nove presouvany
 
-    call    ITEM_TAKEN
+    call    ITEM_TAKEN_A
     jp      INVENTORY_WINDOW_KURZOR
 
 
 PP_NEJSME_V_INVENTARI:
     xor     a                           ; posun vpred
-    call    DO_HL_NOVA_POZICE           ; hl = hledana lokace = aktualni + vpred
+    call    HL_NOVA_POZICE              ; hl = hledana lokace = aktualni + vpred
     
     ld      A, TYP_PREPINAC             ;  7:2
     add     A, C                        ;  4:1
@@ -780,46 +782,39 @@ FB_DALSI_SLOUPEC:
 ; VSTUP:
 ;   C = PODTYP_ITEM co ji/pije
 EATING:
-    push    AF 
     push    BC
-    push    HL
-    push    DE
-    
-    ld      B, C
-    
+        
     ld      A, (HLAVNI_POSTAVA)
-    call    DATA_ZIVOTY_X
+    call    HL_DATA_ZIVOTY_A
     ; HL = DATA_ZIVOTY[HLAVNI_POSTAVA].nyni
     
     inc     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].max
+    ld      DE, VETA_DRINK          ; veta bude piti
 
     ld      A, C
     sub     PODTYP_FOOD
-    ld      C, A        
     jr      nz, E_NO_FOOD
-    ld      DE, VETA_EAT
-    jr      E_PRINT
+    ; food
+    ld      DE, VETA_EAT            ; vymenime vetu za jezeni
 E_NO_FOOD:
 
-    ld      DE, VETA_DRINK
-
-    dec     C
+    dec     A
     jr      nz, E_NO_R    
     ; healing potion
-    ld      A, (HL)                 ; A = max
-    dec     HL                      ; nyni
-    ld      (HL), A                 ; nyni = max
+    ld      B, (HL)                 ; max
+    dec     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].nyni
+    ld      (HL), B                 ; nyni = max
 E_NO_R:
     
-    dec     C
+    dec     A
     jr      nz, E_NO_G
     ; antidote potion
-    inc     HL                      ; trvale
-    ld      (HL), C
+    inc     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].trvale
+    ld      (HL), A                 ; trvale = 0
 E_NO_G:
 
 
-    dec     C
+    dec     A
     jr      nz, E_NO_B
     ; blue potion
 E_NO_B:
@@ -828,14 +823,12 @@ E_NO_B:
 E_PRINT
     ex      DE, HL
     ; HL veta
-    ; B index predmetu
-    call    ITEM_MAKE
+    ld      A, C
+    ; A index predmetu
+    call    ITEM_MAKE_A
     
 ; !!!!! DODELEJ    
-    pop     DE
-    pop     HL
     pop     BC
-    pop     AF
     ld      C, $00
     ret
 
@@ -1090,7 +1083,7 @@ VYHAZEJ_VSECHNO:
     push    DE
     
     ld      A, E
-    call    RADEK_INVENTORY_ITEMS    
+    call    DE_INVENTORY_ITEMS_A    
     ld      B, MAX_INVENTORY
 
 VV_LOOP:    
@@ -1132,7 +1125,7 @@ endif
 ;   A = index postavy hrace 0..5(6)
 ; VYSTUP:
 ;   HL = DATA_ZIVOTY[A]
-DATA_ZIVOTY_X:
+HL_DATA_ZIVOTY_A:
     ld      L, A
     add     A, A                ; 2x
     add     A, A                ; 4x
@@ -1151,7 +1144,7 @@ ZRAN_POSTAVU:
     push    DE                  ;
 
     ld      A, E                ;
-    call    DATA_ZIVOTY_X
+    call    HL_DATA_ZIVOTY_A
     
     ld      A, (HL)             ; DATA_ZIVOTY[E].nyni 
     sub     D                   ; - zraneni 
@@ -1186,7 +1179,7 @@ ZP_EXIT:
 OTESTUJ_TRVALE_ZRANENI:
     push    DE
     ld      A, E
-    call    DATA_ZIVOTY_X
+    call    HL_DATA_ZIVOTY_A
     
     inc     HL                  ; max
     inc     HL                  ; trvale

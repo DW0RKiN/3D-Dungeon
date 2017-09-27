@@ -5,6 +5,7 @@
 ;   offset PISMO_5PX = 0
 ; VYSTUP: 
 ;   IX ukazuje na zacatek dalsiho retece
+;   pokud nebyl prvni znak 0, tak B = 0
 ; MENI:
 ;   DE, HL, BC, A
 
@@ -35,7 +36,7 @@ PS_NEXT_CHAR:
 ; C  maska bitu kde ve znaku zaciname
 ; H segment atributu
 ; L color
-PS_COLOR:
+PRINT_STRING_CONTINUE:
     ld      A, L                        ;  4:1 color
     ld      L, E                        ;  4:1
     ld      (HL), A                     ;  7:1 set color
@@ -235,15 +236,14 @@ PRINT_PREPINAC:
 ; VYSTUP:
 ;   IX = @(strings[B])
 ;   A = 0
-;   B = 0
+;   BC = 0
 AXS_NEXT_STRING:
-    dec     B                   ; 4:1
-    ld      c,$ff               ; pokud by byl retezec delsi jak 255 znaku tak mame smulu
     cpir                        ; hl++, bc--
 
 ; VSTUPNI_BOD FCE!!!
 ADR_X_STRING:
     xor     A                   ;
+    ld      C, A                ; BC = $??00 -> cpir -> B--
     cp      B                   ;
     jr      nz, AXS_NEXT_STRING
 
@@ -252,7 +252,6 @@ ADR_X_STRING:
     ret
 
     
-
 if (0)
 ; VSTUP: hl = odkud, de = kam
 STRING_COPY:
@@ -267,18 +266,20 @@ endif
 
 
 
-
 ; VSTUP: 
-;   b index predmetu
+;   A index predmetu
 ;   HL ukazatel na pokracujici vetu
-ITEM_MAKE:
-    dec     B
-    inc     B
+; MENI:
+;   AF, BC, DE, HL, IX
+;   pokud neni druha tiskova veta "" tak B = 0
+ITEM_MAKE_A:
+    or      A
     ret     z
 
     push    HL                          ; ulozime na zasobnik aby to mohlo byt vybrano jako druha tisknuta veta
     
-    ld      hl,ARRAY_STRING_ITEMS
+    ld      B, A
+    ld      HL, ARRAY_STRING_ITEMS
     call    ADR_X_STRING
 
     call    SCROLL
@@ -287,26 +288,28 @@ ITEM_MAKE:
     call    PRINT_STRING
 
     pop     IX
-    call    PS_COLOR
+    ; navazeme na tisknutou vetu
+    call    PRINT_STRING_CONTINUE
 
     ret
-ITEM_END:
 
 
 
-; VSTUP: B index predmetu
+; VSTUP: 
+;   A index predmetu
 ; VYSTUP: 
 ;   Vypiset NECO TAKEN na spodek obrazovky
-ITEM_TAKEN:
+ITEM_TAKEN_A:
     ld      HL, VETA_TAKEN
-    jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
+    jr      ITEM_MAKE_A                 ; diky tomu ze to neni call, nemenime zasobnik
 
     
  
-; VSTUP: b index predmetu
+; VSTUP: 
+;   A index predmetu
 ; VYSTUP: 
 ;   Vypiset NECO PUT na spodek obrazovky
-ITEM_PUT:
+ITEM_PUT_A:
     ld      HL, VETA_PUT
-    jr      ITEM_MAKE                   ; diky tomu ze to neni call, nemenime zasobnik
+    jr      ITEM_MAKE_A                 ; diky tomu ze to neni call, nemenime zasobnik
  

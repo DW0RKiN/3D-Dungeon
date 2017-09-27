@@ -9,14 +9,14 @@ TEST_OTEVRENY_INVENTAR:
 
 ; VYSTUP:
 ;   DE = @(INVENTORY_ITEMS[HLAVNI_POSTAVA])    
-HLAVNI_RADEK_INVENTORY_ITEMS:
+DE_INVENTORY_ITEMS_AKTIVNI:
     ld      A, (HLAVNI_POSTAVA)     ; 13:3
     ld      E, A                    ;  4:1
 ; VSTUP:
 ;   A = E = 0..5
 ; VYSTUP:
 ;   DE = @(INVENTORY_ITEMS[A])
-RADEK_INVENTORY_ITEMS:
+DE_INVENTORY_ITEMS_A:
 
 if ( MAX_INVENTORY != 27 )
     .error 'Zmenit kod pro nasobeni 27x'
@@ -287,7 +287,7 @@ endif
     ld      HL, POZICE_V_INVENTARI_END
     exx
     ld      HL, MAX_INVENTORY       ; 10:3 
-    call    HLAVNI_RADEK_INVENTORY_ITEMS; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
+    call    DE_INVENTORY_ITEMS_AKTIVNI; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
     add     HL, DE
 
     ld      B, MAX_INVENTORY        ;  7:2
@@ -490,11 +490,11 @@ TEST_NEPOVOLENE_POZICE:
     ld      A, B
     dec     A                       ; 1..16 -> 0..15
     and     $F0                     ; cokoliv na mensi pozici je povoleno
-    ret     z
+    ret     z                       ; vracim ZERO
 
     ld      A, C
     or      A
-    ret     z
+    ret     z                       ; vracim ZERO
     
 POZICE_M1   equ POVOLENE_POZICE-1
     push    HL

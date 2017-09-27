@@ -152,6 +152,11 @@ defb    232,          ZAM_1 + TYP_DVERE_VZ,                                0
 
 defb    246,                  TYP_DEKORACE,                      PODTYP_RUNA
 
+defb    246,                      TYP_ITEM,                  PODTYP_POTION_G
+defb    246,               TYP_ITEM + i_ne,                  PODTYP_POTION_R
+defb    246,               TYP_ITEM + i_se,                  PODTYP_POTION_G
+defb    246,               TYP_ITEM + i_sw,                  PODTYP_POTION_G
+
 defb    254,                  TYP_DEKORACE,                     PODTYP_KANAL
 
 ZARAZKA:

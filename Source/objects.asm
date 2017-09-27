@@ -116,8 +116,7 @@ VINP_BEZ_KONTROLY:
     dec     HL
     ld      (HL), C                     ; lokace
     
-    ld      B, A
-    call    ITEM_PUT    
+    call    ITEM_PUT_A    
     
     jp      INVENTORY_WINDOW_KURZOR
 ;         ret
@@ -138,25 +137,7 @@ VEZMI_ITEM_Z_POZICE:
     dec     H
     ld      ix,VETA_NIC
   
-  
-if (0)
-    dec     DE                          ; MASKA_PODTYP
-    ld      A, (DE)
-    ld      B, A                        ; presouvany predmet
-    
-    dec     DE                          ; MASKA_TYP + MASKA_NATOCENI
-    ld      A, (DE)
-    cp      H                           ; je to predmet se spravnym natocenim?
-    jp      nz, PRINT_MESSAGE           ; misto return
-    
-    dec     DE                          ; lokace
-    ld      A, (DE)    
-    cp      L                           ; sedi lokace?
-    jp      nz, PRINT_MESSAGE           ; misto return, carry = 0, zero = 1
-  
-    ld      A, B
-    ld      (PRESOUVANY_PREDMET), A
-else
+
     ex      DE, HL
     dec     HL                          ; MASKA_PODTYP
     ld      A, (HL)                     ; presouvany predmet    
@@ -170,7 +151,6 @@ else
     jp      nz, PRINT_MESSAGE           ; misto return
     
     ld      (PRESOUVANY_PREDMET), A
-endif
     
     
     ld      HL, (ADR_ZARAZKY)           ; 16:3
@@ -191,8 +171,7 @@ endif
     dec     de                          ; zrusime +1 z ldi
     ld      (ADR_ZARAZKY),de            ;     
     
-    ld      B, A                        ; b DRZENY_PREDMET
-    call    ITEM_TAKEN
+    call    ITEM_TAKEN_A
 ; otevri inventar
     ld      hl,PRIZNAKY                 ; 10:3
     ld      a,(hl)                      ; 7:1
