@@ -1,3 +1,4 @@
+; =====================================================
 ; Nastavi zero flag kdyz nejsme v inventari
 ; Do akumulatoru vlozi kurzor      v inventari
 TEST_OTEVRENY_INVENTAR:
@@ -6,12 +7,15 @@ TEST_OTEVRENY_INVENTAR:
     ld      a, (KURZOR_V_INVENTARI)     ;caab        3a 66 ce 
     ret
     
-
+    
+; =====================================================
 ; VYSTUP:
 ;   DE = @(INVENTORY_ITEMS[HLAVNI_POSTAVA])    
 DE_INVENTORY_ITEMS_AKTIVNI:
     ld      A, (HLAVNI_POSTAVA)     ; 13:3
     ld      E, A                    ;  4:1
+    
+; -----------------------------------------------------
 ; VSTUP:
 ;   A = E = 0..5
 ; VYSTUP:
@@ -45,7 +49,7 @@ endif
     
 
     
-; ----------------------------------
+; =====================================================
 SET_RIGHT_PANEL:
     ld      hl,PRIZNAKY                 ; 10:3
     ld      a,(hl)                      ; 7:1
@@ -55,14 +59,9 @@ SET_RIGHT_PANEL:
 
     jp      nz,INVENTORY_WINDOW_OPEN
     jr      PLAYERS_WINDOW
-;         ret                                sem se uz nikdy nedostanu protoze volam fce pomoci jump
-; POZOR OPRAVIT ZBYTECNY SKOK
 
-
-
-
-
-
+    
+; =====================================================
 ; VSTUP: A = znaky '1' .. '6'
 NEW_PLAYER_ACTIVE:
     sub     '1'                     ; A = 0..5
@@ -81,7 +80,7 @@ NEW_PLAYER_ACTIVE:
     ; jinak pokracujem v PLAYER_WINDOW
 ;     ret
     
-; ----------------------------------
+; -----------------------------------------------------
 PLAYERS_WINDOW:
 
     ; Vymazani vseho krome casti s avatarem a rukama
@@ -189,8 +188,7 @@ PW_KOMPAS_A_SIPKY:
     ret                                 ;dd0c c9         . 
 
     
-
-; ----------------------------------
+; =====================================================
 ; Tento vstup se pouzije pokud predtim byl vykreslen jiny panel
 INVENTORY_WINDOW_OPEN:
 
@@ -431,7 +429,7 @@ IW_EXIT:
 
 
 
-; -------------------------------------------------------
+; =====================================================
 VYKRESLI_AKTIVNI_PREDMET:
     call    TEST_OTEVRENY_INVENTAR      ;ddf7        cd a6 ca
     ret     z                           ; u zavreneho nebudem vykreslovat presah
@@ -474,10 +472,8 @@ VYKRESLI_AKTIVNI_PREDMET:
     call    COPY_SPRITE2BUFFER
     ret
 
-    
 
-    
-; -------------------------------------------------------
+; =====================================================  
 ; VSTUP:
 ;   C = PODTYP_ITEM testovaneho predmetu ( 0 = povolen vzdy )
 ;   B = index testovane pozice 1..MAX_INVENTORY
@@ -520,7 +516,7 @@ TNP_NENI_RUKA:
     ret     
  
 
-; ------------------------------
+; =====================================================
 ; Fce kresli sprity s parametry tahajici ze zasobniku
 ; VSTUP: a = pocet vykresleni ( = 2x pop     )
 ;        na zasobniku lezi nahore pozice a pod ni lezi adresa spritu
@@ -541,12 +537,12 @@ VYKRESLI_ZE_ZASOBNIKU_LOOP:
     jp      (hl)
     
     
-    
+; =====================================================    
 ; VSTUP:    
-;        a = PODTYP predmetu
-;        b = cislo ruky od 0
+;   A = PODTYP predmetu
+;   B = cislo ruky od 0
 ; MENI:
-;        a, hl, de
+;   A, HL, DE
 ; VYSTUP:   vraci zero-flag pokud je prazdna
 VYKRESLI_RUKU:
     pop     hl                      ; vytahni navratovou adresu

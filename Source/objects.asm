@@ -1,4 +1,4 @@
-; =============================
+; =====================================================
 ; VSTUP: 
 ;   L = hledana lokace
 ; VYSTUP:
@@ -24,7 +24,8 @@ FIND_NEXT_OBJECT:
     jp      c, FFO_NEXT                 ; 10:3 carry flag = zaporny = jsme pod lokaci
     ret                                 ; 10:1 zero = nasli jsme lokaci, not zero = presli jsme ji, neni tam
 
-;----------------------
+    
+; =====================================================
 ; VSTUP:      
 ;   L = hledana lokace
 ;   A = hledane natoceni ( kdyz se rovna 4 tak pretika do dalsiho policka )
@@ -55,7 +56,7 @@ FLO_LOOP
     
     ret                                 ; not carry
 
-; ------------------------------------------------------
+; =====================================================
 ; VSTUP: 
 ;   L = lokace kam vkladam
 ;   c = (vector)
@@ -119,10 +120,9 @@ VINP_BEZ_KONTROLY:
     call    ITEM_PUT_A    
     
     jp      INVENTORY_WINDOW_KURZOR
-;         ret
 
 
-;-----------------------------------------------------------
+; =====================================================
 ; VSTUP: L = odkud beru
 ;        c = (vector)
 VEZMI_ITEM_Z_POZICE:
@@ -180,9 +180,9 @@ VEZMI_ITEM_Z_POZICE:
     
     jp      INVENTORY_WINDOW_KURZOR
 ;         ret
-;----------------------------------------------
 
 
+; =====================================================
 PREPNI_OBJECT:
 ; fce prepne dvere nebo paku, bez ohledu na natoceni
 ; v "h" je "typ"
@@ -214,8 +214,8 @@ PO_EXIT:
     pop     de
     ret
 
-; ====================================
 
+; =====================================================
 ; Prohleda seznam predmetu zda na dane pozici ( ulozene v registru "l" ) nelezi nepruchozi predmet ( = aspon jeden z hornich bajtu "typ" je nenulovy ) 
 ; VSTUP: v "hl" je hledana lokace
 ; VYSTUP: vraci carry priznak pokud najde
@@ -234,13 +234,13 @@ JPB_NALEZEN_OBJECT:                     ; na lokaci lezi nejaky predmet
     ret
 
 
+; =====================================================
 ; VSTUP:
 ;   IX je zkoumana lokace
 ;   BC je hloubka * 12 = radek v DOOR_TABLE/RAM_TABLE/...
 ;   tzn B = 0
 ; MENI:
 ;   mam povoleno menit A, HL, DE, BC
-
 FIND_OBJECT:        
 
     inc     ixl
@@ -269,12 +269,11 @@ if ( TYP_PREPINAC != 0 )
 else
     or      a                       ;  4:1
 endif
-    
     jr      z,FOUND_PREPINAC        ;12/7:2
 
     cp      TYP_DVERE               ;  7:2
     jr      z,FOUND_DOOR            ;12/7:2
-
+    
     cp      TYP_ENEMY               ;  7:2
     jr      z,FOUND_ENEMY           ;12/7:2
 
@@ -293,11 +292,11 @@ TEST:
     
     ld      hl,RUNE_TABLE
     cp      PODTYP_RUNA             ;  7:2 
-    jp      z,FOUND_DEKORACE        ;10:2
+    jp      z,FOUND_DEKORACE        ; 10:2
     
     ld      hl,KANAL_TABLE
     cp      PODTYP_KANAL            ;  7:2 
-    jp      z,FOUND_DEKORACE        ;10:2
+    jp      z,FOUND_DEKORACE        ; 10:2
     
     ; sem by jsem se nikdy nemel dostat...
 
@@ -305,8 +304,8 @@ TEST:
 FO_EXIT:
     ret
 
-; ------------ aktualni adresa podfce je v test.asm
 
+; =====================================================
 FOUND_DOOR:
     ; vsechny dvere maji ram
     ld      a,(de)                  ;  7:1 typ
@@ -342,8 +341,8 @@ FD_VIEW_RAM:                        ; vykresli ram
 
     jr      FO_LOOP                 ; return
 
-; ------------ aktualni adresa podfce je v test.asm
 
+; =====================================================
 FOUND_PREPINAC:
     push    bc
 
@@ -392,8 +391,7 @@ FD_PREPINAC_EXIT:
 
 
 
-; ------------ aktualni adresa podfce je v test.asm
-
+; =====================================================
 FOUND_ENEMY:
     push    de
     push    ix
@@ -502,8 +500,7 @@ FE_EXIT:
     jp      FO_LOOP                     ; return
     
     
-; ------------ aktualni adresa podfce je v test.asm
-
+; =====================================================
 ; FOUND_WALL:        ; pruchozi falesna zed
 ; 
 ;         ld      a,(de)                    ;  7:1 typ
@@ -523,14 +520,14 @@ FE_EXIT:
 ;         pop     bc
 ;         
 ;         jp      FO_LOOP_DODATECNY         ; return
-    
-; ------------ aktualni adresa podfce je v test.asm
 
+
+; =====================================================
 ; VSTUP:         bc = index v tabulce
 ;                adresa tabulky spravne dekorace
 ;                de = ukazuje na podtyp/dodatecny!!! proto se vracim pomoci FO_LOOP_DODATECNY
 FOUND_DEKORACE:
-    add     hl,bc
+    add     hl, bc
     push    bc
     push    de
     call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
@@ -541,9 +538,8 @@ FOUND_DEKORACE:
 
     
     
-
-
-; VSTUP:        ;
+; =====================================================
+; VSTUP:    
 ;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
 ;   IXl = TABLE_OBJECTS[?].lokace
 ;   BC = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
@@ -556,6 +552,9 @@ FOUND_ITEM:
     ld      a,c
     cp      MAX_VIDITELNOST_PREDMETU_PLUS_1
     jp      nc, FO_LOOP                     ; return ( bohuzel tolikrat, kolikrat je predmetu na policku )
+    
+    bit     1,(IX+$00)                      ; 20:4 jsme v nepruhledne stene? Nebude videt ze tam neco je ani kdyz jsme uvnitr...
+    ret     nz
 
     push    DE                              ; ulozime adresu prvniho predmetu pro pripad preteceni na zacatek
     

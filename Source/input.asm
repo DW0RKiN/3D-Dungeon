@@ -1,4 +1,4 @@
-
+; =====================================================
 ; VYSTUP:         v "a" ascii kod stisknute klavesy 
 ;                 vraci zero flag kdyz nic...
 TEST_KEMPSTON:
@@ -71,10 +71,9 @@ TK_SHODNY_STAV:
 
     
     
-; ----------------------------------------------
+; =====================================================
 ; VSTUP: nic
 ; VYSTUP:
-;
 KEYPRESSED:
     ld      de,TIMER_ADR
     ld      a,(de)
@@ -179,13 +178,12 @@ KEYPRESSED_NO_NUMBER_1_6:
     pop     hl                      ; zrusim ret
     call    POP_ALL
     ret                             ; do BASICu
-;------
 
+
+; =====================================================
 SET_BORDER:
     ld      a, (BORDER)
     xor     $07
     ld      (BORDER), a
     ret
-    
-    
     

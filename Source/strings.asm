@@ -1,4 +1,4 @@
-
+; =====================================================
 ; VSTUP: 
 ;   IX ukazatel na string zakonceny znakem mensim jak 32 a ktery neni vetsi jak 85+32
 ;   HL = adresa atributu prvniho znaku
@@ -8,11 +8,10 @@
 ;   pokud nebyl prvni znak 0, tak B = 0
 ; MENI:
 ;   DE, HL, BC, A
-
-
 PRINT_STRING:                           ; ver 0.3
     ld      A, $07                      ; white
 
+; -----------------------------------------------------
 ; VSTUP:
 ;   A = color
 PRINT_STRING_COLOR:                     ;
@@ -30,7 +29,8 @@ PRINT_STRING_COLOR:                     ;
 PS_NEXT_CHAR:
     ; na zacatku a na konci obarvuji, takze i kdyz prekroci znak bude to spravne
     pop     HL                          ; 10:1
-    
+
+; -----------------------------------------------------
 ; IX ukazatel na aktualni znak retezce
 ; DE adresa znaku na obrazovce
 ; C  maska bitu kde ve znaku zaciname
@@ -100,7 +100,7 @@ PS_PX_RIGHT:
     jr      PS_NEXT_CHAR
     
 
-; ------------------------------------------
+; =====================================================
 ; VSTUP: 
 ;   a color
 ;   HL adresa atributu prvniho znaku
@@ -130,6 +130,7 @@ PRINT2SCREEN:
 endif
 
 
+; =====================================================
 ; scroll routine, o jeden radek nahoru textoveho pole 
 ; ver 0.1
 ; NEMENI: "a","IX" ( dulezite, lze pak volat pred PRINT_STRING, ktere ma IX jako parameter s adresou retezce )
@@ -168,15 +169,16 @@ SCROLL_CLEAR_MICROLINE:
 
 
 
-;------------------------------------
+; =====================================================
 ; Odskroluje textove pole a zapise naspod novy retezec
 ; VSTUP: IX ukazatel na string zakonceny znakem mensim jak 32
 ; zapisuje primo na obrazovku
 PRINT_MESSAGE:
     ld      a, %00000111                ; INK = 7 = bila
-    
+ 
+; -----------------------------------------------------
 ; VSTUP:
-;   a = color
+;   A = color
 PRINT_MESSAGE_COLOR:
     call    SCROLL                      ; nemeni "IX" ani "a"
 
@@ -185,10 +187,10 @@ PRINT_MESSAGE_COLOR:
     ret
     
     
-    
+; =====================================================    
 ; VSTUP: 
-; B  = index vety
-; HL = je pocatecni veta
+;   B  = index vety
+;   HL = je pocatecni veta
 PRINT_MESSAGE_ARRAY:
 
     call    ADR_X_STRING    
@@ -198,6 +200,7 @@ PRINT_MESSAGE_ARRAY:
     ret
     
     
+; =====================================================
 PRINT_DEKORACE:
     call    PUSH_ALL
         
@@ -211,6 +214,8 @@ PRINT_DEKORACE:
     call    POP_ALL
     ret
 
+    
+; =====================================================
 PRINT_PREPINAC:
     call    PUSH_ALL
 
@@ -227,8 +232,7 @@ PRINT_PREPINAC:
     ret
 
 
-;------------------------------------
-
+; =====================================================
 ; Najde pocatek x-teho retezce zakonceny nulou od pocatecni adresy
 ; VSTUP:
 ;   HL pocatecni adresa
@@ -241,6 +245,7 @@ AXS_NEXT_STRING:
     cpir                        ; hl++, bc--
 
 ; VSTUPNI_BOD FCE!!!
+; -----------------------------------------------------
 ADR_X_STRING:
     xor     A                   ;
     ld      C, A                ; BC = $??00 -> cpir -> B--
@@ -265,7 +270,7 @@ STRING_COPY:
 endif
 
 
-
+; =====================================================
 ; VSTUP: 
 ;   A index predmetu
 ;   HL ukazatel na pokracujici vetu
@@ -294,7 +299,7 @@ ITEM_MAKE_A:
     ret
 
 
-
+; =====================================================
 ; VSTUP: 
 ;   A index predmetu
 ; VYSTUP: 
@@ -304,7 +309,7 @@ ITEM_TAKEN_A:
     jr      ITEM_MAKE_A                 ; diky tomu ze to neni call, nemenime zasobnik
 
     
- 
+; ===================================================== 
 ; VSTUP: 
 ;   A index predmetu
 ; VYSTUP: 

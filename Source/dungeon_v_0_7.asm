@@ -49,8 +49,8 @@ PRIZNAKY:
 defb        0
 
 
+; =====================================================
 ; Pokud se da cokoliv dalsiho nad MAIN tak to zmeni adresu vstupniho bodu!!!
-
 MAIN:                               ;
     call    PUSH_ALL
 
@@ -139,7 +139,7 @@ INCLUDE draw3D.asm
 INCLUDE inventory.asm
 
 
-
+; =====================================================
 ; Vcetne hl
 PUSH_ALL:
     di
@@ -167,8 +167,8 @@ PUSH_ALL_HL:
     ld      hl,0                        ; obnoveni registru "hl"
     ret
 
-; -----------------------
-
+    
+; =====================================================
 ; Vcetne hl
 POP_ALL:
     di
@@ -197,7 +197,7 @@ POP_ALL:
 
 
 
-
+; =====================================================
 ; Nastal uz cas scrollovat stare zpravy?
 ; ver 0.1
 TIME_SCROLL:
@@ -218,8 +218,7 @@ TIME_SCROLL_LAST:
 
 
 
-;------
-
+; =====================================================
 ; Stisknut SPACE
 ; v "c" je (VECTOR)
 ; v "hl" je aktualni lokace
@@ -321,72 +320,8 @@ PP_LOOP:
     call    PREPNI_OBJECT
     jp      PP_LOOP
     
-    
-; --------------------------------
-    
-
-
 
 ; =====================================================
-; VSTUP: 
-;   HL adresa od ktere se budou cist data ( adresa spritu a XY na obrazovce )
-;   zero-flag = 0, nebude se kreslit, = 1 bude
-; VYSTUP: HL = HL + 4 i kdyz se nic nekreslilo
-INIT_COPY_PATTERN2BUFFER_NOZEROFLAG:
-    or      1                       ; reset zero flag
-; VYSTUP:
-;   HL = HL+4
-;   not zero flag a nenulovy segment adresy spritu znamena ze bude sprite vykreslen
-; MENI:
-;   BC, DE, HL=HL+4
-; NEMENI:
-;   IX, A
-INIT_COPY_PATTERN2BUFFER:
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)
-    inc     hl
-    ld      c,(hl)
-    inc     hl
-    ld      b,(hl)
-    inc     hl
-
-    ret     z                       ; je tam chodba, nekreslime
-
-    inc     d                       ; ochranujem akumulator
-    dec     d
-    ret     z                       ; nekreslime
-
-    push    af
-    push    hl
-    push    ix
-
-    call    COPY_SPRITE2BUFFER
-
-    pop     ix
-    pop     hl
-    pop     af
-    ret
-
-; =====================================================
-
-
-; =====================================================
-
-
-
-
-
-
-; =======================================================================
-
-
-
-
-    
-; =====================================================
-
-
 ; Kopirovani 18*14 znaku vcetne atributu z bufferu na screen
 ; Buffer ma rozmery a rozlozeni dat stejne jako SCREEN, jen jinou adresu
 ; Na obrazovce bude obsah zobrazen vlevo nahore
@@ -451,7 +386,7 @@ CI2S_WAIT:
     ret 
 
 
-
+; =====================================================
 ; Kopirovani 18*14 znaku vcetne atributu z bufferu na screen
 ; Buffer ma rozmery a rozlozeni dat stejne jako SCREEN, jen jinou adresu
 ; Na obrazovce bude obsah zobrazen vlevo nahore
@@ -505,8 +440,9 @@ CV2S_WAIT:
     out     (254),a                  ; nastavi BORDER na cernou
 
     ret 
+
     
-    
+; =====================================================
 ; ---------------  zobecnena fce pro kopirovani z bufferu na screen ( oboje se shodnym rozlozenim pameti )
 ; Kopiruje vyrez v jedne tretine od urciteho radku nahoru az k pocatku
 ; VSTUP: ixh = levy spodni roh ( index znaku )
@@ -564,10 +500,8 @@ COPY_START:
     or      a                       ; reset carry flag
     jr      COPY_MICROLINE
 
+
 ; =====================================================
-
-
-
 ; Vypise do textoveho pole napovedu
 HELP:
     ld      ix,HELP_STRING
@@ -578,15 +512,8 @@ HELP:
     call    PRINT_MESSAGE
     ret
 
-;------------------------------------
   
-
-
-
-
-
-
-; ----------------------
+; =====================================================
 OBAL_SPRITE2BUFFER:
     push    af
     push    hl
@@ -598,9 +525,7 @@ OBAL_SPRITE2BUFFER:
     ret
 
 
-
-
-; ----------------------------------
+; =====================================================
 ; nataci kompas
 AKTUALIZUJ_RUZICI:
     ld      a,(VECTOR)                  ; 13:3 0 = N,1 = E,2 = S,3 = W
@@ -626,7 +551,8 @@ endif
     call    SET_TARGET_BUFFER           ; vrat INIT_COPY_PATTERN2BUFFER na BUFFER
     ret
 
-; ----------------------------
+
+; =====================================================
 ; VSTUP: a = 0 dopredu, 4 dozadu , 8 vlevo, 12 vpravo, 16 otoceni doleva, 20 otoceni doprava, 24 jen sipky
 AKTUALIZUJ_SIPKY:
     ld      L, A                        ; 4:1
@@ -740,6 +666,7 @@ FILL_ATTR_BLOCK:
     ret
 else
 
+; =====================================================
 ; VSTUP:    
 ;   HL = adresa kam se to bude ukladat
 ;   B = pocet mikroradku
@@ -779,6 +706,7 @@ FB_DALSI_SLOUPEC:
 ; 8,1,14 = 3365
 
 
+; =====================================================
 ; VSTUP:
 ;   C = PODTYP_ITEM co ji/pije
 EATING:
@@ -833,11 +761,7 @@ E_PRINT
     ret
 
 
-
-
-
-
-
+; =====================================================
 ; Vstup: B = sloupce 1..x
 ;        C = radky   1..y
 ;        HL = adresa atributu
@@ -857,8 +781,7 @@ FILL_ATTR_BLOCK:
 endif
         
 
-
-
+; =====================================================
 ; meni A a z HL ukazujici na atributy udela HL ukazujici na ZNAK ve screen/buffer
 ; Fce prevadejici segment atributu na segment obrazu
 ;                   10xy     10x y
@@ -890,7 +813,8 @@ SA_BUFF:
     ld      H, A                        ; 
     ret                                 ;
 
-
+    
+; =====================================================
 ZOBRAZ_ZIVOTY:
     ld      HL, DATA_ZIVOTY             ;
     ld      B, $06                      ; 6 postav 
@@ -932,7 +856,7 @@ ZZ_BEZ_AKT_ZRANENI:
     ret                                 ; 
 
 
-    
+; =====================================================    
 ; VSTUP: 
 ; DE = adresa atr. pocatku prouzku
 ; B = velikost zraneni
@@ -977,9 +901,7 @@ defb        "1",0
 
 
     
-
- 
-; -----------------------------------------------------------
+; =====================================================
 ; Zobrazi prouzek s zivoty
 ; VSTUP: 
 ;   C = aktulni pocet zivotu
@@ -1073,9 +995,7 @@ VZ_LOOP_PX:
     ret                         ; 
 
 
-    
-
-
+; =====================================================
 ; VSTUP:
 ;   E = index postavy hrace 0..5
 VYHAZEJ_VSECHNO:
@@ -1121,6 +1041,7 @@ if (DATA_ZIVOTY / 256) != ( (1+DATA_ZIVOTY_END) / 256 )
     .error      'Seznam DATA_ZIVOTY prekracuje segment!'
 endif
 
+; =====================================================
 ; VSTUP: 
 ;   A = index postavy hrace 0..5(6)
 ; VYSTUP:
@@ -1137,7 +1058,7 @@ HL_DATA_ZIVOTY_A:
     ret
     
 
-    
+; =====================================================
 ; VSTUP: E = index postavy hrace 0..5
 ;        D = zraneni
 ZRAN_POSTAVU:
@@ -1174,6 +1095,7 @@ ZP_EXIT:
     ret                         ; 
 
 
+; =====================================================
 ; VSTUP: E = index postavy hrace 0..5
 ;        D = zraneni
 OTESTUJ_TRVALE_ZRANENI:
@@ -1191,7 +1113,7 @@ OTESTUJ_TRVALE_ZRANENI:
     ret    
     
     
-; ????????????????????????????????????????
+; =====================================================
 PLAYERS_WINDOW_AND_DAMAGE:
 PWAD_SELF:
     ld      a,$00               ; 

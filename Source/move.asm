@@ -1,3 +1,4 @@
+; =====================================================
 ; VSTUP: b = -1 otoceni doleva, +1 otoceni doprava
 OTOC_SE:
     ld      a,c                     ;  4:1 (VECTOR)
@@ -16,8 +17,9 @@ OTOC_SE:
     call    AKTUALIZUJ_SIPKY        ; a = 16 otoceni doleva, 20 = otoceni doprava
     call    AKTUALIZUJ_RUZICI
     ret
-;------
-
+    
+    
+; =====================================================
 ; ulozi do registru "l" novou pozici 
 ; VSTUP: hl = aktualni pozice, c = (VECTOR), a = { 0 dopredu, 4 dozadu, 8 vlevo, 12 vpravo }
 ; VYSTUP: hl = nova pozice
@@ -32,9 +34,8 @@ HL_NOVA_POZICE:
     ld      l,a                     ;  4:1 hl = pozice na mape po presunu
     ret
 
-;--------
-
-
+    
+; =====================================================
 ; VSTUP:         nic
 ; NEMENI:        b ( protoze nesmi )
 INC_POCITADLO_POHYBU_A_ZVUK:
@@ -53,10 +54,7 @@ IPPAZ_LOOP:
       ret
 
 
-
-    
-    
-; =======================
+; =====================================================
 ; Pokud je aktivni panel s inventarem, tak sipky pohybuji s kurzorem v inventari
 ; VSTUP
 ;   B = stisknuto_dopredu..stisknuto_vpravo = { stisknuto_dopredu = 0,stisknuto_dozadu = 1,stisknuto_vlevo = 2,stisknuto_vpravo = 3 }
@@ -105,12 +103,8 @@ POSUN_V_MEZICH:
     ld      (KURZOR_V_INVENTARI),a      ; opraveny zmeneny ulozim
     jp      INVENTORY_WINDOW_KURZOR
 
-    
 
-
-
-
-; ==============================
+; -----------------------------------------------------
 POSUN_NEJSEM_V_INVENTARI:
 
     ld      a,b
@@ -131,7 +125,8 @@ POSUN_NEJSEM_V_INVENTARI:
 
     call    INC_POCITADLO_POHYBU_A_ZVUK ;zvedne "pocitadlo pohybu/otoceni"
     jr      EXIT_POSUN
-    
+   
+; -----------------------------------------------------
 POSUN_ZABLOKOVAN:
     ld      ix,VETA_NO_WAY
     call    PRINT_MESSAGE

@@ -1,6 +1,5 @@
-; ====================================
-
-VIEW:        ; 0xd1f7
+; =====================================================
+VIEW:     
 
     ; vykresleni pozadi ( strop a podlaha )
     ld      bc,$1100                    ; 17. sloupec
@@ -26,10 +25,10 @@ V_H5:
     ld      h,VEKTORY_POHYBU/256        ;  7:2
     ld      a,(VECTOR)                  ; 13:3 {0, 1, 2, 3}
     ld      l,a                         ;  4:1
-    ld      c,(hl)                      ;  7:1 modifikator      pro posun vpred
+    ld      c,(hl)                      ;  7:1 modifikator pro posun vpred (prvni radek)
     add     a,12                        ;  7:2                        
     ld      l,a                         ;  4:1
-    ld      a,(hl)                      ;  7:1 modifikator      pro posun vpravo
+    ld      a,(hl)                      ;  7:1 modifikator pro posun vpravo (posledni radek)
     ld      e,a                         ;  4:1 "e" obsahuje "o 1 vpravo" 
     add     a,a                         ;  4:1 2 * vpravo
     add     a,a                         ;  4:1 4 * vpravo
@@ -98,81 +97,120 @@ NULA:
 
     ret
     
-    
-    
-    
-    ; -------------------------------------
+
+; =====================================================
 ; VSTUP:
 ;   IX obsahuje pozici na mape kterou vykresluji
 ;   HL obsahuje odkaz do tabulky sten
-;   D obsahuje index "+max. vpravo", e obsahuje "o 1 vpravo"
+;   D obsahuje max vpravo
+;   E obsahuje pozice_vpravo - pozice (o 1 vpravo)
 ;   B obsahuje hloubku/vzdalenost pro zjisteni jakou verzi spritu nakreslit v objektech
 PROHLEDEJ_PROSTOR_VPREDU:
-    ld      c,ixl                   ; ulozime offset pozice
-    ld      a,d
-PPV_LOOP:
-    add     a,c
-    ld      ixl,a                   ; ix = max. vpravo
-; test steny
-    bit     1,(ix)
+    ld      C, IXL                  ; ulozime offset pozice
+    ld      A, D
+PPV_LOOP:                           ; djnz smycka
+    add     A, C
+    ld      IXL, A                  ; ix = max. vpravo
+    
 
-    push    bc
-    push    de
+; test steny
+    bit     1, (IX)                 ; test 0000 0010
+    push    BC
+    push    DE
     call    INIT_COPY_PATTERN2BUFFER
     call    INIT_COPY_PATTERN2BUFFER        
-    pop     de
-    pop     bc
+    pop     DE
+    pop     BC
     
-    ld      a,d
-    cp      e
-    jr      nz,PPV_NEKRESLI_VPRAVO
+    ld      A, D
+    cp      E
     ; jsme o 1 vpravo
-    ld      a,4                     ; primy pohled, o 1 vpravo, o 1 vlevo
-    call    INIT_FIND_OBJECT
-PPV_NEKRESLI_VPRAVO:
-    
+    ld      A, $04                  ; primy pohled, o 1 vpravo, o 1 vlevo
+    call    z, INIT_FIND_OBJECT
+
+
     ld      a,c
     sub     d
     ld      ixl,a                   ; ix = max. vlevo
 ; test steny
     bit     1,(ix)
-
     push    bc
     push    de
     call    INIT_COPY_PATTERN2BUFFER        
     call    INIT_COPY_PATTERN2BUFFER
     pop     de
     pop     bc
-
+    
     ld      a,d
     cp      e
-    jr      nz,PPV_NEKRESLI_VLEVO
     ; jsme o 1 vlevo
-    ld      a,8                     ; primy pohled, o 1 vpravo, o 1 vlevo
-    call    INIT_FIND_OBJECT
-PPV_NEKRESLI_VLEVO:
-    
+    ld      a, $08                  ; primy pohled, o 1 vpravo, o 1 vlevo
+    call    z, INIT_FIND_OBJECT
 
     ld      a,d
     sub     e
     ld      d,a
     jr      nz,PPV_LOOP
 
-    ld      ixl,c
+    ld      ixl,c    
 ; test steny
     bit     1,(ix)
-
     push    bc
     call    INIT_COPY_PATTERN2BUFFER
     pop     bc
     ; divame se vpred
     xor     a                       ; primy pohled, o 1 vpravo, o 1 vlevo
     call    INIT_FIND_OBJECT
+
+    
     ret
     
     
     
-;
+; =====================================================
+; VSTUP: 
+;   HL adresa od ktere se budou cist data ( adresa spritu a XY na obrazovce )
+;   zero-flag = 0, nebude se kreslit, = 1 bude
+; VYSTUP: HL = HL + 4 i kdyz se nic nekreslilo
+INIT_COPY_PATTERN2BUFFER_NOZEROFLAG:
+    or      1                       ; reset zero flag
+; VYSTUP:
+;   HL = HL+4
+;   not zero flag a nenulovy segment adresy spritu znamena ze bude sprite vykreslen
+; MENI:
+;   BC, DE, HL=HL+4
+; NEMENI:
+;   IX, A
+; -----------------------------------------------------
+INIT_COPY_PATTERN2BUFFER:
+    ld      e, (hl)
+    inc     hl
+    ld      d, (hl)
+    inc     hl
+    ld      c, (hl)
+    inc     hl
+    ld      b, (hl)
+    inc     hl
+
+    ret     z                       ; je tam chodba, nekreslime
+
+    inc     d                       ; ochranujem akumulator
+    dec     d
+    ret     z                       ; nekreslime
+
+    push    af
+    push    hl
+    push    ix
+
+    call    COPY_SPRITE2BUFFER
+
+    pop     ix
+    pop     hl
+    pop     af
+    ret
+
+    
+; =====================================================
 INIT_FIND_OBJECT:
 
     bit     7,B                     ; zaporna hloubka, nekreslim, usetrim si radek s nulama v kazde tabulce
@@ -191,4 +229,6 @@ INIT_FIND_OBJECT:
     pop     de
     pop     hl
     ret
+    
+
     
