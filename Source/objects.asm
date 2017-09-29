@@ -28,32 +28,42 @@ FIND_NEXT_OBJECT:
 ; =====================================================
 ; VSTUP:      
 ;   L = hledana lokace
-;   A = hledane natoceni ( kdyz se rovna 4 tak pretika do dalsiho policka )
+;   C = hledane natoceni
 ; VYSTUP:  
 ;   de = ukazuje na typ v prvnim radku se shodnym nebo vyssim natocenim (= za poslednim s nizsim natocenim) nebo prvni predmet na vyssi lokaci
 ;   carry = 0
-;   H = A + 1
+;   H = TYP_ITEM + C
+;   C = C+1
+;   DE = ukazuje na lokaci
 ; MENI:
-;   A, H, DE
+;   A, C, DE
 FIND_LAST_ITEM:
 
     ld      DE, TABLE_OBJECTS-2
-    add     A, TYP_ITEM+1               ; chceme posledni misto s danym natocenim, takze prvni s vyssim nebo pri rohu 3 dalsi lokaci
-    ld      H, A                        ;  4:1
+
+    ld      A, C
+    and     MASKA_NATOCENI              ; 3->0
+    inc     A                           ; chceme posledni misto s danym natocenim, takze prvni s vyssim nebo pri rohu 3 dalsi lokaci
+    ld      C, A                        ;  4:1
     
-FLO_LOOP
+FLI_LOOP
     inc     DE                          ;  6:1 de: "typ"->"dodatecny"
     inc     DE                          ;  6:1 de: "dodatecny"->"lokace"
     ld      A, (DE)                     ;  7:1
     inc     DE                          ;  6:1 de: "lokace"->"typ"
     cp      L                           ;  4:1 "lokace predmetu" - "nase hledana lokace"
-    jp      c, FLO_LOOP                 ; 10:3 carry flag = zaporny = jsme pod lokaci
-    ret     nz                          ; jsme za polickem
-    ld      A, (DE)                     ; typ + natoceni
-    and     MASKA_PODTYP                ; bez bitu s prepinaci (chceme byt totiz i za dverma)
-    cp      H                           ; 
-    jp      c,FLO_LOOP
-    
+    jr      c, FLI_LOOP                 ; 10:3 carry flag = zaporny = jsme pod lokaci
+    jr      nz, FLI_EXIT                ; jsme za polickem
+    ld      A, (DE)                     ; zamky + typ + natoceni
+    and     MASKA_NATOCENI              ;
+    cp      C                           ; 
+    jr      c,FLI_LOOP
+FLI_EXIT:
+    dec     DE                          ; prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
+    ld      A, TYP_ITEM-1               ; TYP_ITEM - 1
+    add     A, C                        ; TYP_ITEM - 1 + natoceni + 1
+    ld      H, A                        ; TYP_ITEM + natoceni
+
     ret                                 ; not carry
 
 ; =====================================================
@@ -61,8 +71,7 @@ FLO_LOOP
 ;   L = lokace kam vkladam
 ;   c = (vector)
 ; Je to komplikovanejsi fce nez sebrani, protoze musi najit to spravne misto kam to vlozit.
-; Polozky jsou razeny podle lokace a nasledne podle typu a natoceni (prepinace jsou ignorovany).
-; Predmety musi byt posledni serazene podle natoceni (az za dverma)
+; Polozky jsou razeny podle lokace a nasledne podle natoceni (prepinace jsou ignorovany).
 ; Pak existuji polozky ktere maji dodatecne radky zacinajici nulou.
 VLOZ_ITEM_NA_POZICI:
     ld      de, PRESOUVANY_PREDMET
@@ -75,12 +84,8 @@ VLOZ_ITEM_NA_POZICI:
 VINP_BEZ_KONTROLY:
     push    DE                          ; adresa drzeneho predmetu
     
-    ld      A, C
-    inc     A
-    and     MASKA_NATOCENI              ; 0->1, 1->2, 2->3, 3->0 vkladam totiz "vzadu doprava"
+    inc     C                           ; vkladame doprava, takze natoceni+1
     call    FIND_LAST_ITEM
-    dec     de                          ; prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
-    dec     H                           ; byl zvednut o 1 ve FIND_LAST_OBJECT
     push    HL                          ; uchovame TYP + NATOCENI a lokaci
     
     ld      hl,(ADR_ZARAZKY)            ; 16:3
@@ -131,12 +136,8 @@ VEZMI_ITEM_Z_POZICE:
     ld      ix,VETA_DRZI
     jp      nz,PRINT_MESSAGE            ; uz neco drzi, fce volana pomoci "jp" misto "call" = uz se nevrati
 
-    ld      A, C                        ; zvedneme pouze TYP_ITEM se spravnym natocenim
     call    FIND_LAST_ITEM
-    dec     de                          ; prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
-    dec     H
-    ld      ix,VETA_NIC
-  
+    ld      ix,VETA_NIC  
 
     ex      DE, HL
     dec     HL                          ; MASKA_PODTYP
@@ -183,21 +184,41 @@ VEZMI_ITEM_Z_POZICE:
 
 
 ; =====================================================
+; fce hleda na lokaci L, objekt H a xoruje mu bity
+; VSTUP:
+;   H "bity+typ+natoceni"
+;   L hledana lokace
 PREPNI_OBJECT:
-; fce prepne dvere nebo paku, bez ohledu na natoceni
-; v "h" je "typ"
-; v "l" je hledana lokace
+
     push    de
     call    FIND_FIRST_OBJECT
+    ; DE = &(TABLE_OBJECTS[?].prepinace+typ) 
     jr      nz, PO_EXIT
 
 PO_NALEZEN_OBJECT:
-; na lokaci lezi nejaky predmet
+    ; na lokaci lezi nejaky predmet
+    ld      A, (DE)                     ;  7:1 typ
+    xor     H
+    and     MASKA_TYP
+    jr      nz, PO_NEXT_OBJECT          ;12/7:2 neshoduje se typ 
+    
+
+if ( KONTROLUJ_NATOCENI_U_PREPINACU)
+    ; pokud jsou to dvere ignoruji natoceni
+    ld      A, H
+    and     MASKA_TYP
+    cp      TYP_DVERE
+    jr      z, PO_FOUND
+
+    ; jinak musi sedet i natoceni
     ld      a,(de)                      ;  7:1 typ
     sub     h
-    and     MASKA_TYP + MASKA_NATOCENI
+    and     MASKA_NATOCENI
     jr      nz,PO_NEXT_OBJECT           ;12/7:2       ??? pokud je horni bit nastaven tak to bude blbnout?
-
+  
+PO_FOUND:
+endif
+  
 ; je to hledany predmet AKTUALIZOVAT
     ld      a,h
     and     MASKA_PREPINACE
@@ -255,7 +276,7 @@ FO_LOOP_DODATECNY:
     ld      a,(de)                  ;  7:1
     inc     de                      ;  6:1 de: "lokace"->"typ"
     sub     ixl                     ;  8:2 "lokace predmetu" - "nase hledana lokace"
-    jp      c,FO_LOOP               ; 10:2 carry flag?
+    jr      c,FO_LOOP               ;12/7:2 carry flag?
     ret     nz                      ;11/5:1 lezi na lokaci "hl"?
 
 ; na lokaci lezi nejaky predmet
@@ -271,77 +292,63 @@ else
 endif
     jr      z,FOUND_PREPINAC        ;12/7:2
 
-    cp      TYP_DVERE               ;  7:2
-    jr      z,FOUND_DOOR            ;12/7:2
+
     
     cp      TYP_ENEMY               ;  7:2
-    jr      z,FOUND_ENEMY           ;12/7:2
+    jr      z, FOUND_ENEMY          ;12/7:2
 
     cp      TYP_ITEM                ;  7:2
-    jp      z,FOUND_ITEM            ;12/7:2
+    jp      z, FOUND_ITEM           ;12/7:2
+    cp      TYP_DVERE               ;  7:2
+    jp      z, FOUND_ITEM           ;12/7:2
     
     cp      TYP_DEKORACE            ; musi byt posledni varianta
-    jr      nz,FO_LOOP
+    jr      nz, FO_LOOP
     
     inc     de                      ; typ -> podtyp
-    ld      a,(de)
+    ld      a, (de)
     and     MASKA_PODTYP
-TEST:
-;         cp      PODTYP_WALL          ;  7:2 pruchozi steny
-;         jp      z,FO_WALL            ;10:3
     
     ld      hl,RUNE_TABLE
     cp      PODTYP_RUNA             ;  7:2 
-    jp      z,FOUND_DEKORACE        ; 10:2
+    jr      z,FOUND_DEKORACE        ; 10:2
     
     ld      hl,KANAL_TABLE
     cp      PODTYP_KANAL            ;  7:2 
-    jp      z,FOUND_DEKORACE        ; 10:2
+    jr      z,FOUND_DEKORACE        ; 10:2
     
-    ; sem by jsem se nikdy nemel dostat...
+    ; dekorace vnitrni ram dveri
+    dec     DE
+    ld      A, (DE)
+    inc     DE
+    ld      H, A
+    ld      A, (VECTOR)
+    sub     H
+    and     MASKA_NATOCENI
+    jr      nz, FO_LOOP_DODATECNY
+    ; dekorace spravne natoceny vnitrni ram dveri
+    
+    ld      hl,VNITRNI_RAM_TABLE
+; -----------------------------------------------------
+; VSTUP:         bc = index v tabulce
+;                adresa tabulky spravne dekorace
+;                de = ukazuje na podtyp/dodatecny!!! proto se vracim pomoci FO_LOOP_DODATECNY
+FOUND_DEKORACE:
+    add     hl, bc
+    push    bc
+    push    de
+    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
+    pop     de
+    pop     bc
+    jr      FO_LOOP_DODATECNY               ; return s de = dodatecny
 
-    jp      FO_LOOP_DODATECNY       ; 10:3 "de" ted ukazuje na "dodatecny"
 FO_EXIT:
     ret
 
 
-; =====================================================
-FOUND_DOOR:
-    ; vsechny dvere maji ram
-    ld      a,(de)                  ;  7:1 typ
 
-    inc     c
-    dec     c
-    jr      nz,FD_VIEW_RAM
-    ; jsme uvnitr otevrenych dveri = nejnizsi bit u "dodatecny" je = { 0 = dvere pro pruchod N-S, 1 dvere pro pruchod W-E }
-    ld      hl,VECTOR               ; 10:3
-    add     a,(hl)                  ;  7:1 0 = N, 1 = E, 2 = S, 3 = W
-    bit     0,a                     ; pokud je nejnizsi bit nastaven ziram kolmo na chodbu ( pruchod ) na ram
-    jr      z,FO_LOOP               ; return
-
-FD_VIEW_RAM:                        ; vykresli ram
-    ld      hl,RAM_TABLE
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
     
-    add     a,MASKA_PREPINACE       ; nektere dvere jsou otevrene, AKTUALIZOVAT!!!
-    jr      nc,FO_LOOP              ; return
-
-    ld      hl,DOOR_TABLE
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
-
-    jr      FO_LOOP                 ; return
-
-
+    
 ; =====================================================
 FOUND_PREPINAC:
     push    bc
@@ -387,7 +394,7 @@ FD_PREPINAC_VIEW:
 
 FD_PREPINAC_EXIT:
     pop     bc
-    jp      FO_LOOP        
+    jr      FO_LOOP        
 
 
 
@@ -499,45 +506,45 @@ FE_EXIT:
     pop     de
     jp      FO_LOOP                     ; return
     
+
+; =====================================================
+; VSTUP:
+;   H = (VECTOR)
+; MENI:
+;   A, HL
+FOUND_DOOR:
+    ; vykreslim jen jedny dvere ze dvou co jsou v tabulce
+    ld      A, (DE)
+    inc     A
+    inc     A                       ; +2
+    xor     H
+    and     MASKA_NATOCENI
+    ret     nz
     
-; =====================================================
-; FOUND_WALL:        ; pruchozi falesna zed
-; 
-;         ld      a,(de)                    ;  7:1 typ
-; 
-;         ld      hl,WALL_TABLE
-;         add     hl,bc
-;         add     hl,BC                     ; 2x ...        
-;         push    bc
-;         push    de
-;         call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-;         pop     de
-;         pop     bc
-;         push    bc                        ; 2x kvuli blbym V4p1 a V4m1,ktere nejsou krychle
-;         push    de
-;         call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-;         pop     de
-;         pop     bc
-;         
-;         jp      FO_LOOP_DODATECNY         ; return
-
-
-; =====================================================
-; VSTUP:         bc = index v tabulce
-;                adresa tabulky spravne dekorace
-;                de = ukazuje na podtyp/dodatecny!!! proto se vracim pomoci FO_LOOP_DODATECNY
-FOUND_DEKORACE:
-    add     hl, bc
+    ; vykresli ram
+    ld      hl,RAM_TABLE
+    add     hl,bc
     push    bc
     push    de
     call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
     pop     de
     pop     bc
-    jp      FO_LOOP_DODATECNY               ; return s de = dodatecny
 
+    ld      A, (DE)
+    add     A, MASKA_PREPINACE      ; nektere dvere jsou otevrene, AKTUALIZOVAT!!!
+    ret     nc                      ;
 
+    ld      hl,DOOR_TABLE
+    add     hl,bc
+    push    bc
+    push    de
+    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
+    pop     de
+    pop     bc
+
+    ret                             ;
     
-    
+
 ; =====================================================
 ; VSTUP:    
 ;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
@@ -549,6 +556,8 @@ FOUND_DEKORACE:
 ; PROBLEM:
 ;   pokud na dane lokaci budou dvere a nebudou pred vsemi predmety tak nebudou vykresleny protoze tahle fce se nevraci
 FOUND_ITEM:
+
+
     ld      a,c
     cp      MAX_VIDITELNOST_PREDMETU_PLUS_1
     jp      nc, FO_LOOP                     ; return ( bohuzel tolikrat, kolikrat je predmetu na policku )
@@ -559,8 +568,7 @@ FOUND_ITEM:
     push    DE                              ; ulozime adresu prvniho predmetu pro pripad preteceni na zacatek
     
     ld      A, (VECTOR)
-    add     A, TYP_ITEM                     ;  7:2 TYP_ITEM + smer podledu
-    ld      H, A                            ;  4:1 ulozime si TYP_ITEM + smer pohledu
+    ld      H, A                            ;  4:1 ulozime si smer pohledu
 
 ; Roh = index rohu ctverce ve kterem lezi predmet (narusta po smeru hodinovych rucicek pri pohledu shora)
 ; vektor = index natoceni pri pohledu danym smerem
@@ -578,8 +586,9 @@ FOUND_ITEM:
 ; Pokud nema, tak pretecu na dalsi lokaci nebo zarazku a NEJVZDALENEJSI je prvni predmet na dane lokaci.
 
 FI_HLEDANI_NEJVZDALENEJSIHO:
-    ld      a,(de)                          ; TYP_ITEM + roh
-    cp      H                               ; TYP_ITEM + roh - ( TYP_ITEM + vektor natoceni ) = roh - vektor natoceni
+    ld      a,(de)                          ; 
+    and     MASKA_NATOCENI                  ; roh
+    cp      H                               ; roh - vektor natoceni
     jr      nc,FI_NEJVZDALENEJSI            ; roh je ten nejvzdalenejsi?
 FI_DALSI_RADEK:
 ; prejdeme na dalsi predmet ( jsou razeny podle rohu )
@@ -612,15 +621,29 @@ FI_VYKRESLI_ITEM_LOOP:
 ;                       0  1    0  1    0  1    0  1
 ;                       3  2    3  2    3  2    3  2
 
-    ld      A, (DE)                         ; typ + roh
-    sub     H
-    and     MASKA_NATOCENI
-    add     A, A                            ; 0, 2, 4, 6
 
     push    hl
     push    de
     push    ix
     push    bc
+    
+    ld      A, (DE)                         ; typ + roh
+    and     MASKA_TYP
+    cp      TYP_ITEM
+    jr      z, FI_ITEM
+    
+    cp      TYP_DVERE
+    call    z, FOUND_DOOR
+    
+    jr      FI_NEKRESLI
+
+FI_ITEM:
+    ld      A, (DE)                         ; typ + roh
+    sub     H
+    and     MASKA_NATOCENI
+    add     A, A                            ; 0, 2, 4, 6
+
+
     
     ld      ixh,a
     
@@ -662,7 +685,7 @@ FI_VYKRESLI_ITEM_LOOP:
     ld      c,(hl)
     inc     c
     dec     c
-    jr      z,FI_NEKRESLI                  ; sirka muze byt nula, ale vyska nula znamena nekreslit
+    jr      z,FI_NEKRESLI                   ; sirka muze byt nula, ale vyska nula znamena nekreslit
     inc     hl
     ld      b,(hl)
     call    COPY_SPRITE2BUFFER
@@ -671,7 +694,7 @@ FI_VYKRESLI_ITEM_LOOP:
 FI_NEKRESLI:
     pop     bc
     pop     ix
-    pop     de
+    pop     de    
     pop     hl
     
     inc     de                              ; typ -> podtyp

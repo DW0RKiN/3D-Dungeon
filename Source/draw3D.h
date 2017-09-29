@@ -107,12 +107,19 @@ defw	D3,	$0704,	D3,	$0B04,	D3,	$0304
 
 ; 	primy smer	vpravo		vlevo
 RAM_TABLE:		
-defw	R0,	$0400,	0,	0,	0,	0	; bocni pohled zevnitr dveri
+defw	0,	0,	0,	0,	0,	0	; 
 defw	R1,	$0101,	R1m1,	$11FE,	R1m1,	$0001	; 16
 defw	R2,	$0402,	R2m1,	$11FD,	R2m1,	$0002	; 10
 defw	R3,	$0603,	R3,	$0C03,	R3m1,	$0003	; 6
 defw	R4,	$0703,	R4,	$0B03,	R4,	$0303	; 4
 
+; 	primy smer	vpravo		vlevo
+VNITRNI_RAM_TABLE:                                      ; bocni pohled zevnitr dveri
+defw	0,	0,	0,	0,	0,	0       
+defw	R0,	$0400,	0,	0,	0,	0
+defw	0,	0,	0,	0,	0,	0
+defw	0,	0,	0,	0,	0,	0
+defw	0,	0,	0,	0,	0,	0
 
 
 

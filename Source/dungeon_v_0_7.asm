@@ -293,14 +293,19 @@ PP_NALEZEN_OBJEKT:                      ; na lokaci lezi nejaky objekt
 
 PP_PROHOD_PAKU:
 
-; nalezen spravny prepinac pred nama!
+    ; nalezen spravny prepinac pred nama!
+
+if ( KONTROLUJ_NATOCENI_U_PREPINACU )
     ld      A, (DE)                     ;  7:1 typ
     xor     ZAM_1                       ;  7:2 prepneme paku / prohodime horni bit
     ld      (de),a                      ;  7:1 typ
-    
-; zjistime co paka prehazuje a prehodime VSECHNY dalsi
+else
+    ld      H, ZAM_1 + TYP_PREPINAC
+    call    PREPNI_OBJECT
+endif
+    ; zjistime co paka prehazuje a prehodime VSECHNY dalsi
     inc     de                          ;  6:1 DE = @(TABLE_OBJECTS[?].dodatecny)
-
+    
     call    PRINT_PREPINAC              ;   
     
 PP_LOOP:

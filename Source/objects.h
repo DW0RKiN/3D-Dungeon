@@ -1,3 +1,7 @@
+; pokud chceme prepinat vsechno daneho typu na dane lokaci tak nechat 0
+; pokud chceme rozlisit i natoceni, dat 1
+KONTROLUJ_NATOCENI_U_PREPINACU    equ 0
+
 NEXT_PAKA	equ	120
 PAKA_DOWN	equ	60
 NEXT_ENEMY	equ	72
@@ -143,6 +147,6 @@ defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;  4
 defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;
 
 
-MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*3	; (primy smer/vpravo/vlevo) * ( 2 * world ) * 3 radky
+MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*5	; (primy smer/vpravo/vlevo) * ( 2 * world ) * 5 radek
 
 

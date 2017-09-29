@@ -221,7 +221,7 @@ INIT_FIND_OBJECT:
     push    bc
     
     add     a,b
-    ld      c,a
+    ld      c,a                     ; C = 0 -> stojime primo na dane lokaci
     ld      b,0                     ; bc ted dela index pro danou hloubku a kolmici
     
     call    FIND_OBJECT
