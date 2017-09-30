@@ -21,6 +21,9 @@ i_sw        equ     3       ; item south-west position
 ; takze druha polozka znaci lokaci a posledni identifikaci objektu, kde horni 3 bity jsou ty co maji byt xorovany
 
 
+CHODBA_VZ   equ     1
+CHODBA_SJ   equ     0
+
 
 TYP_DVERE_N    equ     (TYP_DVERE+north)
 TYP_DVERE_E    equ     (TYP_DVERE+east)
@@ -79,8 +82,6 @@ defb     66,               TYP_ITEM + i_sw,                  PODTYP_POTION_B
 
 defb     68,     4 * 32 + TYP_ENEMY + east,               $80 + PODTYP_SKRET
 
-defb     71,          TYP_DEKORACE + north,                       PODTYP_RAM
-
 defb     80,                      TYP_ITEM,                      PODTYP_BONE
 defb     80,               TYP_ITEM + i_ne,                      PODTYP_BONE
 defb     80,               TYP_ITEM + i_se,                      PODTYP_BONE
@@ -91,6 +92,8 @@ defb     82,               TYP_ITEM + i_ne,                  PODTYP_NECKLACE
 defb     82,               TYP_ITEM + i_se,                      PODTYP_FOOD
 defb     82,               TYP_ITEM + i_sw,                  PODTYP_POTION_G
 
+
+defb     87,             ZAM_1 + TYP_DVERE,                        CHODBA_VZ
 defb     87,               TYP_ITEM + i_nw,                    PODTYP_SHIELD
 defb     87,               TYP_ITEM + i_nw,                  PODTYP_POTION_G
 defb     87,               TYP_ITEM + i_nw,                  PODTYP_POTION_G
@@ -106,11 +109,9 @@ defb      0,                            87,                ZAM_1 + TYP_DVERE    
 
 defb     95,                  TYP_DEKORACE,                     PODTYP_KANAL
 
-defb    103,          TYP_DEKORACE + north,                       PODTYP_RAM
-defb    103,          TYP_DEKORACE + south,                       PODTYP_RAM
-
 defb    115,                  TYP_DEKORACE,                     PODTYP_KANAL
 
+defb    119,             ZAM_1 + TYP_DVERE,                        CHODBA_VZ
 defb    119,           ZAM_1 + TYP_DVERE_E,                                0
 defb    119,           ZAM_1 + TYP_DVERE_W,                                0
 
@@ -119,17 +120,14 @@ defb    129,                  TYP_DEKORACE,                      PODTYP_RUNA
 defb    132,          TYP_PREPINAC + south,                      PODTYP_PAKA    ; dodatecne jeste neni pouzit, vzdy je to paka
 defb      0,                           119,                ZAM_1 + TYP_DVERE    ; aktivace paky prepne bit ZAM_1 dveri na lokaci 119
 
-defb    135,          TYP_DEKORACE + south,                       PODTYP_RAM
 
-defb    141,           TYP_DEKORACE + west,                       PODTYP_RAM
+defb    142,             ZAM_1 + TYP_DVERE,                        CHODBA_SJ
 defb    142,           ZAM_1 + TYP_DVERE_N,                                0    ; 
 defb    142,           ZAM_1 + TYP_DVERE_S,                                0    ; 
-defb    143,           TYP_DEKORACE + east,                       PODTYP_RAM
 
-defb    157,           TYP_DEKORACE + west,                       PODTYP_RAM
+defb    158,           ZAM_123 + TYP_DVERE,                        CHODBA_SJ
 defb    158,         ZAM_123 + TYP_DVERE_N,                                0    ; zavreno az na 3 bity!!!
 defb    158,         ZAM_123 + TYP_DVERE_S,                                0    ; zavreno az na 3 bity!!!
-defb    159,           TYP_DEKORACE + east,                       PODTYP_RAM
 
 defb    176,                  TYP_DEKORACE,                     PODTYP_KANAL
 
@@ -178,13 +176,13 @@ endif
 defb      0,                           232,                ZAM_1 + TYP_DVERE    ; aktivace paky prepne predmet na lokaci 232 s typem dvere
 
 
-defb    216,          TYP_DEKORACE + north,                       PODTYP_RAM
 defb    216,           TYP_PREPINAC + west,                      PODTYP_PAKA
 if ( KONTROLUJ_NATOCENI_U_PREPINACU )
 defb      0,                           216,      ZAM_1 + TYP_PREPINAC + east    ; prepne i paku na druhe strane
 endif
 defb      0,                           232,                ZAM_1 + TYP_DVERE    ; aktivace paky prepne predmet na lokaci 232 s typem dvere
 
+defb    232,             ZAM_1 + TYP_DVERE,                        CHODBA_VZ
 defb    232,           ZAM_1 + TYP_DVERE_E,                                0
 defb    232,           ZAM_1 + TYP_DVERE_W,                                0
 
@@ -194,9 +192,6 @@ defb    246,                      TYP_ITEM,                  PODTYP_POTION_G
 defb    246,               TYP_ITEM + i_ne,                  PODTYP_POTION_R
 defb    246,               TYP_ITEM + i_se,                  PODTYP_POTION_G
 defb    246,               TYP_ITEM + i_sw,                  PODTYP_POTION_G
-
-defb    248,          TYP_DEKORACE + south,                       PODTYP_RAM
-
 
 defb    254,                  TYP_DEKORACE,                     PODTYP_KANAL
 

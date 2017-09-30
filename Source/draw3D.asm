@@ -115,12 +115,8 @@ PPV_LOOP:                           ; djnz smycka
 
 ; test steny
     bit     1, (IX)                 ; test 0000 0010
-    push    BC
-    push    DE
     call    INIT_COPY_PATTERN2BUFFER
     call    INIT_COPY_PATTERN2BUFFER        
-    pop     DE
-    pop     BC
     
     ld      A, D
     cp      E
@@ -134,12 +130,8 @@ PPV_LOOP:                           ; djnz smycka
     ld      ixl,a                   ; ix = max. vlevo
 ; test steny
     bit     1,(ix)
-    push    bc
-    push    de
     call    INIT_COPY_PATTERN2BUFFER        
     call    INIT_COPY_PATTERN2BUFFER
-    pop     de
-    pop     bc
     
     ld      a,d
     cp      e
@@ -155,9 +147,7 @@ PPV_LOOP:                           ; djnz smycka
     ld      ixl,c    
 ; test steny
     bit     1,(ix)
-    push    bc
     call    INIT_COPY_PATTERN2BUFFER
-    pop     bc
     ; divame se vpred
     xor     a                       ; primy pohled, o 1 vpravo, o 1 vlevo
     call    INIT_FIND_OBJECT
@@ -166,23 +156,28 @@ PPV_LOOP:                           ; djnz smycka
     ret
     
     
-    
+ADD_BC_INIT_COPY_PATTERN2BUFFER_NOZEROFLAG:
+
+    add     HL, BC
 ; =====================================================
 ; VSTUP: 
 ;   HL adresa od ktere se budou cist data ( adresa spritu a XY na obrazovce )
-;   zero-flag = 0, nebude se kreslit, = 1 bude
 ; VYSTUP: HL = HL + 4 i kdyz se nic nekreslilo
+; MENI:
+;   AF , HL=HL+4
 INIT_COPY_PATTERN2BUFFER_NOZEROFLAG:
     or      1                       ; reset zero flag
-; VYSTUP:
-;   HL = HL+4
-;   not zero flag a nenulovy segment adresy spritu znamena ze bude sprite vykreslen
-; MENI:
-;   BC, DE, HL=HL+4
-; NEMENI:
-;   IX, A
 ; -----------------------------------------------------
+; VSTUP: 
+;   zero-flag = 0, nebude se kreslit, = 1 bude
+;   HL adresa od ktere se budou cist data ( adresa spritu a XY na obrazovce )
+; VYSTUP: HL = HL + 4 i kdyz se nic nekreslilo
+; MENI:
+;   F , HL=HL+4
 INIT_COPY_PATTERN2BUFFER:
+    push    DE
+    push    BC
+
     ld      e, (hl)
     inc     hl
     ld      d, (hl)
@@ -192,21 +187,24 @@ INIT_COPY_PATTERN2BUFFER:
     ld      b, (hl)
     inc     hl
 
-    ret     z                       ; je tam chodba, nekreslime
+    jr      z, ICP_EXIT             ; je tam chodba, nekreslime
 
     inc     d                       ; ochranujem akumulator
-    dec     d
-    ret     z                       ; nekreslime
+    dec     d                       ; D = 0? nekreslime
 
     push    af
     push    hl
     push    ix
 
-    call    COPY_SPRITE2BUFFER
+    call    nz, COPY_SPRITE2BUFFER
 
     pop     ix
     pop     hl
     pop     af
+    
+ICP_EXIT:
+    pop     BC
+    pop     DE
     ret
 
     

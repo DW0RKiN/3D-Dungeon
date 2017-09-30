@@ -297,9 +297,10 @@ endif
     cp      TYP_ENEMY               ;  7:2
     jr      z, FOUND_ENEMY          ;12/7:2
 
-    cp      TYP_ITEM                ;  7:2
-    jp      z, FOUND_ITEM           ;12/7:2
     cp      TYP_DVERE               ;  7:2
+    jp      z, FOUND_RAM           ;12/7:2
+
+    cp      TYP_ITEM                ;  7:2
     jp      z, FOUND_ITEM           ;12/7:2
     
     cp      TYP_DEKORACE            ; musi byt posledni varianta
@@ -314,32 +315,13 @@ endif
     jr      z,FOUND_DEKORACE        ; 10:2
     
     ld      hl,KANAL_TABLE
-    cp      PODTYP_KANAL            ;  7:2 
-    jr      z,FOUND_DEKORACE        ; 10:2
     
-    ; dekorace vnitrni ram dveri
-    dec     DE
-    ld      A, (DE)
-    inc     DE
-    ld      H, A
-    ld      A, (VECTOR)
-    sub     H
-    and     MASKA_NATOCENI
-    jr      nz, FO_LOOP_DODATECNY
-    ; dekorace spravne natoceny vnitrni ram dveri
-    
-    ld      hl,VNITRNI_RAM_TABLE
 ; -----------------------------------------------------
 ; VSTUP:         bc = index v tabulce
 ;                adresa tabulky spravne dekorace
 ;                de = ukazuje na podtyp/dodatecny!!! proto se vracim pomoci FO_LOOP_DODATECNY
 FOUND_DEKORACE:
-    add     hl, bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
+    call    ADD_BC_INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
     jr      FO_LOOP_DODATECNY               ; return s de = dodatecny
 
 FO_EXIT:
@@ -388,9 +370,7 @@ FD_PREPINAC_INIT:
     add     hl,bc
 
 FD_PREPINAC_VIEW:
-    push    de
     call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
 
 FD_PREPINAC_EXIT:
     pop     bc
@@ -513,6 +493,10 @@ FE_EXIT:
 ; MENI:
 ;   A, HL
 FOUND_DOOR:
+    inc     C
+    dec     C
+    ret     z
+
     ; vykreslim jen jedny dvere ze dvou co jsou v tabulce
     ld      A, (DE)
     inc     A
@@ -523,24 +507,14 @@ FOUND_DOOR:
     
     ; vykresli ram
     ld      hl,RAM_TABLE
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
+    call    ADD_BC_INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
 
     ld      A, (DE)
     add     A, MASKA_PREPINACE      ; nektere dvere jsou otevrene, AKTUALIZOVAT!!!
     ret     nc                      ;
 
     ld      hl,DOOR_TABLE
-    add     hl,bc
-    push    bc
-    push    de
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
-    pop     de
-    pop     bc
+    call    ADD_BC_INIT_COPY_PATTERN2BUFFER_NOZEROFLAG
 
     ret                             ;
     
@@ -550,17 +524,38 @@ FOUND_DOOR:
 ;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
 ;   IXl = TABLE_OBJECTS[?].lokace
 ;   BC = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
+FOUND_RAM:
+    inc     DE
+    ld      A, (DE)
+    inc     DE
+    inc     DE
+
+    inc     C
+    dec     C 
+    jr      nz, FOUND_ITEM
+    
+    ld      H, A
+    ld      A, (VECTOR)
+    xor     H
+    and     1
+    ld      hl, RAM_TABLE
+    call    INIT_COPY_PATTERN2BUFFER
+    
+; =====================================================
+; VSTUP:    
+;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
+;   IXl = TABLE_OBJECTS[?].lokace
+;   BC = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
 ; VYSTUP:
 ;   vraci se jen pokud je predmet prilis daleko aby byl videt, ale ne tak daleko aby se nevykreslovali dekorace atd.
 ;   jinak vykresli predmety pokud jsou videt
-; PROBLEM:
-;   pokud na dane lokaci budou dvere a nebudou pred vsemi predmety tak nebudou vykresleny protoze tahle fce se nevraci
 FOUND_ITEM:
 
-
+if (0)
     ld      a,c
     cp      MAX_VIDITELNOST_PREDMETU_PLUS_1
     jp      nc, FO_LOOP                     ; return ( bohuzel tolikrat, kolikrat je predmetu na policku )
+endif
     
     bit     1,(IX+$00)                      ; 20:4 jsme v nepruhledne stene? Nebude videt ze tam neco je ani kdyz jsme uvnitr...
     ret     nz

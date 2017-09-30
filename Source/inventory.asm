@@ -167,17 +167,13 @@ PW_HANDS_LOOP:
     ld      hl,AVATARS                  ;dce7   odkud se budou cist data
     ld      B, $06                      ;dcea   citac 
 PW_AVATARS:
-    push    BC                          ;dcec   ochranime citac
     call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG ;dced        cd 9d d6         . . . 
-    pop     BC                          ;dcf0   vratime citac
     djnz    PW_AVATARS                  ;dcf1
     
     call    SET_TARGET_SCREEN           ;dcf3 
     ld      B, $02                      ;dcf6
 PW_KOMPAS_A_SIPKY:
-    push    BC                          ;dcf8
     call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG ;dcf9        cd 9d d6         . . . 
-    pop     BC                          ;dcfc 
     djnz    PW_KOMPAS_A_SIPKY           ;dcfd 
     
     call    SET_TARGET_BUFFER           ;dcff cd 76 d8         . v . 
