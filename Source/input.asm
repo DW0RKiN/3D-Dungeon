@@ -76,40 +76,45 @@ KEYPRESSED_NO:
 ;        b = 0 = stisknuto_dopredu = offset radku tabulky VEKTORY_POHYBU
 ; !!! slo by optimalizovat na inc B
 
+    ld      DE, POSUN
+    push    DE
+    
 if ( stisknuto_dopredu = 0 and stisknuto_dozadu = 1 and stisknuto_vlevo = 2 and stisknuto_vpravo = 3 )
     cp      KEY_DOPREDU             ;  7:2, "w" = dopredu
-    jp      z,POSUN
+    ret     z
 
     inc     B                       ;  4:1 B = stisknuto_dozadu
     cp      KEY_DOZADU              ;  7:2, "s" = dozadu
-    jp      z,POSUN
+    ret     z
 
     inc     B                       ;  4:1 B = stisknuto_vlevo
     cp      KEY_VLEVO               ;  7:2, "a" = vlevo
-    jp      z,POSUN
+    ret     z
 
     inc     B                       ;  4:1 B = stisknuto_vpravo
     cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
-    jp      z,POSUN
+    ret     z
 else
 
 .warning 'Delsi kod o 4 bajty protoze stisknuto_dopredu..stisknuto_vpravo != 0..3'
 
     cp      KEY_DOPREDU             ;  7:2, "w" = dopredu
-    jp      z,POSUN
+    ret     z
 
     ld      b,stisknuto_dozadu      ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_DOZADU              ;  7:2, "s" = dozadu
-    jp      z,POSUN
+    ret     z
 
     ld      b,stisknuto_vlevo       ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_VLEVO               ;  7:2, "a" = vlevo
-    jp      z,POSUN
+    ret     z
 
     ld      b,stisknuto_vpravo      ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
-    jp      z,POSUN
+    ret     z
 endif
+    pop     DE
+
     ld      b,-1                    ;  7:2, pouzito pro VECTOR += b
     cp      KEY_DOLEVA              ;  7:2, "q" = otoc se vlevo
     jr      z,OTOC_SE
