@@ -156,9 +156,7 @@ VEZMI_ITEM_Z_POZICE:
 
     dec     de                          ; zrusime +1 z ldi
     ld      (ADR_ZARAZKY),de            ;     
-    
-    call    ITEM_TAKEN_A
-    
+
     jp      INVENTORY_WINDOW_KURZOR
 ;         ret
 
