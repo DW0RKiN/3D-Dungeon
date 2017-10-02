@@ -85,6 +85,33 @@ MAIN_OTEVRENY_INVENTAR:
     call    TIME_SCROLL
     call    KEYPRESSED                  ; obsahuje EXIT_PROGRAM
     jp      MAIN_LOOP
+    
+
+
+; =====================================================
+POSTAVA_PLUS:
+    ld      HL, SUM_POSTAV              ; 1..6
+    ld      A, (HL)                     ;
+    dec     HL                          ; 
+    inc     (HL)                        ; HLAVNI_POSTAVA++
+    sub     (HL)                        ;      
+    ret     nz
+    ld      (HL), A                     ; A = 0
+    ret
+
+
+; =====================================================
+POSTAVA_MINUS:
+    ld      HL, SUM_POSTAV              ; 1..6
+    ld      A, (HL)                     ;
+    dec     HL
+    dec     (HL)                        ; HLAVNI_POSTAVA--
+    ret     p
+    dec     A                           ; SUM_POSTAV--
+    ld      (HL), A                     ;
+    ret
+
+
 
 ; ===================================
 

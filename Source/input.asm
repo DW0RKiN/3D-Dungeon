@@ -1,73 +1,42 @@
 ; =====================================================
-; VYSTUP:         v "a" ascii kod stisknute klavesy 
-;                 vraci zero flag kdyz nic...
+; VSTUP:
+;   cte porty pro KEMPSTON joystick
+; VYSTUP:         
+;   A = podvrzeny ascii kod stisknute klavesy 
+;   zero flag kdyz nic nenacetl
 TEST_KEMPSTON:
-    xor     a                       ;cbb2   a = 0 
-    ld      h,a                     ;cbb3   h = stav joystiku
-    ld      l,a                     ;cbb4   hl = 0 
+    xor     A                       ; A = novy stav joysticku
+    ld      H, A                    ; H = puvodni stav joystiku
+    ld      L, A                    ; HL = 0 
 TK_NOVY_STAV:
-    ld      b,6                     ;cbb5   pocet opakovani cteni stavu joysticku po kazde zmene
-    or      h                       ;cbb7   pridame k puvodnimu stavu novy
-    ld      h,a                     ;cbb8   ulozime do puvodniho
+    ld      B, REPEAT_READING_JOY   ; pocet opakovani cteni stavu joysticku po kazde zmene
+    or      H                       ; pridame k puvodnimu stavu novy
+    ld      H, A                    ; ulozime do puvodniho
 TK_LOOP:
-    halt                            ;cbb9
-    in      a,(31)                  ;cbba   cteme stav joysticku
-    and     31                      ;cbbc   odmazem sum v hornich bitech, krome spodnich 5
-    cp      31                      ;cbbe   je neco stisknuto? 
-    ret     z                       ;cbc0
-    cp      l                       ;cbc1   lisi se nove cteni od predchoziho? 
-    ld      l,a                     ;cbc2   posledni cteni do registru "l"
-    jr      nz,TK_NOVY_STAV         ;cbc3   lisi se 
-    djnz    TK_LOOP                 ;cbc5   nelisilo se, snizime pocitadlo
+    halt                            ;
+    in      A, (JOY_PORT)           ; cteme stav joysticku
+    and     $1F                     ; odmazem sum v hornich bitech, krome spodnich 5
+    cp      $1F                     ; je neco stisknuto? 
+    ret     z                       ;
+    cp      L                       ; lisi se nove cteni od predchoziho? 
+    ld      L, A                    ; posledni cteni do registru "l"
+    jr      nz, TK_NOVY_STAV        ; lisi se 
+    djnz    TK_LOOP                 ; nelisilo se, snizime pocitadlo
     
-    ld      a,h                     ;cbc7   vysledny stav do akumulatoru
-    ld      hl,DATA_KEMPSTON        ;cbc8 21 9e cb         ! . . 
-    ld      b,00ah                  ;cbcb 06 0a         . . 
-    ld      c,B                     ;cbcd 48         H 
+    ld      A, H                    ; vysledny stav do akumulatoru
+    ld      HL, DATA_KEMPSTON       ; 
+    ld      B, DATA_KEMPSTON_SUM    ; delka tabulky    
 TK_TEST_STAVU:
-    cp      (hl)                    ;cbce be         . 
-    jr      z,TK_SHODNY_STAV        ;cbcf 28 27         ( ' 
-    inc     hl                      ;cbd1 23         # 
-    djnz    TK_TEST_STAVU           ;cbd2 10 fa         . .
+    cp      (HL)                    ; je to hledana kombinace
+    inc     HL                      ; nemeni priznaky
+    jr      z, TK_SHODNY_STAV       ;
+    inc     HL                      ;
+    djnz    TK_TEST_STAVU           ;
     
-    inc     b                       ;cbd4   b = 1 
-    cp      011h                    ;cbd5   fire+right
-    jr      z,TK_ZMENA_AKT_POSTAVY  ;cbd7 
-    ld      b,0ffh                  ;cbd9   b = -1 
-    cp      012h                    ;cbdb   fire+left 
-    jr      z,TK_ZMENA_AKT_POSTAVY  ;cbdd 
-    xor     a                       ;cbdf af         . 
-    ret                             ;cbe0 c9         . 
-    
-TK_ZMENA_AKT_POSTAVY:
-    ld      c,031h                  ;cbe1   znak "1" 
-    ld      hl,HLAVNI_POSTAVA       ;cbe3         
-    ld      a,(hl)                  ;cbe6        
-    add     A, B                    ;cbe7   aktivni postava +- 1 
-    inc     hl                      ;cbe8   nemeni priznaky, hl = SUM_POSTAV 
-    jp      m,TK_PODTECENI          ;cbe9   mozne podteceni v pripade 0-1
-    cp      (hl)                    ;cbec   porovnani s MAX_POSTAVA_PLUS_1
-    jr      z,TK_PRETECENI          ;cbed   mozna shoda s MAX_POSTAVA+1 = MAX_POSTAVA_PLUS_1
-    add     a,c                     ;cbef   + znak "1" a nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbf0        
-    
-TK_PRETECENI:
-    ld      a,c                     ;cbf1   a = znak "1"
-    or      a                       ;cbf2   nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbf3         
-    
-TK_PODTECENI:
-    ld      a,(hl)                  ;cbf4         
-    dec     a                       ;cbf5   a = MAX_POSTAVA
-    add     a,c                     ;cbf6   + znak "1" a nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbf7
-
 TK_SHODNY_STAV:
-    ld      b,0                     ;cbf8
-    add     hl,BC                   ;cbfa   offset + 10 
-    ld      a,(hl)                  ;cbfb   nahradi stav joysticku ekvivalentnim znakem klavesnice 
-    or      a                       ;cbfc   nastavi priznaky ( zrusi zero-flag )
-    ret                             ;cbfd 
+    ld      A, (HL)                 ; nahradi stav joysticku ekvivalentnim znakem klavesnice 
+    or      A                       ; (not) zero flag
+    ret                             ; 
 
     
     
@@ -155,12 +124,30 @@ endif
     cp      KEY_INVENTAR            ;  7:2 "i" = inventar / hraci
     jp      z,SET_RIGHT_PANEL
 
-    cp      55                      ;  7:2 
-    jr      nc,KEYPRESSED_NO_NUMBER_1_6     ; vetsi nebo rovno jak hodnota znaku "7"
-    cp      49                      ;  7:2 
-    jr      c,KEYPRESSED_NO_NUMBER_1_6      ; mensi jak hodnota znaku "1"
-    jp      NEW_PLAYER_ACTIVE
-KEYPRESSED_NO_NUMBER_1_6:
+    
+    ld      DE, NEW_PLAYER_ACTIVE
+    push    DE
+    
+    cp      KEY_PLUS                ;  7:2 "k" = "+"
+    jp      z, POSTAVA_PLUS
+    
+    cp      KEY_MINUS                ;  7:2 "j" = "-"
+    jp      z, POSTAVA_MINUS
+
+    cp      '7'                     ;  7:2 
+    jr      nc, K_BAD_NUMBER        ; vetsi nebo rovno jak hodnota znaku "7"
+    cp      '1'                     ;  7:2 
+    jr      c, K_BAD_NUMBER         ; mensi jak hodnota znaku "1"
+    sub     '1'                     ; A = 0..5
+    ld      hl, SUM_POSTAV          ; 10:3
+    cp      (hl)                    ;  7:1  0..5 - SUM_POSTAV
+    jr      nc, K_BAD_NUMBER        ; new >= SUM_POSTAV
+    dec     hl                      ;  6:1 hl = HLAVNI_POSTAVA
+    ld      (hl), A                 ;  7:1 nova HLAVNI_POSTAVA
+
+    ret                             ; jp NEW_PLAYER_ACTIVE
+K_BAD_NUMBER:
+    pop DE
 
     cp      42                      ;  7:2 "*" = ctrl+b ( nastavi border pro test synchronizace obrazu )
     jp      z,SET_BORDER

@@ -19,12 +19,11 @@ defb        0       ; nulty bit meni hodnotu pokazde pri otoceni nebo pohybu ( r
 POSUN_VLEVO_INVENTAREM:
 ; rozsah do+1        posun o
 defb        2,          16-MAX_INVENTORY
-defb        3,          23-2-MAX_INVENTORY
-
-defb        5,          29-3-MAX_INVENTORY
-defb        6,          30-5-MAX_INVENTORY
-defb        7,          26-6-MAX_INVENTORY  ; 6->26(p.prsten)
-defb        8,          22-7-MAX_INVENTORY  ; 7->22(boty)
+defb        3,          27                  ; 2->29
+defb        5,          26                  ; 3->29,4->30
+defb        6,          25                  ; 5->30
+defb        7,          20                  ; 6->26(p.prsten)
+defb        8,          15                  ; 7->22(boty)
 defb        21,         -8
 defb        23,         -7
 defb        27,         -5
@@ -38,7 +37,7 @@ defb        17,         7
 defb        18,         6           ; 17(hlava)->23(toulec)
 defb        22,         5
 defb        23,         16          ; 22(boty)->7
-defb        24,         10          ; 23(toulec)->2
+defb        24,         4           ; 23(toulec)->27
 defb        26,         3
 defb        27,         11          ; 26(p.prsten)->6
 defb        29,         2           ; leva zem->prava zem
