@@ -22,21 +22,20 @@ DE_INVENTORY_ITEMS_AKTIVNI:
 ;   DE = @(INVENTORY_ITEMS[A])
 DE_INVENTORY_ITEMS_A:
 
-if ( MAX_INVENTORY != 27 )
+if ( MAX_INVENTORY != 31 )
     .error 'Zmenit kod pro nasobeni 27x'
 endif
 
     add     A, A                    ;  4:1 2x 
-    add     A, E                    ;  4:1 3x = 2x + 1x
-    ld      E, A                    ;  4:1 3x do E
-    add     A, A                    ;  4:1 6x
-    add     A, A                    ;  4:1 12x
-    add     A, A                    ;  4:1 24x
-    add     A, E                    ;  4:1 27x = 24x + 3x
+    add     A, A                    ;  4:1 4x 
+    add     A, A                    ;  4:1 8x 
+    add     A, A                    ;  4:1 16x 
+    add     A, A                    ;  4:1 32x 
+    sub     E                       ;  4:1 31x 
     add     A, INVENTORY_ITEMS % 256;  7:2
     ld      E, A                    ;  4:1
     
-if ( INVENTORY_ITEMS/256 != INVENTORY_ITEMS_END/256)
+if ( INVENTORY_ITEMS/256 != (INVENTORY_ITEMS_END+1)/256)
      .warning 'Delsi kod o 2 bajty! Pole INVENTORY_ITEMS = preleza segment!'
      
     adc     A, INVENTORY_ITEMS / 256;  7:2
@@ -274,18 +273,46 @@ endif
 
     xor     A
     push    AF                      ; zarazka na zasobnik
-
-
-
+    ; init VYKRESLI_ITEM_NA_POZICI_B
     exx
-    ld      HL, POZICE_V_INVENTARI_END
+    ld      HL, POZICE_V_INVENTARI_HOLD_END
     exx
-    ld      HL, MAX_INVENTORY       ; 10:3 
+    ld      HL, MAX_HOLD_INVENTORY  ; 10:3 
     call    DE_INVENTORY_ITEMS_AKTIVNI; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
     add     HL, DE
-
-    ld      B, MAX_INVENTORY        ;  7:2
+    ld      B, MAX_HOLD_INVENTORY   ;  7:2
 IW_LOOP:
+    call    VYKRESLI_ITEM_NA_POZICI_B  
+    djnz    IW_LOOP
+
+    ld      DE, I_toulec
+    push    DE
+    ld      DE, POZICE_TOULEC
+    push    DE
+    ld      DE, Body_left
+    push    DE
+    ld      DE, $1907
+    push    DE
+    ld      DE, Body_left
+    push    DE
+    ld      DE, $1DF8               ; 7bit znaci zrcadlove kresleni
+    push    DE
+; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
+    call    KRESLI_ZE_ZASOBNIKU
+
+    call    VYKRESLI_AKTIVNI_PREDMET
+    ei
+    call    SET_MAX_17                  ; 
+    
+    ret
+
+
+
+; =====================================================
+VYKRESLI_ITEM_NA_POZICI_B:
+    pop     DE
+    ld      (VINPB_SELF+1), DE
+
     exx
     dec     HL
     ld      D, (HL)
@@ -332,21 +359,7 @@ endif
     jr      z, IW_PRAZDNE_POLICKO
     
     push    HL
-    add     A, ITEM2SPRITE % 256
-    ld      L, A
-if (ITEM2SPRITE/256 != ITEM2SPRITE/256)
-    .warning 'ITEM2SPRITE preleze segment!'
-    adc     A, ITEM2SPRITE / 256
-    sub     L
-    ld      H, A
-    ld      E, (HL)
-    inc     HL
-else
-    ld      H, ITEM2SPRITE / 256
-    ld      E, (HL)
-    inc     L
-endif
-    ld      D, (HL)
+    call    DE_2DSPRITE_A
     pop     HL
     push    DE                      ; ulozeni predmetu
     exx
@@ -391,54 +404,229 @@ IW_PREDMET_OBSAZEN:
     exx 
 IW_NEKRESLI_PODKLAD:
 
-    djnz    IW_LOOP
 
-    ld      DE, I_toulec
-    push    DE
-    ld      DE, POZICE_TOULEC
-    push    DE
-    ld      DE, Body_left
-    push    DE
-    ld      DE, $1907
-    push    DE
-    ld      DE, Body_left
-    push    DE
-    ld      DE, $1DF8               ; 7bit znaci zrcadlove kresleni
-    push    DE
+VINPB_SELF:
+    jp      $0000
+
     
-; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
-IW_ZE_ZASOBNIKU:
-    pop     bc
+; =====================================================
+KRESLI_ZE_ZASOBNIKU:
+    pop     HL                          ; navratova adresa
+    pop     BC
     inc     B
     dec     B
-    jr      z, IW_EXIT    
-    pop     de
+    jr      z, KZZ_EXIT    
+    pop     DE
+    push    HL                          ; navratova adresa
     call    COPY_SPRITE2BUFFER
-    jr      IW_ZE_ZASOBNIKU
-IW_EXIT:        
-
-    call    VYKRESLI_AKTIVNI_PREDMET
-    ei
-    call    SET_MAX_17                  ; 
+    jr      KRESLI_ZE_ZASOBNIKU
+KZZ_EXIT:
+    push    HL
+    ret                                 ; return
     
+
+    
+; =====================================================
+; VSTUP:
+;   A = 2*PODTYP
+; VYSTUP:
+;   DE = adresa spritu
+; MENI:
+;   AF,HL
+DE_2DSPRITE_A:      
+    add     A, ITEM2SPRITE % 256            ;
+    ld      L, A
+if (ITEM2SPRITE/256 != ITEM2SPRITE_END/256)
+    .warning 'ITEM2SPRITE preleze segment!'
+    adc     A, ITEM2SPRITE / 256
+    sub     L
+    ld      H, A
+    ld      E, (HL)
+    inc     HL
+else
+    ld      H, ITEM2SPRITE / 256
+    ld      E, (HL)
+    inc     L
+endif
+    ld      D, (HL)
     ret
+    
+    
+; =====================================================
+; VSTUP:
+;   H = roh
+;   L = lokace
+; VYSTUP:
+;   A = PODTYP_ITEM
+; MENI:
+;   AF
+A_NAJDI_POLOZENY_PREDMET_HL:
+    push    HL
+    push    BC
+    push    DE
 
+    call    FIND_LAST_ITEM
+    ; H = TYP_ITEM + roh
+    ex      DE, HL
+    dec     HL                      ; PODTYP
+    ld      A, (HL)
+    dec     HL                      ; zamky + typ + roh
+    ld      B, (HL)
+    dec     HL                      ; lokace
+    ld      C, (HL)
+    ex      DE, HL
 
+    sbc     HL, BC
+    jr      z, NPP_EXIT
+    xor     A
+NPP_EXIT:
+    pop     DE
+    pop     BC
+    pop     HL
+    ret
+    
+    
+if (0)
+; =====================================================
+; VSTUP:
+;   BC = XY
+;   H = roh
+;   L = lokace
+; VYSTUP:
+;
+; MENI:
+;   AF, BC, DE, HL
+VYKRESLI_POLOZENY_PREDMET:
+    push    BC
+    push    HL
+    ; polozeny predmet na zemi   
+    ld      DE, I_bg                ; podklad pod predmet
+    call    COPY_SPRITE2BUFFER
 
+    pop     HL    
+    call    FIND_LAST_ITEM
+    ; H = TYP_ITEM + roh
+    ex      DE, HL
+    dec     HL                      ; PODTYP
+    ld      A, (HL)
+    dec     HL                      ; zamky + typ + roh
+    ld      B, (HL)
+    dec     HL                      ; lokace
+    ld      C, (HL)
+    ex      DE, HL
+
+    sbc     HL, BC
+    pop     BC
+    ret     nz
+
+    ADD     A, A
+    ret     z                       ; tohle by slo smazat
+
+    call    DE_2DSPRITE_A
+    call    COPY_SPRITE2BUFFER
+    ret
+endif
+    
+    
 ; =====================================================
 VYKRESLI_AKTIVNI_PREDMET:
     call    TEST_OTEVRENY_INVENTAR      ;ddf7        cd a6 ca
     ret     z                           ; u zavreneho nebudem vykreslovat presah
     
+if (0)
+    ; polozeny predmet na zemi   
+    ld      BC, $020D
+    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
+    push    HL
+    call    VYKRESLI_POLOZENY_PREDMET   ; roh vlevo vzadu
+    pop     HL
+    inc     H
+    ld      BC, $0D0D
+    call    VYKRESLI_POLOZENY_PREDMET   ; roh vpravo vzadu
+
+    ;HL_NOVA_POZICE    
+    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
+    ld      D, VEKTORY_POHYBU/256       ;  7:2
+    ld      E, H                        ;  4:1 de = @(VECTORY_POHYBU[radek][sloupec])
+    ld      A, (DE)                     ;  7:1 o kolik zmenit LOCATION pro pohyb danym smerem
+    add     A, L                        ;  4:1 ZMENIT POKUD BUDE MAPA 16bit!!! ( ..a nejen to, pozice predmetu, dveri atd. )
+    ld      L, A                        ;  4:1 hl = pozice na mape po presunu
+    inc     H
+    inc     H
+    
+    ; polozeny predmet na zemi   
+    ld      BC, $0B0B
+    push    HL
+    call    VYKRESLI_POLOZENY_PREDMET   ; roh vpravo vepredu na ctverci pred nama
+    pop     HL
+    inc     H
+    ld      BC, $040B
+    call    VYKRESLI_POLOZENY_PREDMET   ; roh vlevo vepredu na ctverci pred nama
+endif
+
+if (1)
+    call    DE_INVENTORY_ITEMS_AKTIVNI
+    push    DE
+    pop     IX
+    
+    ; polozeny predmet na zemi
+    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR=ROH VLEVO VZADU
+    call    A_NAJDI_POLOZENY_PREDMET_HL ; roh 0 (vlevo vzadu)
+    ld      (IX+INDEX_ZEM_LD_M1), A
+    
+    inc     H
+    call    A_NAJDI_POLOZENY_PREDMET_HL ; roh 1 (vpravo vzadu)
+    ld      (IX+INDEX_ZEM_RD_M1), A
+    
+    ;HL_NOVA_POZICE    
+    call    HL_VEPREDU                  ; 17:3
+    dec     H                           ; roh 3 (-1)  
+    call    A_NAJDI_POLOZENY_PREDMET_HL ; roh vlevo vepredu na ctverci pred nama
+    ld      (IX+INDEX_ZEM_LU_M1), A
+    
+    dec     H                           ; roh 2 (-2)
+    call    A_NAJDI_POLOZENY_PREDMET_HL ; roh vpravo vepredu na ctverci pred nama
+    ld      (IX+INDEX_ZEM_RU_M1), A
+endif
+
+    xor     A
+    push    AF                      ; zarazka na zasobnik
+    ; init VYKRESLI_ITEM_NA_POZICI_B
+    exx
+    ld      HL, POZICE_V_INVENTARI_END
+    exx
+    ld      HL, MAX_INVENTORY  ; 10:3 
+    call    DE_INVENTORY_ITEMS_AKTIVNI; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
+    add     HL, DE
+    ld      B, MAX_INVENTORY   ;  7:2
+VAP_LOOP:
+    call    VYKRESLI_ITEM_NA_POZICI_B
+    dec     B
+    ld      A, INDEX_PPRSTEN
+    cp      B
+    jr      nz, VAP_LOOP
+    call    KRESLI_ZE_ZASOBNIKU
+
+
     ld      a, (PRESOUVANY_PREDMET)
-    or      a
+    add     a, a                        ; 2x
     ret     z                           ; nic nedrzi
 
-    ld      ixh,ITEM2SPRITE / 256
-    add     a,a                         ; 2x
-    add     a,ITEM2SPRITE % 256
-    ld      ixl,a
-    
+    add     a, ITEM2SPRITE % 256
+    ld      l, a
+if ( ITEM2SPRITE / 256 != ITEM2SPRITE_END )
+    adc     a, ITEM2SPRITE / 256
+    sub     l
+    ld      h, a    
+    ld      e, (hl)
+    inc     hl
+else
+    ld      h, ITEM2SPRITE / 256
+    ld      e, (hl)
+    inc     l
+endif
+    ld      d, (hl)
+    push    de
     
     ld      a,(KURZOR_V_INVENTARI)
     add     a,a
@@ -447,28 +635,40 @@ VYKRESLI_AKTIVNI_PREDMET:
     adc     a,POZICE_V_INVENTARI / 256
     sub     l
     ld      h,a
- 
     ld      c,(hl)
     inc     hl
     ld      b,(hl)
     dec     b                           ; posunem doleva
     dec     c                           ; posunem nahoru
-
-    ld      e,(ix)
-    ld      d,(ix+1)
-    push    de
-    
-;         ld      bc,$1806
+        
     ld      de,I_bgm
-    
     push    bc
     call    COPY_SPRITE2BUFFER
+    
     pop     bc
     pop     de
     call    COPY_SPRITE2BUFFER
     ret
 
 
+; =====================================================  
+; VSTUP:
+; VYSTUP:
+;   H = natoceni
+;   L = adresa na mape lokace pred nama
+HL_VEPREDU:
+    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
+    push    HL                          ; 11:1
+    ld      A, L                        ;  4:1 A=LOCATION
+    ld      L, H                        ;  4:1 L=VECTOR
+    ld      H, VEKTORY_POHYBU/256       ;  7:2 HL = @(VECTORY_POHYBU[0][sloupec])
+    add     A, (HL)                     ;  7:1 o kolik zmenit LOCATION pro pohyb danym smerem
+    pop     HL                          ; 10:1
+    ld      L, A                        ;  4:1 L = pozice na mape po presunu
+    ret
+    
+    
+    
 ; =====================================================  
 ; VSTUP:
 ;   C = PODTYP_ITEM testovaneho predmetu ( 0 = povolen vzdy )
@@ -480,7 +680,24 @@ VYKRESLI_AKTIVNI_PREDMET:
 ;   AF
 TEST_NEPOVOLENE_POZICE:
     ld      A, B
-    dec     A                       ; 1..16 -> 0..15
+    dec     A                       ; 1+ -> 0+
+    
+    cp      INDEX_ZEM_LU_M1
+    jr      c, TNP_NOSENE
+    ; pozice na zemi
+    ; sude jsou vzdy povolene
+    ; liche jen kdyz neni pred nama stena
+    and     $01
+    ret     z
+    ; byla to suda pozice
+    push    HL
+    call    HL_VEPREDU
+    ld      H, DUNGEON_MAP / 256        ;  7:2
+    bit     0,(HL)
+    pop     HL
+    ret
+TNP_NOSENE:
+
     and     $F0                     ; cokoliv na mensi pozici je povoleno
     ret     z                       ; vracim ZERO
 
@@ -539,35 +756,51 @@ VYKRESLI_ZE_ZASOBNIKU_LOOP:
 ;   B = cislo ruky od 0
 ; MENI:
 ;   A, HL, DE
-; VYSTUP:   vraci zero-flag pokud je prazdna
+; VYSTUP:   
+;   ulozi na zasobnik 4x word (pozice, pozadi, pozice, ruku/predmet)
 VYKRESLI_RUKU:
-    pop     hl                      ; vytahni navratovou adresu
-    ld      (VR_EXIT+1),hl          ; nastav "jp nn" na konci fce
-    add     a,a                     ; v tabulce jsou 16 bit hodnoty
-    add     a, ITEM2SPRITE % 256
-    ld      (VR_SELF_ITEM + 1),a    ;
-   
+
+    pop     HL                      ; vytahni navratovou adresu
+    ld      (VR_SELF+1), HL         ; nastav "jp nn" na konci fce
+
+    ld      DE, I_empty             ; obrazek prazdne dlane kdyz nic nedrzi
+    add     A, A                    ; v tabulce jsou 16 bit hodnoty
+    jr      z, VR_PRAZDNA
+    
+    add     A, ITEM2SPRITE % 256
+    ld      L, A
+if ( ITEM2SPRITE / 256 != ITEM2SPRITE_END / 256 )
+    adc     A, ITEM2SPRITE / 256
+    sub     L
+    ld      H, A
+    ld      E, (HL)
+    inc     HL
+else
+    ld      H, ITEM2SPRITE / 256
+    ld      E, (HL)
+    inc     L
+endif
+    ld      D, (HL)
+VR_PRAZDNA:
+    push    DE                      ; adresa ruky/predmetu
+
 if ( POZICE_RUKOU / 256 ) != ( POZICE_RUKOU_END / 256 )
     .error      'Seznam POZICE_RUKOU prekracuje 256 bajtovy segment!'
-endif
-
-    ld      a,POZICE_RUKOU % 256
-    add     a,b
-    add     a,B                     ; protoze jde o 16 bit
-    ld      (VR_SELF_POZICE + 1),a  ;
-VR_SELF_ITEM:
-    ld      hl,(ITEM2SPRITE)        ; hl = adresa spravneho spritu
-    ld      a,h                     ; byl nulovy?
-    or      a
-    jr      nz,VR_DRZI
-    ld      hl,I_empty              ; obrazek prazdne dlane pokud nic nedrzi
-VR_DRZI:
-    push    hl                      ; ulozime na zasobnik adresu spritu
-VR_SELF_POZICE:
-    ld      hl,(POZICE_RUKOU)       ; 
-    push    hl                      ; prihodime na zasobnik i pozici
-    ld      de,I_bg                 ; prazdny podklad
-    push    de                      ; ulozime na zasobnik adresu podkladoveho spritu
-    push    hl                      ; prihodime na zasobnik i pozici  
-VR_EXIT:
+endif    
+    
+    ld      A, POZICE_RUKOU % 256
+    add     A, B
+    add     A, B                    ; 2x protoze jde o word
+    ld      L, A                    ;
+    ld      H, POZICE_RUKOU / 256
+    ld      E, (HL)
+    inc     L
+    ld      D, (HL)
+    push    DE                      ; XY pozice ruky
+    ld      HL, I_bg                ;
+    push    HL                      ; prazdny podklad
+    push    DE                      ; XY pozice ruky
+      
+VR_SELF:
     jp      0                       ; self-modifying
+

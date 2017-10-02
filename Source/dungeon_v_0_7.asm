@@ -257,8 +257,52 @@ PREHOD_PREPINAC:
     pop     HL
     ld      (HL), A                     ; nove presouvany
 
+    push    BC                          ; ulozime puvodne presouvany
     call    ITEM_TAKEN_A
+    pop     BC
+    
+    ld      HL, (PRESOUVANY_PREDMET)    ; L = PRESOUVANY_PREDMET, H = KURZOR_V_INVENTARI
+    ld      A, H
+    sub     INDEX_ZEM_LU_M1
+    jp      c, INVENTORY_WINDOW_KURZOR
+    ; pokladame/bereme ze zeme
+    
+    ; A = 0..3 = 0(LeftUp), 1(LeftDown), 2(RightUp), 3(RightDown)
+    ; Up lezi na lokaci pred nama, jinak kde stojime
+    ; Rohy LU=VECTOR+3, LD=VECTOR+0, RU=VECTOR+2, RD=VECTOR+1
+    ; 0->3(7), 1->0(4), 2->2(6), 3->1(5)
+
+    ld      H, PP_DATA / 256
+    add     A, PP_DATA % 256
+    ld      L, A
+    ld      B, (HL)                     ; 0,1,2,3 -> 3,0,2,1
+
+    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
+    bit     1, B
+    call    nz, HL_VEPREDU              ; L=LOCATION vepredu, H=VECTOR
+    
+    ld      A, H
+    add     A, B
+    ld      H, A
+    
+    ld      A, C
+    ; pokud C je nula tak bereme (nic jsme nedrzeli), jinak pokladame
+    or      A
+    push    AF
+    call    nz, VLOZ_ITEM_NA_POZICI
+    pop     AF
+    call    z, VEZMI_ITEM_Z_POZICE
+    
     jp      INVENTORY_WINDOW_KURZOR
+
+
+PP_DATA:
+defb    3,0,2,1
+PP_DATA_END:
+
+if (PP_DATA / 256 != PP_DATA_END / 256 )
+    .error 'PP_DATA!'
+endif
 
 
 PP_NEJSME_V_INVENTARI:
@@ -1009,7 +1053,7 @@ VYHAZEJ_VSECHNO:
     
     ld      A, E
     call    DE_INVENTORY_ITEMS_A    
-    ld      B, MAX_INVENTORY
+    ld      B, MAX_HOLD_INVENTORY
 
 VV_LOOP:    
     push    DE
@@ -1021,13 +1065,16 @@ VV_LOOP:
 ;   L = lokace kam vkladam
 ;   C = vector
     ld      HL, (LOCATION)
-    ld      C, H
     ld      A, (DE)
     or      A
-    call    nz, VINP_BEZ_KONTROLY
+    call    nz, VLOZ_ITEM_NA_POZICI
 
     pop     BC
     pop     DE
+    
+    xor     A
+    ld      (DE), A                     ; vymazani predmetu
+    
 if ( INVENTORY_ITEMS / 256 != INVENTORY_ITEMS_END / 256 )
     .warning 'Pomalejsi kod kvuli vicesegmentovemu INVENTORY_ITEMS'
     inc     DE

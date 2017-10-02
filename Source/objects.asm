@@ -27,24 +27,23 @@ FIND_NEXT_OBJECT:
     
 ; =====================================================
 ; VSTUP:      
+;   H = hledany roh
 ;   L = hledana lokace
-;   C = hledane natoceni
 ; VYSTUP:  
-;   de = ukazuje na typ v prvnim radku se shodnym nebo vyssim natocenim (= za poslednim s nizsim natocenim) nebo prvni predmet na vyssi lokaci
+;   DE = ukazuje na TABLE_OBJECTS[x].lokace v prvnim radku se shodnym nebo vyssim natocenim (= za poslednim s nizsim natocenim) nebo prvni predmet na vyssi lokaci
 ;   carry = 0
 ;   H = TYP_ITEM + C
-;   C = C+1
 ;   DE = ukazuje na lokaci
 ; MENI:
-;   A, C, DE
+;   A, H, DE
 FIND_LAST_ITEM:
 
     ld      DE, TABLE_OBJECTS-2
 
-    ld      A, C
-    and     MASKA_NATOCENI              ; 3->0
+    ld      A, H
+    and     MASKA_NATOCENI              ; osetreni preteceni 3->0
     inc     A                           ; chceme posledni misto s danym natocenim, takze prvni s vyssim nebo pri rohu 3 dalsi lokaci
-    ld      C, A                        ;  4:1
+    ld      H, A                        ;  4:1 1..4
     
 FLI_LOOP
     inc     DE                          ;  6:1 de: "typ"->"dodatecny"
@@ -56,35 +55,27 @@ FLI_LOOP
     jr      nz, FLI_EXIT                ; jsme za polickem
     ld      A, (DE)                     ; zamky + typ + natoceni
     and     MASKA_NATOCENI              ;
-    cp      C                           ; 
+    cp      H                           ; 
     jr      c,FLI_LOOP
 FLI_EXIT:
     dec     DE                          ; prvni bajt radku, (de) = lokace "za" nebo zarazka, od teto pozice vcetne ulozime 3 byty a zbytek vcetne zarazky o 3 posunem.
     ld      A, TYP_ITEM-1               ; TYP_ITEM - 1
-    add     A, C                        ; TYP_ITEM - 1 + natoceni + 1
+    add     A, H                        ; TYP_ITEM - 1 + natoceni + 1
     ld      H, A                        ; TYP_ITEM + natoceni
 
     ret                                 ; not carry
 
 ; =====================================================
 ; VSTUP: 
+;   A = PODTYP_ITEM
 ;   L = lokace kam vkladam
-;   c = (vector)
+;   H = roh
 ; Je to komplikovanejsi fce nez sebrani, protoze musi najit to spravne misto kam to vlozit.
 ; Polozky jsou razeny podle lokace a nasledne podle natoceni (prepinace jsou ignorovany).
 ; Pak existuji polozky ktere maji dodatecne radky zacinajici nulou.
 VLOZ_ITEM_NA_POZICI:
-    ld      de, PRESOUVANY_PREDMET
-    ld      a,(de)
-    or      a
-    ld      ix,VETA_NEDRZI
-    jp      z,PRINT_MESSAGE             ; nic nedrzi, fce volana pomoci "jp" misto "call" = uz se nevrati
-
+    push    AF                          ; ukladany predmet
     
-VINP_BEZ_KONTROLY:
-    push    DE                          ; adresa drzeneho predmetu
-    
-    inc     C                           ; vkladame doprava, takze natoceni+1
     call    FIND_LAST_ITEM
     push    HL                          ; uchovame TYP + NATOCENI a lokaci
     
@@ -108,36 +99,30 @@ VINP_BEZ_KONTROLY:
     lddr                                ; "LD (DE),(HL)", DE--, HL--, BC--
     
     pop     BC                          ; TYP + NATOCENI a lokace
-    pop     HL                          ; adresa drzeneho predmetu
+    pop     AF                          ; ukladany predmet
 
-    ld      A, (HL)                     ; drzeny predmet
-    ld      (DE), A                     ; dodatecny
-    ld      (HL), $00                   ; 10:2 vyprazdnime misto kde byl drzeny predmet
-
-    ex      DE, HL
-    
+    ex      DE, HL    
+    ld      (HL), A                     ; dodatecny
     dec     HL
     ld      (HL), B                     ; TYP + NATOCENI
-    
     dec     HL
     ld      (HL), C                     ; lokace
     
     call    ITEM_PUT_A    
+
+    xor     A
+    ld      (PRESOUVANY_PREDMET), A     ; 10:2 vyprazdnime misto kde byl drzeny predmet
+
     
     jp      INVENTORY_WINDOW_KURZOR
 
 
 ; =====================================================
 ; VSTUP: L = odkud beru
-;        c = (vector)
+;        H = (vector)
 VEZMI_ITEM_Z_POZICE:
-    ld      a, (PRESOUVANY_PREDMET)
-    or      a
-    ld      ix,VETA_DRZI
-    jp      nz,PRINT_MESSAGE            ; uz neco drzi, fce volana pomoci "jp" misto "call" = uz se nevrati
 
     call    FIND_LAST_ITEM
-    ld      ix,VETA_NIC  
 
     ex      DE, HL
     dec     HL                          ; MASKA_PODTYP
@@ -149,7 +134,7 @@ VEZMI_ITEM_Z_POZICE:
     
     ex      DE, HL    
     sbc     HL, BC                      ; spravna lokace i spravny predmet s natocenim?
-    jp      nz, PRINT_MESSAGE           ; misto return
+    ret     nz                          ; nenalezen predmet na dane lokaci a rohu
     
     ld      (PRESOUVANY_PREDMET), A
     
@@ -173,11 +158,6 @@ VEZMI_ITEM_Z_POZICE:
     ld      (ADR_ZARAZKY),de            ;     
     
     call    ITEM_TAKEN_A
-; otevri inventar
-    ld      hl,PRIZNAKY                 ; 10:3
-    ld      a,(hl)                      ; 7:1
-    or      PRIZNAK_OTEVRENY_INVENTAR   ; 7:2
-    ld      (hl),a                      ; 7:1
     
     jp      INVENTORY_WINDOW_KURZOR
 ;         ret
@@ -523,7 +503,7 @@ FOUND_DOOR:
 ; VSTUP:    
 ;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
 ;   IXl = TABLE_OBJECTS[?].lokace
-;   BC = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
+;   BC = 6*word*radek + 2*word*sloupec = offset v table, sloupec = {0..2} = {primy smer, vlevo, vpravo}, radek = hloubka 
 FOUND_RAM:
     inc     DE
     ld      A, (DE)
@@ -545,7 +525,8 @@ FOUND_RAM:
 ; VSTUP:    
 ;   DE = @(TABLE_OBJECTS[?].prepinace+typ)
 ;   IXl = TABLE_OBJECTS[?].lokace
-;   BC = offset v table ( 3 sloupce po dvou 16 bit int ( 12 bajtu ) = primy smer / vlevo / vpravo, radky = hloubka ) 
+;   B = 0
+;   C = 6*word*radek + 2*word*sloupec = offset v table, sloupec = {0..2} = {primy smer, vlevo, vpravo}, radek = hloubka 
 ; VYSTUP:
 ;   vraci se jen pokud je predmet prilis daleko aby byl videt, ale ne tak daleko aby se nevykreslovali dekorace atd.
 ;   jinak vykresli predmety pokud jsou videt
@@ -633,56 +614,64 @@ FI_VYKRESLI_ITEM_LOOP:
     jr      FI_NEKRESLI
 
 FI_ITEM:
-    ld      A, (DE)                         ; typ + roh
+
+    ; nastaveni XY do BC
+    ld      A, (DE)                         ; zamky + typ + roh
     sub     H
     and     MASKA_NATOCENI
-    add     A, A                            ; 0, 2, 4, 6
-
-
+    add     A, A                            ; 0, 2, 4, 6 = 2*(roh-natoceni) & $07
     
-    ld      ixh,a
+    ; nastaveni adresy spritu do DE
+    ld      HL, DIV_6                       ; 10:3
+    add     HL, BC                          ; 11:1
     
-    ld      hl,DIV_6                        ; 10:3
-    add     hl,BC                           ; 11:1
-    ld      a,(hl)                          ;  7:1 ziskame hloubku * 2
-    cp      6                               ; hloubku 3 a 4 ignorujeme
-    jr      nc,FI_NEKRESLI
-    ld      l,a
+    ; B uz nepotrebujeme
+    ; nastaveni XY do BC
+    ld      B, A                            ; 2 * index rohu 
 
-    inc     de
-    ld      a,(de)
-    and     MASKA_PODTYP
-    add     a,a                             ; 2x
-    add     a,a                             ; 4x
-    add     a,a                             ; 8x
-    add     a,l                             ; pripoctem hloubku
-    add     a,ITEM_TABLE % 256
-    ld      l,a
-    adc     a,ITEM_TABLE / 256
-    sub     l
-    ld      h,a                             ; hl = adresa, kde je ulozena adresa spritu daneho predmetu v ITEM_TABLE vcetne hloubky
-    ld      e,(hl)
-    inc     hl
-    ld      d,(hl)                          ; de = adr. spritu
+    ; nastaveni adresy spritu do DE
+    ld      A, (HL)                         ;  7:1 A = 2 * hloubka = C / 6
+    cp      6                               ; hloubku 3+ vcetne ignorujeme
+    jr      nc, FI_NEKRESLI
+
+    inc     DE
+    ld      A, (DE)
+    add     A, A                            ; 2 * PODTYP
+    add     A, A                            ; 4 * PODTYP
+    add     A, A                            ; 8 * PODTYP (4 * word * PODTYP) = ofset radku
+    add     A, (HL)                         ; + ofset sloupce = + 2*hloubka
+    add     A, ITEM_TABLE % 256
+    ld      L, A
+    adc     A, ITEM_TABLE / 256
+    sub     L
+    ld      H, A                            ; hl = adresa, kde je ulozena adresa spritu daneho predmetu v ITEM_TABLE vcetne hloubky
+    ld      E, (HL)
+    inc     HL
+    ld      D, (HL)                          ; de = adr. spritu
     
-    inc     d
-    dec     d
+    inc     D
+    dec     D
     jr      z,FI_NEKRESLI                   ; adresa je rovna nule, po dokonceni vsech nahledu snad nenastane... POZOR aktualizovat?
 
-    ld      a,c
-    add     a,a                             ; 2*c protoze radek ma 12 word polozek
-    add     a,ixh                           ; pridame spravny sloupec
-    add     a,ITEM_POZICE % 256             ; 
-    ld      l,a
-    adc     a,ITEM_POZICE / 256
-    sub     l
-    ld      h,a                             ; hl = adr. v ITEM_POZICE
-    ld      c,(hl)
-    inc     c
-    dec     c
-    jr      z,FI_NEKRESLI                   ; sirka muze byt nula, ale vyska nula znamena nekreslit
-    inc     hl
-    ld      b,(hl)
+    ; nastaveni XY do BC
+    ld      A, C                            ; C = 12*radek, kvuli TYP_TABLE
+    add     A, A                            ; A = 24*radek, protoze ITEM_POZICE ma 24 bajtu na radek
+    add     A, B                            ; pridame spravny podsloupec {0,2,4,6} = 2*(VECTOR)
+    add     A, ITEM_POZICE % 256            ; 
+    ld      L, A
+    adc     A, ITEM_POZICE / 256
+    sub     L
+    ld      H, A                            ; hl = adr. v ITEM_POZICE
+    ld      C, (HL)
+    
+    inc     C
+    dec     C
+    jr      z, FI_NEKRESLI                  ; sirka muze byt nula, ale vyska nula znamena nekreslit
+
+    ; nastaveni XY do BC    
+    inc     HL
+    ld      B, (HL)
+    
     call    COPY_SPRITE2BUFFER
     
             

@@ -1,6 +1,6 @@
 # 0.
 # gcc gif2bin.c -o gif2bin
-# grep --include=\*.{asm,h} -rnw 'directory' -e 'pattern'
+# grep -B 2 --include=\*.{asm,h} -rnw 'directory' -e 'pattern'
 "
 1. zkompiluje gif2bin a prevede vsechny gify na bin format
 bash gif2bin.sh

@@ -1,7 +1,39 @@
-MAX_INVENTORY	equ	27
+MAX_INVENTORY           equ     31
+MAX_HOLD_INVENTORY      equ     (MAX_INVENTORY-4)
 
 COLOR_OTHER_PLAYERS     equ     %00000111        ; white ink + black paper
 COLOR_ACTIVE_PLAYER     equ     %00000011        ; magenta ink + black paper
+
+
+INVENTORY_ITEMS:
+;	0		1		2		3		4		5		6		7		8		9		10		11		12		13		14		15
+; player 0
+defb	PODTYP_ARMOR_P,	PODTYP_SHIELD,	PODTYP_FOOD,	PODTYP_FOOD,	PODTYP_ANKH,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
+;	prostirani	hlava		nahrdelnik	brneni		l.ruka		l.prsten	boty		toulec		chran.predlokti	p.ruka		p.prsten	na zemi		na zemi		na zemi		na zemi	
+defb	0,		PODTYP_HELM_D,	0,		PODTYP_ARMOR_CH,PODTYP_AXE,	0,		PODTYP_BOOTS,	0,		0,		PODTYP_SHIELD,	PODTYP_RING_B,	5,		4,		3,		2	
+
+; player 1
+defb	PODTYP_FOOD,	PODTYP_DAGGER,	0,		0, 		PODTYP_ANKH,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
+defb	0,		PODTYP_HELM,	PODTYP_NECKLACE,PODTYP_ARMOR_P,	PODTYP_SWORD,	PODTYP_RING_R,	0,		0,		0,		PODTYP_SHIELD,	0,		0,		0,		0,		0
+
+; player 2
+defb	PODTYP_POTION_R,PODTYP_POTION_R,PODTYP_POTION_G,PODTYP_POTION_B,PODTYP_ANKH,	0,		0,		0,		PODTYP_DAGGER,	0,		0,		0,		0,		0,		0,		0
+defb	0,		0,		PODTYP_NECKLACE,PODTYP_ARMOR_L,	PODTYP_MACE,	0,		PODTYP_BOOTS,	0,		0,		PODTYP_ANKH,	0,		0,		0,		0,		0
+
+; player 3
+defb	PODTYP_DAGGER,	PODTYP_SHIELD2,	PODTYP_FOOD,	0,		PODTYP_SLING,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
+defb	0,		0,		0,		0,		PODTYP_DAGGER,	PODTYP_RING_W,	PODTYP_BOOTS,	0,		0,		PODTYP_DAGGER,	0,		0,		0,		0,		0
+
+; player 4
+defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		PODTYP_BONE,	0,		0,		0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0
+defb	0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0
+
+; player 5
+defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		0,		0,		0,		PODTYP_MACE,	0,		0,		0,		0,		0,		0,		0,		0
+defb	0,		0,		PODTYP_NECKLACE,0,		0,		PODTYP_RING_G,	0,		0,		0,		PODTYP_BOOK,	PODTYP_RING,	0,		0,		0,		0
+
+INVENTORY_ITEMS_END:
+
 
 
 
@@ -53,45 +85,12 @@ ITEM2SPRITE_END:
 
 
 
-INVENTORY_ITEMS:
-;	0		1		2		3		4		5		6		7		8		9		10		11		12		13		14		15
-; player 0
-defb	PODTYP_ARMOR_P,	PODTYP_SHIELD,	PODTYP_FOOD,	PODTYP_FOOD,	PODTYP_ANKH,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
-;	prostirani	hlava		nahrdelnik	brneni		l.ruka		l.prsten	boty		toulec		chran.predlokti	p.ruka		p.prsten
-defb	0,		PODTYP_HELM_D,	0,		PODTYP_ARMOR_CH,PODTYP_AXE,	0,		PODTYP_BOOTS,	0,		0,		PODTYP_SHIELD,	PODTYP_RING_B		
-
-; player 1
-defb	PODTYP_FOOD,	PODTYP_DAGGER,	0,		0, 		PODTYP_ANKH,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
-defb	0,		PODTYP_HELM,	PODTYP_NECKLACE,PODTYP_ARMOR_P,	PODTYP_SWORD,	PODTYP_RING_R,	0,		0,		0,		PODTYP_SHIELD,	0		
-
-; player 2
-defb	PODTYP_POTION_R,PODTYP_POTION_R,PODTYP_POTION_G,PODTYP_POTION_B,PODTYP_ANKH,	0,		0,		0,		PODTYP_DAGGER,	0,		0,		0,		0,		0,		0,		0
-defb	0,		0,		PODTYP_NECKLACE,PODTYP_ARMOR_L,	PODTYP_MACE,	0,		PODTYP_BOOTS,	0,		0,		PODTYP_ANKH,	0		
-
-; player 3
-defb	PODTYP_DAGGER,	PODTYP_SHIELD2,	PODTYP_FOOD,	0,		PODTYP_SLING,	0,		0,		0,		0,		0,		0,		0,		0,		0,		0,		0
-defb	0,		0,		0,		0,		PODTYP_DAGGER,	PODTYP_RING_W,	PODTYP_BOOTS,	0,		0,		PODTYP_DAGGER,	0		
-
-; player 4
-defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		PODTYP_BONE,	0,		0,		0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0
-defb	0,		0,		0,		0,		PODTYP_BOW,	0,		0,		0,		0,		0,		0		
-
-; player 5
-defb	PODTYP_DAGGER,	PODTYP_SHIELD,	0,		0,		0,		0,		0,		PODTYP_MACE,	0,		0,		0,		0,		0,		0,		0,		0
-defb	0,		0,		PODTYP_NECKLACE,0,		0,		PODTYP_RING_G,	0,		0,		0,		PODTYP_BOOK,	PODTYP_RING
-
-INVENTORY_ITEMS_END:
-
-
-
-
-
-
-
+; vvvv ----------------- zacatek souvisleho bloku
 PRESOUVANY_PREDMET:
 defb	0
 KURZOR_V_INVENTARI:
 defb	0              ; 1..MAX_INVENTORY
+; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
 
 POZICE_PROSTIRANI	equ	$1904
@@ -106,20 +105,25 @@ POZICE_PPRSTEN		equ	$1C10
 
 ; vvvv ----------------- zacatek souvisleho bloku
 POZICE_V_INVENTARI:
-defw	$1204, $1206, $1208, $120A, $120C, $120E, $1210, $1212
-defw	$1504, $1506, $1508, $150A, $150C, $150E, $1510, $1512
+defw    $1204, $1206, $1208, $120A, $120C, $120E, $1210, $1212
+defw    $1504, $1506, $1508, $150A, $150C, $150E, $1510, $1512
 PROSTIRANI:
-defw	POZICE_PROSTIRANI	; prostirani
-defw    POZICE_HLAVA		; hlava
-defw	POZICE_NAHRDELNIK	; nahrdelnik
-defw	POZICE_BRNENI		; brneni
-defw	$180D			; l.ruka
-defw	POZICE_LPRSTEN		; l.prsten
-defw	POZICE_BOTY		; boty
-defw	POZICE_TOULEC		; toulec
-defw	POZICE_NATEPNIK		; natepnik / chranic predlokti
-defw	$1C0D			; p.ruka
-defw	POZICE_PPRSTEN		; p.prsten
+defw    POZICE_PROSTIRANI       ; prostirani
+defw    POZICE_HLAVA            ; hlava
+defw    POZICE_NAHRDELNIK       ; nahrdelnik
+defw    POZICE_BRNENI           ; brneni
+defw    $180D                   ; l.ruka
+defw    POZICE_LPRSTEN          ; l.prsten
+defw    POZICE_BOTY             ; boty
+defw    POZICE_TOULEC           ; toulec
+defw    POZICE_NATEPNIK         ; natepnik / chranic predlokti
+defw    $1C0D                   ; p.ruka
+defw    POZICE_PPRSTEN          ; p.prsten
+POZICE_V_INVENTARI_HOLD_END:
+defw    $040B                   ; na zemi vlevo nahore
+defw    $020D                   ; na zemi vlevo dole
+defw    $0B0B                   ; na zemi vpravo nahore
+defw    $0D0D                   ; na zemi vpravo dole
 POZICE_V_INVENTARI_END:
 ; ^^^^ ----------------- konec souvisleho bloku
 
@@ -136,6 +140,11 @@ INDEX_TOULEC        equ     24
 INDEX_NATEPNIK      equ     25
 INDEX_PRUKA         equ     26
 INDEX_PPRSTEN       equ     27
+
+INDEX_ZEM_LU_M1     equ     27
+INDEX_ZEM_LD_M1     equ     28
+INDEX_ZEM_RU_M1     equ     29
+INDEX_ZEM_RD_M1     equ     30
 
 ; vvvvvvvvvvvvvvvvvvvvvvvvv zacatek souvisleho bloku vvvvvvvvvvvvvvvvvvvvvvvvv
 ; Tabulka pro zjistni zda muze byt predmet ulozen na dane pozici

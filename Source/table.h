@@ -106,10 +106,11 @@ defb     87,               TYP_ITEM + i_sw,                       PODTYP_AXE
 defb     89,           TYP_PREPINAC + east,                      PODTYP_PAKA    ; dodatecne jeste neni pouzit, vzdy je to paka
 defb      0,                            87,                ZAM_1 + TYP_DVERE    ; aktivace paky prepne bit ZAM_1 dveri na lokaci 87
 
-
 defb     95,                  TYP_DEKORACE,                     PODTYP_KANAL
 
-defb    115,                  TYP_DEKORACE,                     PODTYP_KANAL
+defb    115,          ZAM_1 + TYP_DEKORACE,                     PODTYP_KANAL
+defb    115,               TYP_ITEM + i_se,                  PODTYP_POTION_G    ; ve stene (jakoby v kanalu)
+
 
 defb    119,             ZAM_1 + TYP_DVERE,                        CHODBA_VZ
 defb    119,           ZAM_1 + TYP_DVERE_E,                                0

@@ -164,13 +164,7 @@ KEYPRESSED_NO_NUMBER_1_6:
 
     cp      42                      ;  7:2 "*" = ctrl+b ( nastavi border pro test synchronizace obrazu )
     jp      z,SET_BORDER
-    
-    cp      KEY_POLOZ               ;  7:2 "p"
-    jp      z,VLOZ_ITEM_NA_POZICI
-
-    cp      KEY_VEZMI               ;  7:2 "o"
-    jp      z,VEZMI_ITEM_Z_POZICE
-    
+        
     cp      96                      ; ctrl+x
     jp      nz,HELP                 ; jina klavesa? zobraz napovedu! Pozor      tohle musi byt posledni test klavesy, protoze pokracovani je ukonceni programu
     

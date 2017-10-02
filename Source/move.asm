@@ -20,10 +20,15 @@ OTOC_SE:
     
     
 ; =====================================================
-; ulozi do registru "l" novou pozici 
-; VSTUP: hl = aktualni pozice, c = (VECTOR), a = { 0 dopredu, 4 dozadu, 8 vlevo, 12 vpravo }
-; VYSTUP: hl = nova pozice
-; MENI: de,a
+; ulozi do registru L novou pozici 
+; VSTUP: 
+;   L = aktualni pozice 
+;   C = (VECTOR)
+;   A = { 0 dopredu, 4 dozadu, 8 vlevo, 12 vpravo }
+; VYSTUP: 
+;   L = nova pozice
+; MENI: 
+;   A, DE
 HL_NOVA_POZICE:
     ld      d,VEKTORY_POHYBU/256    ;  7:2
     add     a,c                     ;  4:1 (VECTOR) = {0, 1, 2, 3} = sloupec
