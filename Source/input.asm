@@ -129,6 +129,9 @@ endif
     cp      KEY_INVENTAR            ;  7:2 "i" = inventar / hraci
     jp      z,SET_RIGHT_PANEL
 
+
+    cp      KEY_BOJ                 ;  7:2 "f" fight
+    jp      z, BOJ
     
     ld      DE, NEW_PLAYER_ACTIVE
     push    DE

@@ -63,25 +63,41 @@ MAIN:                               ;
     dec     l                       ; HL = 23560 = LAST K system variable
     ld      (hl), 0                 ; put null value there
         
-    ld      BC, $2005               ; velikost vyplnovaneho okna v sloupcich a radcich
-    ld      HL, $5A60               ; levy horni roh textoveho okna
+    ; vycisti textove okno
+    ld      BC, $2004               ; velikost vyplnovaneho okna v sloupcich a radcich
+    ld      HL, $5A80               ; levy horni roh textoveho okna
     call    FILL_ATTR_BLOCK
 
     call    HELP
     call    PLAYERS_WINDOW
+    
 MAIN_LOOP:
+    ; vykresli okoli kompasu (musi byt pred VIEW aby bylo prekresleno zvedlym predmetem)
+    ld      DE, Kompas
+    ld      BC, KOMPAS_POZICE
+    di
+    call    COPY_SPRITE2BUFFER
+    ei
+
     di
     call    VIEW
     ei
-    call    COPY_VYREZ2SCREEN
+
+;     call    COPY_VYREZ2SCREEN
     call    TEST_OTEVRENY_INVENTAR
-    jr      nz,MAIN_OTEVRENY_INVENTAR
+    jr      nz, MAIN_OTEVRENY_INVENTAR
     call    PLAYERS_WINDOW_AND_DAMAGE
 MAIN_OTEVRENY_INVENTAR:
 
-    call    COPY_INVENTORY2SCREEN
-    ld      a,24
-    call    AKTUALIZUJ_SIPKY            ; VSTUP: a = 0 dopredu, 4 dozadu , 8 vlevo, 12 vpravo, 16 otoceni doleva, 20 otoceni doprava, 24 jen sipky
+    call    AKTUALIZUJ_RUZICI           ;
+    ld      DE, S_vsechny
+    ld      BC, SIPKY_POZICE
+    di
+    call    COPY_SPRITE2BUFFER
+    ei
+    
+    call    BUFF2SCREEN
+
     call    TIME_SCROLL
     call    KEYPRESSED                  ; obsahuje EXIT_PROGRAM
     jp      MAIN_LOOP
@@ -109,6 +125,26 @@ POSTAVA_MINUS:
     ret     p
     dec     A                           ; SUM_POSTAV--
     ld      (HL), A                     ;
+    ret
+
+
+; =====================================================
+BOJ:
+; nevykreslovat kdyz jsme v inventari
+    ld      A, (HLAVNI_POSTAVA)
+    add     A, A                        ; zobrazeny 2 ruce na osobu
+    call    DE_POZICE_RUKOU_A
+    ld      B, D
+    ld      C, E
+    ld      DE, miss
+    call    SET_MAX_31
+    call    SET_TARGET_SCREEN
+    di
+    call    COPY_SPRITE2BUFFER
+    ei
+    call    SET_TARGET_BUFFER
+    call    SET_MAX_17    
+    
     ret
 
 
@@ -333,8 +369,7 @@ endif
 
 
 PP_NEJSME_V_INVENTARI:
-    xor     a                           ; posun vpred
-    call    HL_NOVA_POZICE              ; hl = hledana lokace = aktualni + vpred
+    call    HL_VEPREDU                  ; l = hledana lokace = aktualni + vpred
     
     ld      A, TYP_PREPINAC             ;  7:2
     add     A, C                        ;  4:1
@@ -396,12 +431,14 @@ PP_LOOP:
     call    PREPNI_OBJECT
     jp      PP_LOOP
     
-
+if (0)
 ; =====================================================
 ; Kopirovani 18*14 znaku vcetne atributu z bufferu na screen
 ; Buffer ma rozmery a rozlozeni dat stejne jako SCREEN, jen jinou adresu
 ; Na obrazovce bude obsah zobrazen vlevo nahore
 COPY_INVENTORY2SCREEN:        ; $D64D
+jp BUFF2SCREEN
+
     halt                                        ; cekame nez 50x za sekundu nezacne ULA prekreslovat obrazovku
 
     ld      a,COPY_LOOP_14x - COPY_END_SEGMENT
@@ -467,6 +504,8 @@ CI2S_WAIT:
 ; Buffer ma rozmery a rozlozeni dat stejne jako SCREEN, jen jinou adresu
 ; Na obrazovce bude obsah zobrazen vlevo nahore
 COPY_VYREZ2SCREEN:        ; $D64D
+jp BUFF2SCREEN
+
     halt                                ; cekame nez 50x za sekundu nezacne ULU prekreslovat obrazovku
 
 ;        inicializace fce COPY
@@ -576,6 +615,7 @@ COPY_START:
     or      a                       ; reset carry flag
     jr      COPY_MICROLINE
 
+endif
 
 ; =====================================================
 ; Vypise do textoveho pole napovedu
@@ -620,17 +660,19 @@ else
     ld      h,RUZICE / 256              ;  7:2 resi preteceni
 
 endif        
-    call    SET_TARGET_SCREEN           ; prepis COPY_PATTERN2BUFFER na SCREEN
     di
     call    INIT_COPY_PATTERN2BUFFER
     ei
-    call    SET_TARGET_BUFFER           ; vrat INIT_COPY_PATTERN2BUFFER na BUFFER
     ret
 
 
 ; =====================================================
+; Vykresluje sipky primo na obrazovku
 ; VSTUP: a = 0 dopredu, 4 dozadu , 8 vlevo, 12 vpravo, 16 otoceni doleva, 20 otoceni doprava, 24 jen sipky
 AKTUALIZUJ_SIPKY:
+    push    BC
+    push    HL
+
     ld      L, A                        ; 4:1
     call    SET_TARGET_SCREEN           ; prepis INIT_COPY_PATTERN2BUFFER na SCREEN, meni jen akumulator
     ld      A, L                        ; 4:1
@@ -652,6 +694,9 @@ endif
     call    INIT_COPY_PATTERN2BUFFER    ; konkretni stisknuta sipka
     ei
     call    SET_TARGET_BUFFER           ; vrat INIT_COPY_PATTERN2BUFFER na BUFFER
+    
+    pop     HL
+    pop     BC
     ret
 
 
@@ -1215,7 +1260,211 @@ PWAD_NEZRANUJ:
     ret                         ; 
 
     
+
+; =====================================================
+BUFF2SCREEN:
+if (0)
+
+    exx 
+    ld      DE, Adr_Attr_Screen
+    ld      HL, Adr_Attr_Buffer
+    exx 
+    halt
+
+    ld      BC, $020C           ; cekani na 14336+ T-states (paprsek kresli prvni pixely)
+B2S_WAIT:
+    dec     BC                  ;  6:1
+    ld      A, B                ;  4:1
+    or      C                   ;  4:1
+    jr      nz, B2S_WAIT        ;12/7
+
+    ld      IXL, $15            ; celkovy pocet radku + 1
+    ld      DE, Adr_Screen
+    ld      H, Seg_Buffer
+B2S_NOVA_TRETINA:
+    dec     D
+    dec     H
+    ld      L, D
+    ld      C, $07              ; pocet radku na tretinu-1
+    ld      A, B2S_LOOP-(B2S_SELF+2)
+    ld      (B2S_SELF+1), A    ; djnz B2S_LOOP
+    push    HL
+B2S_DALSI_RADEK:
+    pop     HL
+    ld      B, $09              ; pocet px na radek + 1
+    ld      D, L
+    dec     IXL
+    ret     z
+    ld      A, E                ; uchovame offsety prvniho sloupce
+    push    HL                  ; uchovame segmenty zdroje i cile 
+B2S_LOOP:
+    inc     D                   ; o pixel dolu
+    inc     H                   ; o pixel dolu
+B2S_LOOP_POSLEDNI_RADEK:
+    ld      E, A                ; obnovime offset cile
+    ld      L, A                ; obnovime offset zdroje
+    REPT    32                  ; 32x zopakujeme ldi
+    ldi
+    ENDM
+B2S_SELF:                   
+    djnz    B2S_LOOP            ; B2S_LOOP nebo B2S_LOOP_POSLEDNI_RADEK
     
+    exx 
+    if (0)
+    ld      BC, $0020
+    ldir
+    else
+    REPT    32                  ; 32x zopakujeme ldi
+    ldi
+    ENDM    
+    endif
+    exx 
+    
+    dec     C
+    jp      z, B2S_PREPIS
+    jp      p, B2S_DALSI_RADEK
+
+    pop     BC
+    jp      m, B2S_NOVA_TRETINA
+    
+B2S_PREPIS:
+    ld      A, B2S_LOOP_POSLEDNI_RADEK-(B2S_SELF+2)
+    ld      (B2S_SELF+1), A    ; djnz B2S_LOOP_POSLEDNI_RADEK
+    jp      B2S_DALSI_RADEK
+else
+
+
+    call    PUSH_ALL
+    
+    xor     A                   ; cerne pozadi
+    out     (254), A
+    
+    ; init
+    ld      HL, Adr_Attr_Buffer
+    ld      (B2S_SELF_HL+1), HL
+    ld      HL, Adr_Attr_Screen
+    ld      (B2S_SELF_DE+1), HL
+
+    halt
+    di
+    ld      HL, $0200           ; cekani na 14336+ T-states az budeme delat prvni PUSH (paprsek kresli prvni pixely)
+B2S_WAIT:
+    dec     HL
+    ld      A, H
+    or      L
+    jr      nz, B2S_WAIT        ; vynulovani HL
+    
+    ld      C, L                ; vynulovani pocitadla radku
+    add     HL, SP
+    ld      (B2S_SELF+1), HL
+
+    ld      DE, Adr_Buffer
+    ex      DE, HL
+    sbc     HL, DE              ; HL = Adr_Buffer - SP -> HL + SP = Adr_Buffer
+    
+B2S_NOVA_TRETINA:
+
+B2S_DALSI_RADEK
+    ld      B, $08
+    
+B2S_LOOP:
+    add     HL, SP                          ; 11:1
+    ld      SP, HL                          ;  6:1 buf++
+    pop     AF
+    pop     DE 
+    pop     HL
+    exx     
+    pop     IX
+    pop     IY
+    ex      AF, AF'
+    pop     DE
+    pop     BC
+    ld      HL, 2 + Adr_Screen - Adr_Buffer ; 10:3
+    add     HL, SP                          ; 11:1
+    pop     AF
+        
+    ld      SP, HL                          ;  6:1 screen--
+    push    AF                              ; Melo by byt po 14336+ T-states
+    push    BC
+    push    DE    
+    ex      AF, AF'    
+    push    IY
+    push    IX
+    exx 
+    push    HL
+    push    DE
+    push    AF
+    
+    ld      HL, 16 + Adr_Buffer - Adr_Screen; 10:3
+    add     HL, SP                          ; 11:1
+    ld      SP, HL                          ;  6:1 buf++
+    
+    pop     AF
+    pop     DE 
+    pop     HL
+    exx     
+    pop     IX
+    pop     IY
+    ex      AF, AF'
+    pop     DE
+    pop     BC
+    ld      HL, 2 + Adr_Screen - Adr_Buffer
+    add     HL, SP
+    pop     AF
+        
+    ld      SP, HL                          ; screen--
+    push    AF
+    push    BC
+    push    DE    
+    ex      AF, AF'    
+    push    IY
+    push    IX
+    exx 
+    push    HL
+    push    DE
+    push    AF
+    
+    ld      HL, Adr_Buffer - Adr_Screen + 256 - 16    
+    djnz    B2S_LOOP                        ; 13/8:2
+    
+    ; Nastaveni atributu
+    exx
+B2S_SELF_HL:
+    ld      HL, Adr_Attr_Buffer
+B2S_SELF_DE:
+    ld      DE, Adr_Attr_Screen
+    REPT    32                  ; 32x zopakujeme ldi
+    ldi
+    ENDM
+    ld      (B2S_SELF_HL+1), HL
+    ld      (B2S_SELF_DE+1), DE
+    exx
+    
+    ld      HL, Adr_Buffer - Adr_Screen - 7*256 + 16    
+    inc     C    
+    ld      A, C
+    cp      $14                             ; max radku co kopiruji je 20
+    jr      z, B2S_EXIT
+    
+    and     $07
+    jp      nz, B2S_DALSI_RADEK
+    
+    ; nova tretina
+    ld      HL, Adr_Buffer - Adr_Screen + 16
+    jp      B2S_NOVA_TRETINA
+    
+    
+B2S_EXIT:
+B2S_SELF:
+    ld      SP, $0000
+    ei
+    call    POP_ALL
+    ret
+
+
+endif
+
+  
 ; Musi byt posledni ( je to tabulka predmetu, bran, nepratel )
 INCLUDE table.h                 ; tabulka veci roste dolu proti zasobniku
 

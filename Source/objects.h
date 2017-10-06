@@ -67,6 +67,8 @@ POZICE_RUKOU_END:
 
 
 
+SIPKY_POZICE    equ $000F
+KOMPAS_POZICE   equ $070F
 
 AVATARS:
 defw	MFace02,	$1201,	FFace02,	$1901
@@ -75,11 +77,11 @@ defw	MFace01,	$120F,	FFace01,	$190F
 
 ; je label nutny? asi ne, ale musi bezprostredne navazovat za AVATARS
 KOMPAS:
-defw	Kompas,		$070F
+defw	Kompas,		KOMPAS_POZICE
 
 ; vvvv ----------------- zacatek souvisleho bloku
 SIPKY:
-defw	S_vsechny,	$000F		; 
+defw	S_vsechny,	SIPKY_POZICE	; 
 STISKNUTA_SIPKA:
 defw	S_dopredu,	$030F		;  0
 defw	S_dozadu,	$0311		;  4

@@ -130,45 +130,37 @@ PW_AKTIVNI:
     djnz    PW_JMENA_LOOP               ;13/8:2
     
     
-    call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
-    ld      ix, INVENTORY_ITEMS         ;dcc1 dd 21 78 ce         . ! x . 
-    xor     a                           ;dcc5   a = 0 
-    ld      c, MAX_INVENTORY            ;dcc6 
+    ld      ix, INVENTORY_ITEMS         ; 
+    xor     a                           ; 
+    push    AF                          ; stop symbol
+    ld      c, MAX_INVENTORY            ; 
 PW_HANDS_LOOP:
-    ld      B, A                        ;dcc8   "b" = cislo ruky 0..11
-    ld      a,(ix+$14)                  ;dcc9   leva ruka
-    call    VYKRESLI_RUKU               ;dccc 
-    inc     B                           ;dccf 
-    ld      a,(ix+$19)                  ;dcd0   prava ruka 
-    call    VYKRESLI_RUKU               ;dcd3
-    inc     B                           ;dcd6
-    ld      A, B                        ;dcd7   schovame cislo ruky do akumulatoru 
-    ld      B, $00                      ;dcd8
-    add     ix,BC                       ;dcda   + MAX_INVENTORY = inventar dalsi postavy  
-    cp      12                          ;dcdc   pocet zobrazenych ruk
-    jp      nz,PW_HANDS_LOOP            ;dcde
+    ld      B, A                        ; "b" = cislo ruky 0..11
+    ld      a,(ix+$14)                  ; leva ruka
+    call    VYKRESLI_RUKU               ; 
+    inc     B                           ; 
+    ld      a,(ix+$19)                  ; prava ruka 
+    call    VYKRESLI_RUKU               ;
+    inc     B                           ;
+    ld      A, B                        ; schovame cislo ruky do akumulatoru 
+    ld      B, $00                      ;
+    add     ix,BC                       ; + MAX_INVENTORY = inventar dalsi postavy  
+    cp      12                          ; pocet zobrazenych ruk
+    jp      nz,PW_HANDS_LOOP            ;
     
+    call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
     di                                  ;dce1        
-    ld      a, $18                      ;dce2   a = citac ulozenych obrazku na zasobniku ( vzdy po 2 word ) 
-    call    VYKRESLI_ZE_ZASOBNIKU       ;dce4
+    call    KRESLI_ZE_ZASOBNIKU         ;dce4
     
-    ld      hl,AVATARS                  ;dce7   odkud se budou cist data
-    ld      B, $06                      ;dcea   citac 
+    ld      hl,AVATARS                  ; odkud se budou cist data
+    ld      B, $06                      ; citac 
 PW_AVATARS:
     call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG ;dced        cd 9d d6         . . . 
-    djnz    PW_AVATARS                  ;dcf1
+    djnz    PW_AVATARS                  ;
     
-    call    SET_TARGET_SCREEN           ;dcf3 
-    ld      B, $02                      ;dcf6
-PW_KOMPAS_A_SIPKY:
-    call    INIT_COPY_PATTERN2BUFFER_NOZEROFLAG ;dcf9        cd 9d d6         . . . 
-    djnz    PW_KOMPAS_A_SIPKY           ;dcfd 
-    
-    call    SET_TARGET_BUFFER           ;dcff cd 76 d8         . v . 
     call    ZOBRAZ_ZIVOTY               ;dd02 cd 4b df         . K . 
     ei                                  ;dd05 fb         . 
     call    SET_MAX_17                  ;dd06 cd 95 d8         . . . 
-    call    AKTUALIZUJ_RUZICI           ;dd09 cd d6 de         . . . 
     ret                                 ;dd0c c9         . 
 
     
@@ -475,83 +467,13 @@ NPP_EXIT:
     ret
     
     
-if (0)
-; =====================================================
-; VSTUP:
-;   BC = XY
-;   H = roh
-;   L = lokace
-; VYSTUP:
-;
-; MENI:
-;   AF, BC, DE, HL
-VYKRESLI_POLOZENY_PREDMET:
-    push    BC
-    push    HL
-    ; polozeny predmet na zemi   
-    ld      DE, I_bg                ; podklad pod predmet
-    call    COPY_SPRITE2BUFFER
-
-    pop     HL    
-    call    FIND_LAST_ITEM
-    ; H = TYP_ITEM + roh
-    ex      DE, HL
-    dec     HL                      ; PODTYP
-    ld      A, (HL)
-    dec     HL                      ; zamky + typ + roh
-    ld      B, (HL)
-    dec     HL                      ; lokace
-    ld      C, (HL)
-    ex      DE, HL
-
-    sbc     HL, BC
-    pop     BC
-    ret     nz
-
-    ADD     A, A
-    ret     z                       ; tohle by slo smazat
-
-    call    DE_2DSPRITE_A
-    call    COPY_SPRITE2BUFFER
-    ret
-endif
-    
-    
+        
 ; =====================================================
 VYKRESLI_AKTIVNI_PREDMET:
     call    TEST_OTEVRENY_INVENTAR      ;ddf7        cd a6 ca
     ret     z                           ; u zavreneho nebudem vykreslovat presah
     
-if (0)
-    ; polozeny predmet na zemi   
-    ld      BC, $020D
-    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
-    push    HL
-    call    VYKRESLI_POLOZENY_PREDMET   ; roh vlevo vzadu
-    pop     HL
-    inc     H
-    ld      BC, $0D0D
-    call    VYKRESLI_POLOZENY_PREDMET   ; roh vpravo vzadu
 
-    ;HL_NOVA_POZICE    
-    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
-    ld      D, VEKTORY_POHYBU/256       ;  7:2
-    ld      E, H                        ;  4:1 de = @(VECTORY_POHYBU[radek][sloupec])
-    ld      A, (DE)                     ;  7:1 o kolik zmenit LOCATION pro pohyb danym smerem
-    add     A, L                        ;  4:1 ZMENIT POKUD BUDE MAPA 16bit!!! ( ..a nejen to, pozice predmetu, dveri atd. )
-    ld      L, A                        ;  4:1 hl = pozice na mape po presunu
-    inc     H
-    inc     H
-    
-    ; polozeny predmet na zemi   
-    ld      BC, $0B0B
-    push    HL
-    call    VYKRESLI_POLOZENY_PREDMET   ; roh vpravo vepredu na ctverci pred nama
-    pop     HL
-    inc     H
-    ld      BC, $040B
-    call    VYKRESLI_POLOZENY_PREDMET   ; roh vlevo vepredu na ctverci pred nama
-endif
 
 if (1)
     call    DE_INVENTORY_ITEMS_AKTIVNI
@@ -566,8 +488,7 @@ if (1)
     inc     H
     call    A_NAJDI_POLOZENY_PREDMET_HL ; roh 1 (vpravo vzadu)
     ld      (IX+INDEX_ZEM_RD_M1), A
-    
-    ;HL_NOVA_POZICE    
+      
     call    HL_VEPREDU                  ; 17:3
     dec     H                           ; roh 3 (-1)  
     call    A_NAJDI_POLOZENY_PREDMET_HL ; roh vlevo vepredu na ctverci pred nama
@@ -642,24 +563,6 @@ endif
 
 ; =====================================================  
 ; VSTUP:
-; VYSTUP:
-;   H = natoceni
-;   L = adresa na mape lokace pred nama
-HL_VEPREDU:
-    ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR
-    push    HL                          ; 11:1
-    ld      A, L                        ;  4:1 A=LOCATION
-    ld      L, H                        ;  4:1 L=VECTOR
-    ld      H, VEKTORY_POHYBU/256       ;  7:2 HL = @(VECTORY_POHYBU[0][sloupec])
-    add     A, (HL)                     ;  7:1 o kolik zmenit LOCATION pro pohyb danym smerem
-    pop     HL                          ; 10:1
-    ld      L, A                        ;  4:1 L = pozice na mape po presunu
-    ret
-    
-    
-    
-; =====================================================  
-; VSTUP:
 ;   C = PODTYP_ITEM testovaneho predmetu ( 0 = povolen vzdy )
 ;   B = index testovane pozice 1..MAX_INVENTORY
 ; VYSTUP:
@@ -719,24 +622,22 @@ TNP_NENI_RUKA:
  
 
 ; =====================================================
-; Fce kresli sprity s parametry tahajici ze zasobniku
-; VSTUP: a = pocet vykresleni ( = 2x pop     )
-;        na zasobniku lezi nahore pozice a pod ni lezi adresa spritu
-VYKRESLI_ZE_ZASOBNIKU:
-    pop     hl                  ; vytahni navratovou hodnotu
-VYKRESLI_ZE_ZASOBNIKU_LOOP:
-    pop     bc
-    pop     de
-    push    hl
-    push    af                  ; ochran citac
-    inc     d
-    dec     d
-    call    nz,COPY_SPRITE2BUFFER
-    pop     af
-    pop     hl
-    dec     a
-    jr      nz,VYKRESLI_ZE_ZASOBNIKU_LOOP
-    jp      (hl)
+DE_POZICE_RUKOU_A:
+; MENI: 
+;   AF, DE, HL
+if ( POZICE_RUKOU / 256 ) != ( POZICE_RUKOU_END / 256 )
+    .error      'Seznam POZICE_RUKOU prekracuje 256 bajtovy segment!'
+endif    
+;     push    HL
+    add     A, A                    ; polozky jsou word
+    add     A, POZICE_RUKOU % 256
+    ld      L, A                    ;
+    ld      H, POZICE_RUKOU / 256
+    ld      E, (HL)
+    inc     L
+    ld      D, (HL)
+;     pop     HL
+    ret
     
     
 ; =====================================================    
@@ -773,19 +674,10 @@ endif
 VR_PRAZDNA:
     push    DE                      ; adresa ruky/predmetu
 
-if ( POZICE_RUKOU / 256 ) != ( POZICE_RUKOU_END / 256 )
-    .error      'Seznam POZICE_RUKOU prekracuje 256 bajtovy segment!'
-endif    
-    
-    ld      A, POZICE_RUKOU % 256
-    add     A, B
-    add     A, B                    ; 2x protoze jde o word
-    ld      L, A                    ;
-    ld      H, POZICE_RUKOU / 256
-    ld      E, (HL)
-    inc     L
-    ld      D, (HL)
+    ld      A, B
+    call    DE_POZICE_RUKOU_A
     push    DE                      ; XY pozice ruky
+
     ld      HL, I_bg                ;
     push    HL                      ; prazdny podklad
     push    DE                      ; XY pozice ruky

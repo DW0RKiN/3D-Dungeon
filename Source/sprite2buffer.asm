@@ -96,7 +96,7 @@ MEZERA		equ	$3F
 	ld	ixh,a				; 8:2 Pocet_radku_spritu ( delka sloupce )
 
 	ld	a,c
-	xor	$FF				; 7:2 = cpl 4:1 ale nenastavuje priznaky..
+	xor	$FF				; 7:2 = cpl + set sign flag
 	jp	m,CS2B_JAKPISMO
 	
 ; --------------- Zrcadlove vykreslovani
@@ -148,6 +148,10 @@ CS2B_JAKPISMO:
 ;	ld	hl,CS2B_SELF_MIRROR_PREPISOVANI+3	; 10:3
 ;	ld	(CS2B_SELF_MIRROR_PREPISOVANI+1),hl	; 16:3	
 ;	pop	hl					; 10:1
+	
+if ( Adr_Attr_Buffer < $8000 )
+    .error 'Adresa bufferu obrazovky nema horni bit nastaveny na jednicku!'
+endif
 	
 	bit	7,b					;  8:2 zaporny sloupec?
 	ld	iyl,b					;  8:2 vnejsi citac se zapornym sloupcem presunem do pomalejsiho a delsiho "iyl"
@@ -204,7 +208,7 @@ CS2B_ZACINAME_V_BUFFERU:
 	jr	CS2B_TEST_ZKRACENI_SIRKY; a = pocatecni sloupec, ale jdeme doleva takze i zbyvajici pocet sloupcu - 1
 	
 CS2B_SELFMODIFYING_MAXSLOUPEC:
-	ld	a,17			;  8:2 {17,31}
+	ld	a, $11			;  8:2 {17,31}
 	sub	iyl			;  4:1 max - pocatek < 0? Nezaciname vpravo od maxima a pritom kreslime doprava?
 	jp	m,CS2B_EXIT		; 10:3
 CS2B_TEST_ZKRACENI_SIRKY:
