@@ -1356,19 +1356,20 @@ B2S_WAIT:
     
     ld      C, L                ; vynulovani pocitadla radku
     add     HL, SP
-    ld      (B2S_SELF+1), HL
+    ld      (B2S_SELF+1), HL    ; ulozeni puvodni hodnoty SP
 
-    ld      DE, Adr_Buffer
-    ex      DE, HL
-    sbc     HL, DE              ; HL = Adr_Buffer - SP -> HL + SP = Adr_Buffer
-    
-B2S_NOVA_TRETINA:
-
-B2S_DALSI_RADEK
     ld      B, $08
+    ld      HL, Adr_Buffer
+    jr      B2S_DIRECT
     
-B2S_LOOP:
+    
+B2S_PIXEL_DOWN__LOOP:
+    ld      HL, Adr_Buffer - Adr_Screen + 256 - 16    
+    
+B2S_CHAR_DOWN_LOOP:
     add     HL, SP                          ; 11:1
+
+B2S_DIRECT:
     ld      SP, HL                          ;  6:1 buf++
     pop     AF
     pop     DE 
@@ -1384,7 +1385,7 @@ B2S_LOOP:
     pop     AF
         
     ld      SP, HL                          ;  6:1 screen--
-    push    AF                              ; Melo by byt po 14336+ T-states
+    push    AF                              ; 14423 T-States > 14336 T-states
     push    BC
     push    DE    
     ex      AF, AF'    
@@ -1424,11 +1425,9 @@ B2S_LOOP:
     push    DE
     push    AF
     
-    ld      HL, Adr_Buffer - Adr_Screen + 256 - 16    
-    djnz    B2S_LOOP                        ; 13/8:2
+    djnz    B2S_PIXEL_DOWN__LOOP            ; 13/8:2
     
     ; Nastaveni atributu
-    exx
 B2S_SELF_HL:
     ld      HL, Adr_Attr_Buffer
 B2S_SELF_DE:
@@ -1438,20 +1437,22 @@ B2S_SELF_DE:
     ENDM
     ld      (B2S_SELF_HL+1), HL
     ld      (B2S_SELF_DE+1), DE
-    exx
+    ; C snizeno pokazde o 32 (za tretinu se to srovna na nulu)
     
     ld      HL, Adr_Buffer - Adr_Screen - 7*256 + 16    
-    inc     C    
     ld      A, C
-    cp      $14                             ; max radku co kopiruji je 20
+    cp      $82                             ; $100 - 4*$20 (skoncime na 4. radku odshora) + 2 (3. tretiny)
     jr      z, B2S_EXIT
     
-    and     $07
-    jp      nz, B2S_DALSI_RADEK
+    ld      B, $08                          ; obnovime pocitadlo pixelu
+    
+    and     $E0                             ; horni 3 bity urcuji radek v tretine, spodni tretinu
+    jp      nz, B2S_CHAR_DOWN_LOOP
     
     ; nova tretina
+    inc     C                               ; posuneme hodnoty C o jedna
     ld      HL, Adr_Buffer - Adr_Screen + 16
-    jp      B2S_NOVA_TRETINA
+    jp      B2S_CHAR_DOWN_LOOP              
     
     
 B2S_EXIT:
