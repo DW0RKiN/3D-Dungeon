@@ -1341,9 +1341,9 @@ else
     
     ; init
     ld      HL, Adr_Attr_Buffer
-    ld      (B2S_SELF_HL+1), HL
-    ld      HL, Adr_Attr_Screen
-    ld      (B2S_SELF_DE+1), HL
+    ld      (B2S_SELF_SRC+1), HL
+    ld      HL, Adr_Attr_Screen + 16
+    ld      (B2S_SELF_DST+1), HL
 
     halt
     di
@@ -1363,7 +1363,7 @@ B2S_WAIT:
     jr      B2S_DIRECT
     
     
-B2S_PIXEL_DOWN__LOOP:
+B2S_PIXEL_DOWN_LOOP:
     ld      HL, Adr_Buffer - Adr_Screen + 256 - 16    
     
 B2S_CHAR_DOWN_LOOP:
@@ -1425,32 +1425,57 @@ B2S_DIRECT:
     push    DE
     push    AF
     
-    djnz    B2S_PIXEL_DOWN__LOOP            ; 13/8:2
+    djnz    B2S_PIXEL_DOWN_LOOP             ; 13/8:2
+    
     
     ; Nastaveni atributu
-B2S_SELF_HL:
-    ld      HL, Adr_Attr_Buffer
-B2S_SELF_DE:
-    ld      DE, Adr_Attr_Screen
-    REPT    32                  ; 32x zopakujeme ldi
-    ldi
-    ENDM
-    ld      (B2S_SELF_HL+1), HL
-    ld      (B2S_SELF_DE+1), DE
-    ; C snizeno pokazde o 32 (za tretinu se to srovna na nulu)
+    ld  (B2S_ATTR_SELF+1), SP
+    ld      B, $02                          ; 32/16
+B2S_ATTR_LOOP:
+B2S_SELF_SRC:
+    ld      SP, Adr_Attr_Buffer
+    pop     AF    
+    pop     DE
+    pop     HL
+    pop     IX
+    pop     IY
+    exx
+    pop     BC
+    pop     DE
+    pop     HL
+    ld      (B2S_SELF_SRC+1), SP
+B2S_SELF_DST:
+    ld      SP, Adr_Attr_Screen
+    push    HL
+    push    DE
+    push    BC
+    exx
+    push    IY
+    push    IX
+    push    HL
+    push    DE
+    push    AF
+    ld      HL, $0020
+    add     HL, SP
+    ld      (B2S_SELF_DST+1), HL
+    djnz    B2S_ATTR_LOOP    
+B2S_ATTR_SELF:
+    ld      SP, $0000
     
+    
+    
+    inc     C
     ld      HL, Adr_Buffer - Adr_Screen - 7*256 + 16    
     ld      A, C
-    cp      $82                             ; $100 - 4*$20 (skoncime na 4. radku odshora) + 2 (3. tretiny)
+    cp      $14                             ; hledame 20 radek
     jr      z, B2S_EXIT
     
     ld      B, $08                          ; obnovime pocitadlo pixelu
     
-    and     $E0                             ; horni 3 bity urcuji radek v tretine, spodni tretinu
+    and     $07                             ; delitelne osmi?
     jp      nz, B2S_CHAR_DOWN_LOOP
     
     ; nova tretina
-    inc     C                               ; posuneme hodnoty C o jedna
     ld      HL, Adr_Buffer - Adr_Screen + 16
     jp      B2S_CHAR_DOWN_LOOP              
     
