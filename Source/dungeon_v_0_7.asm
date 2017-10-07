@@ -1272,8 +1272,6 @@ BUFF2SCREEN:
     ; init
     ld      HL, Adr_Attr_Buffer
     ld      (B2S_SELF_SRC+1), HL
-    ld      HL, Adr_Attr_Screen + 16
-    ld      (B2S_SELF_DST+1), HL
 
     halt
     di
@@ -1365,30 +1363,30 @@ B2S_SELF_DIRECT:
 B2S_ATTR_LOOP:
 B2S_SELF_SRC:
     ld      SP, Adr_Attr_Buffer
-    pop     AF    
-    pop     DE
+    pop     AF
+    pop     DE 
     pop     HL
+    exx     
     pop     IX
     pop     IY
-    exx
-    pop     BC
+    ex      AF, AF'
     pop     DE
-    pop     HL
+    pop     BC
+    ld      HL, 2 + Adr_Screen - Adr_Buffer ; 10:3
+    add     HL, SP                          ; 11:1
+    pop     AF
     ld      (B2S_SELF_SRC+1), SP
-B2S_SELF_DST:
-    ld      SP, Adr_Attr_Screen
-    push    HL
-    push    DE
+    ld      SP, HL                          ;  6:1
+    push    AF                              ; 14407 T-States > 14560 T-states
     push    BC
-    exx
+    push    DE    
+    ex      AF, AF'    
     push    IY
     push    IX
+    exx 
     push    HL
     push    DE
-    push    AF
-    ld      HL, $0020
-    add     HL, SP
-    ld      (B2S_SELF_DST+1), HL
+    push    AF    
     djnz    B2S_ATTR_LOOP    
 B2S_ATTR_SELF:
     ld      SP, $0000
