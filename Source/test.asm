@@ -4277,59 +4277,6 @@ EC92:		label PWAD_NEZRANUJ
 EC92:CD92E7	CALL E792
 EC95:C9		RET
 EC96:		label BUFF2SCREEN
-		IF (false)
--     exx 
--     ld      DE, Adr_Attr_Screen
--     ld      HL, Adr_Attr_Buffer
--     exx 
--     halt
--     ld      BC, $020C           ; cekani na 14336+ T-states (paprsek kresli prvni pixely)
-- B2S_WAIT:
--     dec     BC                  ;  6:1
--     ld      A, B                ;  4:1
--     or      C                   ;  4:1
--     jr      nz, B2S_WAIT        ;12/7
--     ld      IXL, $15            ; celkovy pocet radku + 1
--     ld      DE, Adr_Screen
--     ld      H, Seg_Buffer
-- B2S_NOVA_TRETINA:
--     dec     D
--     dec     H
--     ld      L, D
--     ld      C, $07              ; pocet radku na tretinu-1
--     ld      A, B2S_LOOP-(B2S_SELF+2)
--     ld      (B2S_SELF+1), A    ; djnz B2S_LOOP
--     push    HL
-- B2S_DALSI_RADEK:
--     pop     HL
--     ld      B, $09              ; pocet px na radek + 1
--     ld      D, L
--     dec     IXL
--     ret     z
--     ld      A, E                ; uchovame offsety prvniho sloupce
--     push    HL                  ; uchovame segmenty zdroje i cile 
-- B2S_LOOP:
--     inc     D                   ; o pixel dolu
--     inc     H                   ; o pixel dolu
-- B2S_LOOP_POSLEDNI_RADEK:
--     ld      E, A                ; obnovime offset cile
--     ld      L, A                ; obnovime offset zdroje
-- B2S_SELF:                   
--     djnz    B2S_LOOP            ; B2S_LOOP nebo B2S_LOOP_POSLEDNI_RADEK
--     exx 
--     ld      BC, $0020
--     ldir
--     exx 
--     dec     C
--     jp      z, B2S_PREPIS
--     jp      p, B2S_DALSI_RADEK
--     pop     BC
--     jp      m, B2S_NOVA_TRETINA
-- B2S_PREPIS:
--     ld      A, B2S_LOOP_POSLEDNI_RADEK-(B2S_SELF+2)
--     ld      (B2S_SELF+1), A    ; djnz B2S_LOOP_POSLEDNI_RADEK
--     jp      B2S_DALSI_RADEK
-		ELSE (true)
 EC96:CD12EA	CALL EA12
 EC99:AF		XOR A
 EC9A:D3FE	OUT (FE), A
@@ -4339,7 +4286,7 @@ ECA2:211058	LD HL, 5810
 ECA5:221DED	LD (ED1D), HL
 ECA8:76		HALT
 ECA9:F3		DI
-ECAA:210002	LD HL, 0200
+ECAA:210602	LD HL, 0206
 ECAD:		label B2S_WAIT
 ECAD:2B		DEC HL
 ECAE:7C		LD A, H
@@ -4349,10 +4296,10 @@ ECB2:4D		LD C, L
 ECB3:39		ADD HL, SP
 ECB4:224DED	LD (ED4D), HL
 ECB7:0608	LD B, 08
-ECB9:2100B0	LD HL, B000
+ECB9:2110B0	LD HL, B010
 ECBC:1804	JR ECC2
 ECBE:		label B2S_PIXEL_DOWN_LOOP
-ECBE:21F070	LD HL, 70F0
+ECBE:211071	LD HL, 7110
 ECC1:		label B2S_CHAR_DOWN_LOOP
 ECC1:39		ADD HL, SP
 ECC2:		label B2S_DIRECT
@@ -4380,28 +4327,28 @@ ECDC:D9		EXX
 ECDD:E5		PUSH HL
 ECDE:D5		PUSH DE
 ECDF:F5		PUSH AF
-ECE0:211070	LD HL, 7010
-ECE3:39		ADD HL, SP
-ECE4:F9		LD SP, HL
-ECE5:F1		POP AF
-ECE6:D1		POP DE
-ECE7:E1		POP HL
-ECE8:D9		EXX
-ECE9:DDE1	POP IX
-ECEB:FDE1	POP IY
-ECED:08		EX AF, AF'
-ECEE:D1		POP DE
-ECEF:C1		POP BC
-ECF0:210290	LD HL, 9002
-ECF3:39		ADD HL, SP
-ECF4:F1		POP AF
-ECF5:F9		LD SP, HL
-ECF6:F5		PUSH AF
-ECF7:C5		PUSH BC
-ECF8:D5		PUSH DE
-ECF9:08		EX AF, AF'
-ECFA:FDE5	PUSH IY
-ECFC:DDE5	PUSH IX
+ECE0:ED73F5EC	LD (ECF5), SP
+ECE4:21F06F	LD HL, 6FF0
+ECE7:39		ADD HL, SP
+ECE8:F9		LD SP, HL
+ECE9:F1		POP AF
+ECEA:D1		POP DE
+ECEB:E1		POP HL
+ECEC:D9		EXX
+ECED:FDE1	POP IY
+ECEF:08		EX AF, AF'
+ECF0:E1		POP HL
+ECF1:D1		POP DE
+ECF2:C1		POP BC
+ECF3:F1		POP AF
+ECF4:		label B2S_SELF_DIRECT
+ECF4:310000	LD SP, 0000
+ECF7:F5		PUSH AF
+ECF8:C5		PUSH BC
+ECF9:D5		PUSH DE
+ECFA:E5		PUSH HL
+ECFB:08		EX AF, AF'
+ECFC:FDE5	PUSH IY
 ECFE:D9		EXX
 ECFF:E5		PUSH HL
 ED00:D5		PUSH DE
@@ -4440,14 +4387,14 @@ ED31:10D7	DJNZ ED0A
 ED33:		label B2S_ATTR_SELF
 ED33:310000	LD SP, 0000
 ED36:0C		INC C
-ED37:211069	LD HL, 6910
+ED37:213069	LD HL, 6930
 ED3A:79		LD A, C
 ED3B:FE14	CP 14
 ED3D:280D	JR Z, ED4C
 ED3F:0608	LD B, 08
 ED41:E607	AND 07
 ED43:C2C1EC	JP NZ, ECC1
-ED46:211070	LD HL, 7010
+ED46:213070	LD HL, 7030
 ED49:C3C1EC	JP ECC1
 ED4C:		label B2S_EXIT
 ED4C:		label B2S_SELF
@@ -4455,7 +4402,6 @@ ED4C:310000	LD SP, 0000
 ED4F:FB		EI
 ED50:CD2CEA	CALL EA2C
 ED53:C9		RET
-		ENDIF
 		INCLUDE table.h
 i_nw		EQU 0000
 i_ne		EQU 0001

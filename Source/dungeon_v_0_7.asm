@@ -1263,76 +1263,6 @@ PWAD_NEZRANUJ:
 
 ; =====================================================
 BUFF2SCREEN:
-if (0)
-
-    exx 
-    ld      DE, Adr_Attr_Screen
-    ld      HL, Adr_Attr_Buffer
-    exx 
-    halt
-
-    ld      BC, $020C           ; cekani na 14336+ T-states (paprsek kresli prvni pixely)
-B2S_WAIT:
-    dec     BC                  ;  6:1
-    ld      A, B                ;  4:1
-    or      C                   ;  4:1
-    jr      nz, B2S_WAIT        ;12/7
-
-    ld      IXL, $15            ; celkovy pocet radku + 1
-    ld      DE, Adr_Screen
-    ld      H, Seg_Buffer
-B2S_NOVA_TRETINA:
-    dec     D
-    dec     H
-    ld      L, D
-    ld      C, $07              ; pocet radku na tretinu-1
-    ld      A, B2S_LOOP-(B2S_SELF+2)
-    ld      (B2S_SELF+1), A    ; djnz B2S_LOOP
-    push    HL
-B2S_DALSI_RADEK:
-    pop     HL
-    ld      B, $09              ; pocet px na radek + 1
-    ld      D, L
-    dec     IXL
-    ret     z
-    ld      A, E                ; uchovame offsety prvniho sloupce
-    push    HL                  ; uchovame segmenty zdroje i cile 
-B2S_LOOP:
-    inc     D                   ; o pixel dolu
-    inc     H                   ; o pixel dolu
-B2S_LOOP_POSLEDNI_RADEK:
-    ld      E, A                ; obnovime offset cile
-    ld      L, A                ; obnovime offset zdroje
-    REPT    32                  ; 32x zopakujeme ldi
-    ldi
-    ENDM
-B2S_SELF:                   
-    djnz    B2S_LOOP            ; B2S_LOOP nebo B2S_LOOP_POSLEDNI_RADEK
-    
-    exx 
-    if (0)
-    ld      BC, $0020
-    ldir
-    else
-    REPT    32                  ; 32x zopakujeme ldi
-    ldi
-    ENDM    
-    endif
-    exx 
-    
-    dec     C
-    jp      z, B2S_PREPIS
-    jp      p, B2S_DALSI_RADEK
-
-    pop     BC
-    jp      m, B2S_NOVA_TRETINA
-    
-B2S_PREPIS:
-    ld      A, B2S_LOOP_POSLEDNI_RADEK-(B2S_SELF+2)
-    ld      (B2S_SELF+1), A    ; djnz B2S_LOOP_POSLEDNI_RADEK
-    jp      B2S_DALSI_RADEK
-else
-
 
     call    PUSH_ALL
     
@@ -1347,7 +1277,7 @@ else
 
     halt
     di
-    ld      HL, $0200           ; cekani na 14336+ T-states az budeme delat prvni PUSH (paprsek kresli prvni pixely)
+    ld      HL, $0206           ; cekani na 14560+ T-states az budeme delat prvni PUSH (paprsek kresli prvni pixely)
 B2S_WAIT:
     dec     HL
     ld      A, H
@@ -1359,18 +1289,18 @@ B2S_WAIT:
     ld      (B2S_SELF+1), HL    ; ulozeni puvodni hodnoty SP
 
     ld      B, $08
-    ld      HL, Adr_Buffer
+    ld      HL, Adr_Buffer + 16 ; budeme kopirovat pravou stranu radku (znaky 16-31) a pak levou (znaky 0-15). Takze navazovat bude PUSH v SCREEN.
     jr      B2S_DIRECT
     
     
 B2S_PIXEL_DOWN_LOOP:
-    ld      HL, Adr_Buffer - Adr_Screen + 256 - 16    
+    ld      HL, Adr_Buffer - Adr_Screen + 256 + 16    
     
 B2S_CHAR_DOWN_LOOP:
     add     HL, SP                          ; 11:1
 
 B2S_DIRECT:
-    ld      SP, HL                          ;  6:1 buf++
+    ld      SP, HL                          ;  6:1 Adresa pulky radku ( znak 16 ) v buferu
     pop     AF
     pop     DE 
     pop     HL
@@ -1380,12 +1310,12 @@ B2S_DIRECT:
     ex      AF, AF'
     pop     DE
     pop     BC
-    ld      HL, 2 + Adr_Screen - Adr_Buffer ; 10:3
+    ld      HL, 2 + Adr_Screen - Adr_Buffer ; 10:3 Adresa konce radku ( znak 32 ) na  obrazovce
     add     HL, SP                          ; 11:1
     pop     AF
         
-    ld      SP, HL                          ;  6:1 screen--
-    push    AF                              ; 14423 T-States > 14336 T-states
+    ld      SP, HL                          ;  6:1
+    push    AF                              ; 14407 T-States > 14560 T-states
     push    BC
     push    DE    
     ex      AF, AF'    
@@ -1396,37 +1326,38 @@ B2S_DIRECT:
     push    DE
     push    AF
     
-    ld      HL, 16 + Adr_Buffer - Adr_Screen; 10:3
+    ld      (B2S_SELF_DIRECT+1), SP         ; pro ukladani v prvni polovine radku navazeme na soucasnou adresu na obrazovce ( znak 16 )
+                                            ; pomalejsi o 3 takty, ale misto IX pouzijeme rychlejsi HL, usetrime 5 taktu
+    
+    ld      HL, Adr_Buffer - Adr_Screen - 16; 10:3 
     add     HL, SP                          ; 11:1
-    ld      SP, HL                          ;  6:1 buf++
+    ld      SP, HL                          ;  6:1 adresa pocatku radku ( znak 0 ) v buferu
     
     pop     AF
     pop     DE 
     pop     HL
     exx     
-    pop     IX
     pop     IY
     ex      AF, AF'
+    pop     HL
     pop     DE
     pop     BC
-    ld      HL, 2 + Adr_Screen - Adr_Buffer
-    add     HL, SP
     pop     AF
-        
-    ld      SP, HL                          ; screen--
+B2S_SELF_DIRECT:
+    ld      SP, $0000                       ; adresa poloviny radku ( znak 16 ) na obrazovce
     push    AF
     push    BC
     push    DE    
+    push    HL
     ex      AF, AF'    
     push    IY
-    push    IX
     exx 
     push    HL
     push    DE
     push    AF
-    
+
+    ; skoncime vzdy na adrese pocatku radku daneho pixeloveho radku ( znak 0 ) 
     djnz    B2S_PIXEL_DOWN_LOOP             ; 13/8:2
-    
     
     ; Nastaveni atributu
     ld  (B2S_ATTR_SELF+1), SP
@@ -1461,11 +1392,10 @@ B2S_SELF_DST:
     djnz    B2S_ATTR_LOOP    
 B2S_ATTR_SELF:
     ld      SP, $0000
-    
-    
+
     
     inc     C
-    ld      HL, Adr_Buffer - Adr_Screen - 7*256 + 16    
+    ld      HL, Adr_Buffer - Adr_Screen - 7*256 + 16 + 32  
     ld      A, C
     cp      $14                             ; hledame 20 radek
     jr      z, B2S_EXIT
@@ -1476,7 +1406,7 @@ B2S_ATTR_SELF:
     jp      nz, B2S_CHAR_DOWN_LOOP
     
     ; nova tretina
-    ld      HL, Adr_Buffer - Adr_Screen + 16
+    ld      HL, Adr_Buffer - Adr_Screen + 16 + 32
     jp      B2S_CHAR_DOWN_LOOP              
     
     
@@ -1486,9 +1416,6 @@ B2S_SELF:
     ei
     call    POP_ALL
     ret
-
-
-endif
 
   
 ; Musi byt posledni ( je to tabulka predmetu, bran, nepratel )
