@@ -350,6 +350,13 @@ CS2B_EXIT:
 	ld	sp,0		; self-modifying code
 	pop	iy
 	ret
+	
+	
+CS2B_CELOPRUHLEDNY_ZNAK:
+	exx				; Dira v datech, cely znak je pruhledny
+	ld	a,h
+	add	a,8			; simulace kopirovani
+	ld	h,a
 
 CS2B_O_ZNAK_NIZE:			; jsme ve stinovych registrech	
 	dec	ixl			; 8:2	snizime pocitadlo znaku v sloupci
@@ -381,14 +388,7 @@ CS2B_POCATEK:
 	ld	a,(de)			; 7:1 (SPRITE_ATTR_ADR)
 	
 	cp	MEZERA			; 4:1
-	jr	nz,CS2B_NENI_DIRA	
-	exx				; Dira v datech, cely znak je pruhledny
-	ld	a,h
-	add	a,8			; simulace kopirovani
-	ld	h,a
-	jr	CS2B_O_ZNAK_NIZE	; 12:2
-
-CS2B_NENI_DIRA:
+	jr	z,CS2B_CELOPRUHLEDNY_ZNAK	
 
 	or	a
 	jp	m,CS2B_MASKA

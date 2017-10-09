@@ -3,17 +3,17 @@
 ;  0  1  2  3  4  5  6  7  8  9  A  B  C  D  E  F 10 11
 
 ; prvni word obsahuje adresu spritu
-; treti "x" souradnici (nula vlevo, roste doprava)
-; ctvrty "y" souradnici (nula nahore, roste dolu)
+; treti bajt "x" souradnici (nula vlevo, roste doprava)
+; ctvrty bajt "y" souradnici (nula nahore, roste dolu)
 ; pokud je "y" zaporna ( xor $ff ) tak je to vetsinou signal, ze se ma kreslit zprava doleva
 
 
 ; 5. krychle pred nama ( sirka 21 px blizsi strana, hloubka 5 px )
 TABLE_VIEW_9_DEPTH_4:
-defw	H4m4,	$11FB,	0,	0,	H4m4,	$0004,	0,	0	
-defw	H4m3,	$11FB,	0,	0,	H4m3,	$0004,	0,	0
-defw	H4m2,	$0FFB,	0,	0,	H4m2,	$0204,	0,	0
-defw	H4m1,	$0CFB,	0,	0,	H4m1,	$0504,	0,	0,	H4,	$0704
+defw	H4m4,	$11FC,	0,	0,	H4m4,	$0003,	0,	0	
+defw	H4m3,	$11FC,	0,	0,	H4m3,	$0003,	0,	0
+defw	H4m2,	$0FFC,	0,	0,	H4m2,	$0203,	0,	0
+defw	H4m1,	$0CFC,	0,	0,	H4m1,	$0503,	0,	0,	H4,	$0703
 
 ; 4. krychle pred nama ( sirka 4 blizsi strana, hloubka 6 px )
 TABLE_VIEW_7_DEPTH_3:
