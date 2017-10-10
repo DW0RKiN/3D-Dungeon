@@ -17,7 +17,8 @@ KEY_DOLEVA          equ     113     ; q
 KEY_DOPRAVA         equ     101     ; e
 KEY_SPACE           equ     32      ; mezernik
 KEY_INVENTAR        equ     105     ; i
-KEY_BOJ             equ     102     ; f
+KEY_FHAND           equ     102     ; f
+KEY_SHAND           equ     103     ; g
 KEY_PLUS            equ     107     ; k
 KEY_MINUS           equ     106     ; j
 
@@ -45,10 +46,12 @@ defb    $0a,    KEY_DOLEVA      ; up+l
 defb    $04,    KEY_DOZADU      ; down
 defb    $08,    KEY_DOPREDU     ; up
 defb    $10,    KEY_SPACE       ; fire
-defb    $05,    KEY_BOJ         ; down+r
+defb    $05,    KEY_INVENTAR    ; down+r
 defb    $06,    KEY_INVENTAR    ; down+l
 defb    $11,    KEY_PLUS        ; fire+r
 defb    $12,    KEY_MINUS       ; fire+l
+defb    $18,    KEY_FHAND       ; fire+up
+defb    $14,    KEY_SHAND       ; fire+down
 DATA_KEMPSTON_END:
 defb    $00
 ; ^^^^ ----------------- konec souvisleho bloku

@@ -126,13 +126,22 @@ POSTAVA_MINUS:
     dec     A                           ; SUM_POSTAV--
     ld      (HL), A                     ;
     ret
+    
 
+INCLUDE input.h    
 
 ; =====================================================
 BOJ:
-; nevykreslovat kdyz jsme v inventari
+; opravit !!!!!!! nevykreslovat kdyz jsme v inventari
+    
+if ( KEY_SHAND - KEY_FHAND != 1 )
+    .error 'Opravit BOJ'
+endif
+    sub     KEY_FHAND                   ; 0..1
+    ld      B, A
     ld      A, (HLAVNI_POSTAVA)
     add     A, A                        ; zobrazeny 2 ruce na osobu
+    add     A, B
     call    DE_POZICE_RUKOU_A
     ld      B, D
     ld      C, E
@@ -166,7 +175,6 @@ ENDM
 endif
 
 INCLUDE objects.h
-INCLUDE input.h
 INCLUDE inventory.h
 INCLUDE draw3D.h
 INCLUDE strings.h
