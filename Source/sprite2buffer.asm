@@ -104,12 +104,14 @@ MEZERA		equ	$3F
 	ld	a,$2D					;  7:2 dec iyl = $FD $2D
 	ld	(CS2B_SELF_MIRROR_DEC+1),a		; 13:3
 	push	hl					; 11:1
-	ld	hl,$18 + 256*SKOK_NA_MASKA_ZRCADLOVE	; 10:3
+	ld	hl,$18 + 256*SKOK_NA_MASKA_ZRCADLOVE	; 10:3 L = $18 = JR xx
 	ld	(CS2B_SELF_LD8_OR_JR_MASKA_ZRC),hl	; 16:3 na adrese bude instrukce "jr CS2B_MASKA_ZRCADLOVE"
 	ld	h,SKOK_NA_PREPISOVANI_ZRCADLOVE		;  7:2
 	ld	(CS2B_SELF_LD4_OR_JR_PREP_ZRC),hl	; 16:3
 	ld	h,SKOK_NA_PRIPISOVANI_ZRCADLOVE		;  7:2
 	ld	(CS2B_SELF_LD4_OR_JR_PRIP_ZRC),hl	; 16:3
+	ld	h,SKOK_NA_VYMAZANI_ZRCADLOVE		;  7:2
+	ld	(CS2B_SELF_LD4_OR_JR_VYMAZ_ZRC),hl	; 16:3
 ;	ld	hl,CS2B_MASKA_ZRCADLOVE			; 10:3
 ;	ld	(CS2B_SELF_MIRROR_MASKA+1),hl		; 16:3
 ;	ld	hl,CS2B_PRIPISOVANI_ZRCADLOVE		; 10:3
@@ -138,6 +140,7 @@ CS2B_JAKPISMO:
 	ld	h,$04					;  7:2
 	ld	(CS2B_SELF_LD4_OR_JR_PREP_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,4"
 	ld	(CS2B_SELF_LD4_OR_JR_PRIP_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,4"
+	ld	(CS2B_SELF_LD4_OR_JR_VYMAZ_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,4"
 	pop	hl					; 10:1 obnovime hl
 	
 ;	push	hl					; 11:1
@@ -453,6 +456,16 @@ CS2B_PRIPISOVANI:
 ; 	and	%00000111	; mazani BRIGHTNESS
 ; 	ld	c,a		; vyreseno uz v datech
 
+
+; Test kolize novy INK == puvodni PAPER  
+	ld	a,(hl)		; 7:1 (BUF_ATTR_ADR)
+        rrca
+        rrca
+        rrca
+        and     $07
+        cp      C
+        jr      z, CS2B_VYMAZANI; novy INK je shodny s puvodnim PAPER, takze jen vymazavam puvodni INK
+
 	ld	a,(hl)		; 7:1 (BUF_ATTR_ADR)
 	and	%11111000	; 7:2
 	or	c		; 4:1
@@ -502,11 +515,62 @@ CS2B_PRIPISOVANI_ZRCADLOVE_LOOP:
 
 	jp	CS2B_O_ZNAK_NIZE	; 12:2 
 	
+
+; ---------------------------------------------------------
+CS2B_VYMAZANI:
+    exx
+CS2B_SELF_LD4_OR_JR_VYMAZ_ZRC:
+    ld      B, 4                ; ?:2 Self-modifying je zde bud "ld b,4" nebo "jr CS2B_VYMAZANI_ZRCADLOVE"
+
+CS2B_VYMAZANI_LOOP:
+    pop     DE                  ; 10:1
+    ld      A, E                ;  4:1
+    cpl                         ;  4:1 inverze bitu
+    and     (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1
+    ld      A, D                ;  4:1
+    cpl                         ;  4:1 inverze bitu
+    and     (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1 = 62 / 2 = 31 T/byte
+    djnz    CS2B_VYMAZANI_LOOP
+    
+    jp      CS2B_O_ZNAK_NIZE    ; 12:2 
+
+; ---------------------------------
+CS2B_VYMAZANI_ZRCADLOVE:
+    ld      D, ZRCADLOVY/256
+    ld      IYH, 4
+
+CS2B_VYMAZANI_ZRCADLOVE_LOOP:
+    pop     BC                  ; 10:1
+    ld      E, C                ;  4:1
+    ld      A, (DE)             ;  7:1 zrcadleny sprite
+    cpl                         ;  4:1
+    and     (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1
+    
+    ld      E, B                ;  4:1 
+    ld      A, (DE)             ;  7:1 zrcadleny sprite
+    cpl                         ;  4:1
+    and     (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1 = 68 / 2 = 34T/byte
+
+    dec     IYH
+    jr      nz, CS2B_VYMAZANI_ZRCADLOVE_LOOP
+
+    jp      CS2B_O_ZNAK_NIZE    ; 12:2 
+
 ; ==========================================================================================
 
-SKOK_NA_MASKA_ZRCADLOVE      equ   ( CS2B_MASKA_ZRCADLOVE       - CS2B_SELF_LD8_OR_JR_MASKA_ZRC - 2 )
-SKOK_NA_PREPISOVANI_ZRCADLOVE   equ   ( CS2B_PREPISOVANI_ZRCADLOVE - CS2B_SELF_LD4_OR_JR_PREP_ZRC  - 2 )
-SKOK_NA_PRIPISOVANI_ZRCADLOVE   equ   ( CS2B_PRIPISOVANI_ZRCADLOVE - CS2B_SELF_LD4_OR_JR_PRIP_ZRC  - 2 )
+; zjisteni relativniho ofsetu
+SKOK_NA_MASKA_ZRCADLOVE         equ     ( CS2B_MASKA_ZRCADLOVE       - CS2B_SELF_LD8_OR_JR_MASKA_ZRC - 2 )
+SKOK_NA_PREPISOVANI_ZRCADLOVE   equ     ( CS2B_PREPISOVANI_ZRCADLOVE - CS2B_SELF_LD4_OR_JR_PREP_ZRC  - 2 )
+SKOK_NA_PRIPISOVANI_ZRCADLOVE   equ     ( CS2B_PRIPISOVANI_ZRCADLOVE - CS2B_SELF_LD4_OR_JR_PRIP_ZRC  - 2 )
+SKOK_NA_VYMAZANI_ZRCADLOVE      equ     ( CS2B_VYMAZANI_ZRCADLOVE    - CS2B_SELF_LD4_OR_JR_VYMAZ_ZRC - 2 )
 
 if ( SKOK_NA_MASKA_ZRCADLOVE > 128 )
   .error 'Hodnota relativniho skoku na CS2B_MASKA_ZRCADLOVE mimo povoleny rozsah!'
