@@ -17,8 +17,8 @@ KEY_DOLEVA          equ     113     ; q
 KEY_DOPRAVA         equ     101     ; e
 KEY_SPACE           equ     32      ; mezernik
 KEY_INVENTAR        equ     105     ; i
-KEY_FHAND           equ     102     ; f
-KEY_SHAND           equ     103     ; g
+KEY_FHAND           equ     114     ; r
+KEY_SHAND           equ     102     ; f
 KEY_PLUS            equ     107     ; k
 KEY_MINUS           equ     106     ; j
 

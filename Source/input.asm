@@ -44,23 +44,23 @@ TK_SHODNY_STAV:
 ; VSTUP: nic
 ; VYSTUP:
 KEYPRESSED:
-    ld      de,TIMER_ADR
-    ld      a,(de)
+    ld      DE, TIMER_ADR
+    ld      A, (DE)
     and     FLOP_BIT_ATTACK/2
-    ld      b,a
-    ld      hl,LAST_KEY_ADR         ; 10:3 23560 = LAST K system variable.
+    ld      B, A                    ; nastav bit
+    ld      HL, LAST_KEY_ADR        ; 10:3 23560 = LAST K system variable.
 KEYPRESSED_NO:
 
-    ld      a,(de)
+    ld      A, (DE)
     and     FLOP_BIT_ATTACK/2
-    xor     b
-    ret     nz
+    xor     B                   
+    ret     nz                      ; pokud bit uz neni shodny tak prekresli scenu 
     
-    ld      a,(hl)                  ;  7:1 a = LAST K
+    ld      A, (HL)                 ;  7:1 a = LAST K
     or      a                       ;  4:1 nula?
     push    hl
     push    bc
-    call    z,TEST_KEMPSTON
+    call    z, TEST_KEMPSTON
     pop     bc
     pop     hl
     
@@ -69,12 +69,16 @@ KEYPRESSED_NO:
     ld      b,0                     ;  7:2 
     ld      (hl),b                  ;  7:1 smazem, LAST K = 0
 
-    ld      hl,(LOCATION)           ; 16:3 l=LOCATION, h=VECTOR
-    ld      c,h                     ;  4:1 (VECTOR)
-    ld      h,DUNGEON_MAP/256       ;  7:2 HL = aktualni pozice na mape 
+    ld      HL, (LOCATION)          ; 16:3 L=LOCATION, H=VECTOR
+    ld      C, H                    ;  4:1 (VECTOR)
+    ld      H, DUNGEON_MAP/256      ;  7:2 HL = aktualni pozice na mape 
 
-;        b = 0 = stisknuto_dopredu = offset radku tabulky VEKTORY_POHYBU
-; !!! slo by optimalizovat na inc B
+    ; Vstup:
+    ;   HL = adresa mapy
+    ;   C  = vektor natoceni
+    ;   A  = stisknuty znak
+    
+    ;   B = 0 = stisknuto_dopredu = offset radku tabulky VEKTORY_POHYBU
 
     ld      DE, POSUN
     push    DE
@@ -94,6 +98,7 @@ if ( stisknuto_dopredu = 0 and stisknuto_dozadu = 1 and stisknuto_vlevo = 2 and 
     inc     B                       ;  4:1 B = stisknuto_vpravo
     cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
     ret     z
+    
 else
 
 .warning 'Delsi kod o 4 bajty protoze stisknuto_dopredu..stisknuto_vpravo != 0..3'
@@ -101,15 +106,15 @@ else
     cp      KEY_DOPREDU             ;  7:2, "w" = dopredu
     ret     z
 
-    ld      b,stisknuto_dozadu      ;  7:2, offset radku tabulky VEKTORY_POHYBU
+    ld      B, stisknuto_dozadu     ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_DOZADU              ;  7:2, "s" = dozadu
     ret     z
 
-    ld      b,stisknuto_vlevo       ;  7:2, offset radku tabulky VEKTORY_POHYBU
+    ld      B, stisknuto_vlevo      ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_VLEVO               ;  7:2, "a" = vlevo
     ret     z
 
-    ld      b,stisknuto_vpravo      ;  7:2, offset radku tabulky VEKTORY_POHYBU
+    ld      B, stisknuto_vpravo     ;  7:2, offset radku tabulky VEKTORY_POHYBU
     cp      KEY_VPRAVO              ;  7:2, "d" = vpravo
     ret     z
 endif
@@ -135,40 +140,34 @@ endif
     cp      KEY_SHAND               ;  7:2 "g" second hand
     jp      z, BOJ
     
+    cp      42                      ;  7:2 "*" = ctrl+b ( nastavi border pro test synchronizace obrazu )
+    jp      z, SET_BORDER
+    
+    cp      96                      ; ctrl+x
+    jr      nz, K_NOEXIT            ; jina klavesa?
+    pop     hl                      ; zrusim ret
+    call    POP_ALL
+    ret                             ; return to  BASIC
+K_NOEXIT:
+
+
+    ld      HL, SUM_POSTAV
     ld      DE, NEW_PLAYER_ACTIVE
     push    DE
     
     cp      KEY_PLUS                ;  7:2 "k" = "+"
     jp      z, POSTAVA_PLUS
     
-    cp      KEY_MINUS                ;  7:2 "j" = "-"
+    cp      KEY_MINUS               ;  7:2 "j" = "-"
     jp      z, POSTAVA_MINUS
-
-    cp      '7'                     ;  7:2 
-    jr      nc, K_BAD_NUMBER        ; vetsi nebo rovno jak hodnota znaku "7"
-    cp      '1'                     ;  7:2 
-    jr      c, K_BAD_NUMBER         ; mensi jak hodnota znaku "1"
-    sub     '1'                     ; A = 0..5
-    ld      hl, SUM_POSTAV          ; 10:3
-    cp      (hl)                    ;  7:1  0..5 - SUM_POSTAV
-    jr      nc, K_BAD_NUMBER        ; new >= SUM_POSTAV
-    dec     hl                      ;  6:1 hl = HLAVNI_POSTAVA
-    ld      (hl), A                 ;  7:1 nova HLAVNI_POSTAVA
-
-    ret                             ; jp NEW_PLAYER_ACTIVE
-K_BAD_NUMBER:
-    pop DE
-
-    cp      42                      ;  7:2 "*" = ctrl+b ( nastavi border pro test synchronizace obrazu )
-    jp      z,SET_BORDER
-        
-    cp      96                      ; ctrl+x
-    jp      nz,HELP                 ; jina klavesa? zobraz napovedu! Pozor      tohle musi byt posledni test klavesy, protoze pokracovani je ukonceni programu
     
-;EXIT_PROGRAM:
-    pop     hl                      ; zrusim ret
-    call    POP_ALL
-    ret                             ; do BASICu
+    sub     '1'                     ; 0..5?
+    cp      (HL)                    ; 1..6
+    jp      nc, HELP
+    
+    dec     HL                      ;  6:1 HL = HLAVNI_POSTAVA
+    ld      (HL), A                 ;  7:1 nova HLAVNI_POSTAVA    
+    ret                             ; jp NEW_PLAYER_ACTIVE
 
 
 ; =====================================================

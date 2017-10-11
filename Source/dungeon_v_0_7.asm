@@ -131,17 +131,21 @@ POSTAVA_MINUS:
 INCLUDE input.h    
 
 ; =====================================================
+; VSTUP:
+;   A = KEY_FHAND nebo KEY_SHAND
+;   na zasobniku lezi adresa NEW_PLAYER_ACTIVE
 BOJ:
 ; opravit !!!!!!! nevykreslovat kdyz jsme v inventari
     
-if ( KEY_SHAND - KEY_FHAND != 1 )
-    .error 'Opravit BOJ'
+if (  KEY_FHAND > KEY_SHAND )
+    sub     KEY_FHAND                   ; carry pokud KEY_SHAND
+else
+    ; KEY_SHAND > KEY_FHAND
+    add     256-KEY_SHAND               ; carry pokud KEY_SHAND
 endif
-    sub     KEY_FHAND                   ; 0..1
-    ld      B, A
+    
     ld      A, (HLAVNI_POSTAVA)
-    add     A, A                        ; zobrazeny 2 ruce na osobu
-    add     A, B
+    adc     A, A                        ; zobrazeny 2 ruce na osobu + carry spodni ruka   
     call    DE_POZICE_RUKOU_A
     ld      B, D
     ld      C, E
