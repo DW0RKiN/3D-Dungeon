@@ -358,7 +358,6 @@ IW_NENI_PROSTIRANI:
 
     ; vykresleni prazdneho ramu nebo modreho/fialoveho podkladu
     ld      DE, I_ram               ; adresa spritu
-    cp      1+INDEX_PROSTIRANI
     jr      c, IW_MODRY             ; prvnich 16 pozic ma vzdy modre pozadi
     jr      z, IW_MODRY             ; pod prostiranim je take modro
     ; vykresleni mozneho podkladu
