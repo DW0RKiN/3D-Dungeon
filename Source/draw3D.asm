@@ -1,38 +1,37 @@
 ; =====================================================
-VIEW:     
+DRAW3D:     
 
     ; vykresleni pozadi ( strop a podlaha )
-    ld      bc,$1100                    ; 17. sloupec
-POZADI:
-    ld      de,H5
-    ld      a,(POHYB)                   ; 13:3
-    and     1
-    jr      z,V_H5
-    ld      c,$FF
-V_H5:
-    push    bc
-    push    de
+    ld      B, $12                      ; 18 prouzku ( sloupcu )
+    ld      A, (POHYB)                  ; 13:3
+    rrca                                ; carry?
+    sbc     A, A                        ; $00 nebo $FF
+    ld      C, A
+    
+D_POZADI_LOOP:
+    ld      DE, H5
+    push    BC
+    dec     B                           ; 0..17
     call    COPY_SPRITE2BUFFER
-    pop     de
-    pop     bc
-    djnz    POZADI
-    call    COPY_SPRITE2BUFFER
+    pop     BC
+    djnz    D_POZADI_LOOP
+    
     ; vykresli dno bufferu
-    ld      de,dno_bufferu
-    ld      bc,$000E                    ;
+    ld      de, dno_bufferu
+    ld      bc, $000E                   ;
     call    COPY_SPRITE2BUFFER        
 
-    ld      h,VEKTORY_POHYBU/256        ;  7:2
-    ld      a,(VECTOR)                  ; 13:3 {0, 1, 2, 3}
-    ld      l,a                         ;  4:1
-    ld      c,(hl)                      ;  7:1 modifikator pro posun vpred (prvni radek)
-    add     a,12                        ;  7:2                        
-    ld      l,a                         ;  4:1
-    ld      a,(hl)                      ;  7:1 modifikator pro posun vpravo (posledni radek)
-    ld      e,a                         ;  4:1 "e" obsahuje "o 1 vpravo" 
-    add     a,a                         ;  4:1 2 * vpravo
-    add     a,a                         ;  4:1 4 * vpravo
-    ld      d,a                         ;  4:1 "d" obsahuje "max vpravo"
+    ld      h, VEKTORY_POHYBU/256       ;  7:2
+    ld      a, (VECTOR)                 ; 13:3 {0, 1, 2, 3}
+    ld      l, a                        ;  4:1
+    ld      c, (hl)                     ;  7:1 modifikator pro posun vpred (prvni radek)
+    add     a, 12                       ;  7:2                        
+    ld      l, a                        ;  4:1
+    ld      a, (hl)                     ;  7:1 modifikator pro posun vpravo (posledni radek)
+    ld      e, a                        ;  4:1 "e" obsahuje "o 1 vpravo" 
+    add     a, a                        ;  4:1 2 * vpravo
+    add     a, a                        ;  4:1 4 * vpravo
+    ld      d, a                        ;  4:1 "d" obsahuje "max vpravo"
 
     ld      h,DUNGEON_MAP/256           ;  7:2 
     ld      a,(LOCATION)                ; 13:3        

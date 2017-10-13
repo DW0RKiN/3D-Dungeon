@@ -80,7 +80,7 @@ MAIN_LOOP:
     ei
 
     di
-    call    VIEW
+    call    DRAW3D
     ei
 
 ;     call    COPY_VYREZ2SCREEN
