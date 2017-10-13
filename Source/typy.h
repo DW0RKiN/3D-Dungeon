@@ -82,3 +82,5 @@ TYP_ITEM		equ	4*POSUN_TYP
   PODTYP_POTION_G	equ	29*POSUN_PODTYP
   PODTYP_POTION_B	equ	30*POSUN_PODTYP
   
+  ; kolik vyleci snezeni jidla
+  FOOD_HEALING          equ     20

@@ -665,6 +665,7 @@ EATING:
     ; HL = DATA_ZIVOTY[HLAVNI_POSTAVA].nyni
     
     inc     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].max
+    ld      B, (HL)                 ; max
     ld      DE, VETA_DRINK          ; veta bude piti
 
     ld      A, C
@@ -672,12 +673,20 @@ EATING:
     jr      nz, E_NO_FOOD
     ; food
     ld      DE, VETA_EAT            ; vymenime vetu za jezeni
+    dec     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].nyni
+    ld      A, (HL)                 ; A = nyni
+    add     A, FOOD_HEALING
+    cp      B
+    jr      c, E_LESS
+    ld      A, B
+E_LESS:
+    ld      (HL), A
+    xor     A
 E_NO_FOOD:
 
     dec     A
     jr      nz, E_NO_R    
     ; healing potion
-    ld      B, (HL)                 ; max
     dec     HL                      ; DATA_ZIVOTY[HLAVNI_POSTAVA].nyni
     ld      (HL), B                 ; nyni = max
 E_NO_R:
