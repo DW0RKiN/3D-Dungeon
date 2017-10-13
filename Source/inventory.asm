@@ -290,6 +290,14 @@ IW_LOOP:
 
 
 ; =====================================================
+; Ulozi na zasobnik dvojice 16 bitovych hodnot (adresu a pak souradnice) pro pozdejsi vykresleni
+; VSTUP:
+;   B = index pozice 1..MAX_INVENTORY
+;   HL' = ukazatel na souradnice spritu na obrazovce
+;   HL = ukazatel na typ predmetu
+; VYSTUP:
+;   HL' += 2
+;   HL++
 VYKRESLI_ITEM_NA_POZICI_B:
     pop     DE
     ld      (VINPB_SELF+1), DE
@@ -308,23 +316,11 @@ VYKRESLI_ITEM_NA_POZICI_B:
     
     jr      z, IW_BEZ_MRIZKY
     ld      DE, I_zakazano          ; vykresleni mrizky
-    push    DE                      ; ulozeni souradnic
+    push    DE                      ; ulozeni adresy spritu
     exx                 
     push    DE                      ; ulozeni pozice
     exx
 IW_BEZ_MRIZKY:
-
-
-    ; vykresleni prostirani 
-    ld      A, B
-    cp      INDEX_PROSTIRANI
-    jr      nz, IW_NENI_PROSTIRANI
-    ld      DE, I_prostirani
-    push    DE
-    exx                 
-    push    DE                      ; ulozeni pozice
-    exx
-IW_NENI_PROSTIRANI:
 
 
     ; vykresleni predmetu
@@ -337,7 +333,7 @@ else
 endif
     ld      A, (HL)
     add     A, A
-    jr      z, IW_PRAZDNE_POLICKO
+    jr      z, IW_BEZ_PREDMETU
     
     push    HL
     call    DE_2DSPRITE_A
@@ -347,44 +343,41 @@ endif
     push    DE                      ; ulozeni pozice
     exx    
     dec     C                       ; zrusime priznak prazdneho policka
-IW_PRAZDNE_POLICKO:
+IW_BEZ_PREDMETU:
 
-
-    ; vykresleni ramu
-    ld      de, I_ram               ; prazdny ram protoze jsme jeste (B klesa) na naznacene postave
+    ; vykresleni prostirani
+    ld      A, B
+    cp      INDEX_PROSTIRANI
+    jr      nz, IW_NENI_PROSTIRANI
+    ld      DE, I_prostirani        ; adresa spritu
     push    DE
     exx
     push    DE                      ; ulozeni pozice
-    exx    
-    
-    
-    ; vykresleni podkladu pod kurzorem
+    exx        
+IW_NENI_PROSTIRANI:
+
+    ; vykresleni prazdneho ramu nebo modreho/fialoveho podkladu
+    ld      DE, I_ram               ; adresa spritu
+    cp      1+INDEX_PROSTIRANI
+    jr      c, IW_MODRY             ; prvnich 16 pozic ma vzdy modre pozadi
+    jr      z, IW_MODRY             ; pod prostiranim je take modro
+    ; vykresleni mozneho podkladu
+    cp      C
+    jr      z, IW_PRAZDNE_POLICKO   ; zero = prazdne policko
+IW_MODRY:
+    ld      DE, I_bg                ; modry podklad
+IW_PRAZDNE_POLICKO:
+    ; fialovy podklad je pod kurzorem vzdy
     ld      A, (KURZOR_V_INVENTARI)
     inc     A
     cp      B
     jr      nz, IW_NEJSME_NA_KURZORU
     ld      DE, I_bgm               ; fialovy podklad pro kurzor
-    push    DE
-    exx
-    push    DE                      ; ulozeni pozice
-    exx    
 IW_NEJSME_NA_KURZORU:
-
-
-    ; vykresleni mozneho podkladu
-    ld      A, B
-    cp      C
-    jr      nz, IW_PREDMET_OBSAZEN
-    cp      1+INDEX_PROSTIRANI
-    jr      nc, IW_NEKRESLI_PODKLAD 
-IW_PREDMET_OBSAZEN:
-    ld      DE, I_bg                ; modry podklad
     push    DE
-    exx
+    exx                 
     push    DE                      ; ulozeni pozice
-    exx 
-IW_NEKRESLI_PODKLAD:
-
+    exx
 
 VINPB_SELF:
     jp      $0000
@@ -446,7 +439,7 @@ A_NAJDI_POLOZENY_PREDMET_HL:
     push    BC
     push    DE
 
-    call    FIND_LAST_ITEM
+    call    DEH_FIND_LAST_ITEM_HL
     ; H = TYP_ITEM + roh
     ex      DE, HL
     dec     HL                      ; PODTYP
@@ -470,45 +463,40 @@ NPP_EXIT:
         
 ; =====================================================
 VYKRESLI_AKTIVNI_PREDMET:
-    call    TEST_OTEVRENY_INVENTAR      ;ddf7        cd a6 ca
+    call    TEST_OTEVRENY_INVENTAR      ;
     ret     z                           ; u zavreneho nebudem vykreslovat presah
     
 
-
-if (1)
+    ; predmety nahore strcim do poslednich 4 polozek inventare
     call    DE_INVENTORY_ITEMS_AKTIVNI
     push    DE
     pop     IX
-    
     ; polozeny predmet na zemi
     ld      HL, (LOCATION)              ; 16:3 L=LOCATION, H=VECTOR=ROH VLEVO VZADU
     call    A_NAJDI_POLOZENY_PREDMET_HL ; roh 0 (vlevo vzadu)
     ld      (IX+INDEX_ZEM_LD_M1), A
-    
     inc     H
     call    A_NAJDI_POLOZENY_PREDMET_HL ; roh 1 (vpravo vzadu)
     ld      (IX+INDEX_ZEM_RD_M1), A
-      
     call    HL_VEPREDU                  ; 17:3
     dec     H                           ; roh 3 (-1)  
     call    A_NAJDI_POLOZENY_PREDMET_HL ; roh vlevo vepredu na ctverci pred nama
     ld      (IX+INDEX_ZEM_LU_M1), A
-    
     dec     H                           ; roh 2 (-2)
     call    A_NAJDI_POLOZENY_PREDMET_HL ; roh vpravo vepredu na ctverci pred nama
     ld      (IX+INDEX_ZEM_RU_M1), A
-endif
 
+    ; vykreslim odzadu posledni 4 polozky inventare
     xor     A
-    push    AF                      ; zarazka na zasobnik
+    push    AF                          ; zarazka na zasobnik
     ; init VYKRESLI_ITEM_NA_POZICI_B
     exx
     ld      HL, POZICE_V_INVENTARI_END
     exx
-    ld      HL, MAX_INVENTORY  ; 10:3 
-    call    DE_INVENTORY_ITEMS_AKTIVNI; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
+    ld      HL, MAX_INVENTORY           ; 10:3 
+    call    DE_INVENTORY_ITEMS_AKTIVNI  ; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
     add     HL, DE
-    ld      B, MAX_INVENTORY   ;  7:2
+    ld      B, MAX_INVENTORY            ;  7:2
 VAP_LOOP:
     call    VYKRESLI_ITEM_NA_POZICI_B
     dec     B
@@ -584,8 +572,8 @@ TEST_NEPOVOLENE_POZICE:
     ; byla to suda pozice
     push    HL
     call    HL_VEPREDU
-    ld      H, DUNGEON_MAP / 256        ;  7:2
-    bit     0,(HL)
+    ld      H, DUNGEON_MAP / 256    ;  7:2
+    bit     BIT_NEPRUCHOZI, (HL)
     pop     HL
     ret
 TNP_NOSENE:

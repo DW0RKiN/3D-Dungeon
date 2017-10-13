@@ -8,7 +8,7 @@
 ;   not zero flag   = nenalezen ( A > L a je roven nasledujici nebo zarazce )
 ; NEMENI:
 ;   HL, BC
-FIND_FIRST_OBJECT:
+DE_FIND_FIRST_OBJECT_L:
     ld      DE, TABLE_OBJECTS-2         ; 10:3 DE = &(TABLE_OBJECTS[-1].prepinace+typ)
 ; VSTUP:
 ;   DE = &(TABLE_OBJECTS[?].prepinace+typ)
@@ -26,6 +26,28 @@ FIND_NEXT_OBJECT:
 
     
 ; =====================================================
+; Prohleda seznam predmetu zda na dane pozici ( ulozene v registru "l" ) nelezi nepruchozi predmet ( = aspon jeden z hornich bajtu "typ" je nenulovy ) 
+; VSTUP: 
+;   L = hledana lokace
+; VYSTUP: 
+;   carry = zablokovana ( nepruchozi )
+; MENI: 
+;   DE, L, A
+JE_POZICE_BLOKOVANA_L:
+    call    DE_FIND_FIRST_OBJECT_L
+    ret     nz                          ;11/5:1 nenalezena
+    
+JPB_NALEZEN_OBJECT:                     ; na lokaci lezi nejaky predmet
+    ld      A, (DE)                     ;  7:1 typ
+    add     A, MASKA_PREPINACE
+    ret     c                           ; blokovany?
+    
+    call    FFO_NEXT                    ; hledej dalsi
+    jr      z, JPB_NALEZEN_OBJECT       ; 10:1 nalezen dalsi objekt na lokaci
+    ret    
+    
+
+; =====================================================
 ; VSTUP:      
 ;   H = hledany roh
 ;   L = hledana lokace
@@ -33,10 +55,9 @@ FIND_NEXT_OBJECT:
 ;   DE = ukazuje na TABLE_OBJECTS[x].lokace v prvnim radku se shodnym nebo vyssim natocenim (= za poslednim s nizsim natocenim) nebo prvni predmet na vyssi lokaci
 ;   carry = 0
 ;   H = TYP_ITEM + C
-;   DE = ukazuje na lokaci
 ; MENI:
 ;   A, H, DE
-FIND_LAST_ITEM:
+DEH_FIND_LAST_ITEM_HL:
 
     ld      DE, TABLE_OBJECTS-2
 
@@ -76,12 +97,12 @@ FLI_EXIT:
 VLOZ_ITEM_NA_POZICI:
     push    AF                          ; ukladany predmet
     
-    call    FIND_LAST_ITEM
+    call    DEH_FIND_LAST_ITEM_HL
     push    HL                          ; uchovame TYP + NATOCENI a lokaci
     
     ld      hl,(ADR_ZARAZKY)            ; 16:3
     push    hl
-    sbc     hl,de                       ; 15:2 carry = 0 diky FIND_LAST_ITEM
+    sbc     hl,de                       ; 15:2 carry = 0 diky DEH_FIND_LAST_ITEM_HL
     ld      b,h                         ;  4:1
     ld      c,l                         ;  4:1 o kolik bajtu
     inc     bc                          ; pridame zarazku a odstranime problem kdy bc = 0
@@ -122,7 +143,7 @@ VLOZ_ITEM_NA_POZICI:
 ;        H = (vector)
 VEZMI_ITEM_Z_POZICE:
 
-    call    FIND_LAST_ITEM
+    call    DEH_FIND_LAST_ITEM_HL
 
     ex      DE, HL
     dec     HL                          ; MASKA_PODTYP
@@ -169,7 +190,7 @@ VEZMI_ITEM_Z_POZICE:
 PREPNI_OBJECT:
 
     push    de
-    call    FIND_FIRST_OBJECT
+    call    DE_FIND_FIRST_OBJECT_L
     ; DE = &(TABLE_OBJECTS[?].prepinace+typ) 
     jr      nz, PO_EXIT
 
@@ -211,25 +232,6 @@ PO_NEXT_OBJECT:
     
 PO_EXIT:
     pop     de
-    ret
-
-
-; =====================================================
-; Prohleda seznam predmetu zda na dane pozici ( ulozene v registru "l" ) nelezi nepruchozi predmet ( = aspon jeden z hornich bajtu "typ" je nenulovy ) 
-; VSTUP: v "hl" je hledana lokace
-; VYSTUP: vraci carry priznak pokud najde
-; MENI: de,l,a
-JE_POZICE_BLOKOVANA:
-    call    FIND_FIRST_OBJECT
-    ret     nz                          ;11/5:1 nenalezena
-    
-JPB_NALEZEN_OBJECT:                     ; na lokaci lezi nejaky predmet
-    ld      a,(de)                      ;  7:1 typ
-    add     a,MASKA_PREPINACE
-    ret     c                           ; blokovany?
-    
-    call    FFO_NEXT                    ; hledej dalsi
-    jr      z,JPB_NALEZEN_OBJECT        ; 10:1 nalezen dalsi objekt na lokaci
     ret
 
 
@@ -536,7 +538,7 @@ if (0)
     jp      nc, FO_LOOP                     ; return ( bohuzel tolikrat, kolikrat je predmetu na policku )
 endif
     
-    bit     1,(IX+$00)                      ; 20:4 jsme v nepruhledne stene? Nebude videt ze tam neco je ani kdyz jsme uvnitr...
+    bit     BIT_STENA, (IX+$00)             ; 20:4 jsme v nepruhledne stene? Nebude videt ze tam neco je ani kdyz jsme uvnitr...
     ret     nz
 
     push    DE                              ; ulozime adresu prvniho predmetu pro pripad preteceni na zacatek

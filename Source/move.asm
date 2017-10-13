@@ -85,6 +85,7 @@ IPPAZ_LOOP:
 ;   B = stisknuto_dopredu..stisknuto_vpravo = { stisknuto_dopredu = 0,stisknuto_dozadu = 1,stisknuto_vlevo = 2,stisknuto_vpravo = 3 }
 ;   A = KEY_DOPREDU (119), KEY_DOZADU (115), KEY_VLEVO (97), KEY_VPRAVO (100)
 POSUN:
+    ; zobrazeni co je stisknuto primo na SCREEN
     ld      A, B
     add     A, A
     add     A, A
@@ -137,32 +138,25 @@ POSUN_V_MEZICH:
 ; -----------------------------------------------------
 POSUN_NEJSEM_V_INVENTARI:
 
-    ld      a,b
-    add     a,a                         ; 4:1 2x
-    add     a,a                         ; 4:1 4x
+    ld      a, b
+    add     a, a                        ; 4:1 2x
+    add     a, a                        ; 4:1 4x
     push    af                          ; uchovam smer kvuli sipkam
     call    AKTUALIZUJ_SIPKY
     pop     af
     
     call    HL_NOVA_POZICE
-; test steny
-    bit     0,(hl)                      ; 12:2 self-modifying pokud meni patra
-    jr      nz,POSUN_ZABLOKOVAN         ;12/7:1 Pokud tam je stena opust fci
-    
-    call    JE_POZICE_BLOKOVANA         ; vraci carry priznak kdyz je zablokovana
-    jr      c,POSUN_ZABLOKOVAN
+    ; test steny
+    ld      ix, VETA_NO_WAY
+    bit     BIT_NEPRUCHOZI, (hl)        ; 12:2 self-modifying pokud meni patra
+    jr      nz, PRINT_MESSAGE           ;12/7:1 exit + hlaska
+    ; test nepruchoziho objektu
+    call    JE_POZICE_BLOKOVANA_L       ; vraci carry priznak kdyz je zablokovana
+    jr      c, PRINT_MESSAGE            ;12/7:1 exit + hlaska
 
-    ld      a,l
-    ld      (LOCATION),a                ; 13:3 ulozi novou pozici
+    ld      a, l
+    ld      (LOCATION), a               ; 13:3 ulozi novou pozici
 
-    call    INC_POCITADLO_POHYBU_A_ZVUK ;zvedne "pocitadlo pohybu/otoceni"
-    jr      EXIT_POSUN
-   
-; -----------------------------------------------------
-POSUN_ZABLOKOVAN:
-    ld      ix,VETA_NO_WAY
-    call    PRINT_MESSAGE
-    
-EXIT_POSUN:
+    jr     INC_POCITADLO_POHYBU_A_ZVUK  ;zvedne "pocitadlo pohybu/otoceni"
 
-    ret
+;     ret

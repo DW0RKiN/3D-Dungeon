@@ -1,3 +1,7 @@
+BIT_NEPRUCHOZI  equ 0
+BIT_STENA       equ 1
+
+
 DUNGEON_MAP:
 ;	0 1 2 3 4 5 6 7 8 9 A B C D E F
 defb	3,3,3,3,3,3,2,3,3,3,3,3,3,3,3,3   ; $00 0 ( na pozici 0 musi byt stena ( = zadny predmet, paka, dvere ), znaci rozsirene udaje u TABLE_OBJECTS )

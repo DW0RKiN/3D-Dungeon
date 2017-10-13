@@ -113,7 +113,7 @@ PPV_LOOP:                           ; djnz smycka
     
 
 ; test steny
-    bit     1, (IX)                 ; test 0000 0010
+    bit     BIT_STENA, (IX)         ; test 0000 0010
     call    INIT_COPY_PATTERN2BUFFER
     call    INIT_COPY_PATTERN2BUFFER        
     
@@ -128,7 +128,7 @@ PPV_LOOP:                           ; djnz smycka
     sub     d
     ld      ixl,a                   ; ix = max. vlevo
 ; test steny
-    bit     1,(ix)
+    bit     BIT_STENA, (IX)
     call    INIT_COPY_PATTERN2BUFFER        
     call    INIT_COPY_PATTERN2BUFFER
     
@@ -145,7 +145,7 @@ PPV_LOOP:                           ; djnz smycka
 
     ld      ixl,c    
 ; test steny
-    bit     1,(ix)
+    bit     BIT_STENA, (IX)
     call    INIT_COPY_PATTERN2BUFFER
     ; divame se vpred
     xor     a                       ; primy pohled, o 1 vpravo, o 1 vlevo
