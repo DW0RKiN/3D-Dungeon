@@ -280,7 +280,8 @@ TIME_SCROLL_LAST:
 ; Stisknut SPACE
 ; v "c" je (VECTOR)
 ; v "hl" je aktualni lokace
-; MENI: hl pri hledani dalsich objektu co se musi prepnout
+; MENI: 
+;   vse ???
 PREHOD_PREPINAC:
     call    TEST_OTEVRENY_INVENTAR  
     ; A = index kurzoru v inventari
@@ -304,13 +305,11 @@ PREHOD_PREPINAC:
     ; pokud je zero flag tak do C dat nulu
     call    z, EATING                   ; C = co ji/pije -> C = 0 (bude vynulovan)
 
-    ld      H, $00
-    ld      L, B
-    dec     L
-    call    DE_INVENTORY_ITEMS_AKTIVNI  ; nacist do DE adresu radku aktivni postavy z INVENTORY_ITEMS
-    add     HL, DE
+    dec     B
+    call    DE_INVENTORY_ITEMS_AKTIVNI_B; DE = @(INVENTORY_ITEMS[HLAVNI_POSTAVA][B])
     
-    ld      A, (HL)                     ; predmet ktery vymenime za presouvany
+    ld      A, (DE)                     ; predmet ktery vymenime za presouvany
+    ex      DE, HL
     ld      (HL), C                     ; puvodne presouvany ulozime
     pop     HL
     ld      (HL), A                     ; nove presouvany
@@ -636,6 +635,8 @@ FB_DALSI_SLOUPEC:
 ; =====================================================
 ; VSTUP:
 ;   C = PODTYP_ITEM co ji/pije
+; MENI:
+;   AF, DE, HL
 EATING:
     push    BC
         
@@ -939,10 +940,18 @@ VYHAZEJ_VSECHNO:
     push    DE
     
     ld      A, E
-    call    DE_INVENTORY_ITEMS_A    
     ld      B, MAX_HOLD_INVENTORY
+    call    DE_INVENTORY_ITEMS_ABE    
 
-VV_LOOP:    
+VV_LOOP:
+
+if ( INVENTORY_ITEMS / 256 != (1+INVENTORY_ITEMS_END) / 256 )
+    .warning 'Pomalejsi kod kvuli vicesegmentovemu INVENTORY_ITEMS'
+    dec     DE
+else
+    dec     E
+endif
+
     push    DE
     push    BC
 
@@ -958,16 +967,10 @@ VV_LOOP:
 
     pop     BC
     pop     DE
-    
+
     xor     A
     ld      (DE), A                     ; vymazani predmetu
     
-if ( INVENTORY_ITEMS / 256 != INVENTORY_ITEMS_END / 256 )
-    .warning 'Pomalejsi kod kvuli vicesegmentovemu INVENTORY_ITEMS'
-    inc     DE
-else
-    inc     E
-endif
     djnz    VV_LOOP
     
     pop     DE
