@@ -77,16 +77,16 @@ MEZERA		equ	$3F
 ; 	pod tim byla jednicka (INK), ale protoze je to mensi cast puvodniho znaku tak hodnota barvy zustane puvodni
 ; Chce to zakazat preruseni protoze SP bude pod 18
  COPY_SPRITE2BUFFER:	; ver 4
- 
-	push	iy
-	ld	(CS2B_EXIT+1),sp		; 20:4 uloz puvodni ukazatel zasobniku	
+    di
+    push    IY
+    ld      (CS2B_EXIT+1), SP                   ; 20:4 uloz puvodni ukazatel zasobniku	
 
-	ld	a,(de)				; 7:1 Offset_Dat
-	add	a,e				; 4:1
-	ld	l,a				; 4:1
-	ld	a,d				; 4:1
-	adc	a,0				; 7:2 +1?
-	ld	h,a				; 4:1 hl = SPRITE_DATA_ADR = Adresa hlavicky + Offset_Dat
+    ld      A, (DE)                             ; 7:1 Offset_Dat
+    add     A, E                                ; 4:1
+    ld      L, A                                ; 4:1
+    adc     A, D                                ;  
+    sub     L                                   ; 4:1
+    ld      H, A                                ; 4:1 HL = SPRITE_DATA_ADR = Adresa hlavicky + Offset_Dat
 	
 	inc	de				; 6:1
 	ld	a,(de)				; 7:1 
@@ -352,6 +352,7 @@ CS2B_SELF_H:
 CS2B_EXIT:
 	ld	sp,0		; self-modifying code
 	pop	iy
+	ei
 	ret
 	
 	

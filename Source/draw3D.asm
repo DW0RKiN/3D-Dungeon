@@ -1,6 +1,7 @@
 ; =====================================================
 DRAW3D:     
-
+    call    SET_MAX_17
+    
     ; vykresleni pozadi ( strop a podlaha )
     ld      B, $12                      ; 18 prouzku ( sloupcu )
     ld      A, (POHYB)                  ; 13:3
@@ -94,6 +95,7 @@ NULA:
     
     call    VYKRESLI_AKTIVNI_PREDMET
 
+    call    SET_MAX_31
     ret
     
 

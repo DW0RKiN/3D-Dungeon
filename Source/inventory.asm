@@ -1,6 +1,6 @@
 ; =====================================================
 ; Nastavi zero flag kdyz nejsme v inventari
-; Do akumulatoru vlozi kurzor      v inventari
+; Do akumulatoru vlozi kurzor v inventari
 TEST_OTEVRENY_INVENTAR:
     ld      a, (PRIZNAKY)               ;caa6        3a 13 c6 
     and     PRIZNAK_OTEVRENY_INVENTAR   ;caa9        e6 01 
@@ -148,8 +148,6 @@ PW_HANDS_LOOP:
     cp      12                          ; pocet zobrazenych ruk
     jp      nz,PW_HANDS_LOOP            ;
     
-    call    SET_MAX_31                  ;dcbe cd 8c d8         . . . 
-    di                                  ;dce1        
     call    KRESLI_ZE_ZASOBNIKU         ;dce4
     
     ld      hl,AVATARS                  ; odkud se budou cist data
@@ -159,8 +157,6 @@ PW_AVATARS:
     djnz    PW_AVATARS                  ;
     
     call    ZOBRAZ_ZIVOTY               ;dd02 cd 4b df         . K . 
-    ei                                  ;dd05 fb         . 
-    call    SET_MAX_17                  ;dd06 cd 95 d8         . . . 
     ret                                 ;dd0c c9         . 
 
     
@@ -220,21 +216,8 @@ IW_NEXT_NAME:
     ld      d,(hl)                  ; de = ukazatel na sprite avatara aktivniho hrace
     
     ld      bc,$1200
-    call    SET_MAX_31              ; meni jen akumulator
-    di
     call    COPY_SPRITE2BUFFER
     
-    
-if (0)
-    jr      INVENTORY_POKRACUJ
-; ---------------
-; Menime jen kurzor      
-; INVENTORY_WINDOW_KURZOR:
-    call    SET_MAX_31              ; meni jen akumulator
-    di
-INVENTORY_POKRACUJ:
-endif
-
 ;--- Nastrkame spravna data (parametry dale volane fce) na zasobnik a protoze je to zasobnik, posledni bude prvni kreslene.
 
 ; Vykresleni v poradi:
@@ -282,8 +265,6 @@ IW_LOOP:
     call    KRESLI_ZE_ZASOBNIKU
 
     call    VYKRESLI_AKTIVNI_PREDMET
-    ei
-    call    SET_MAX_17                  ; 
     
     ret
 

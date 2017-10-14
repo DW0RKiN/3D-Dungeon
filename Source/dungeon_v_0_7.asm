@@ -72,16 +72,12 @@ MAIN:                               ;
     call    PLAYERS_WINDOW
     
 MAIN_LOOP:
-    ; vykresli okoli kompasu (musi byt pred VIEW aby bylo prekresleno zvedlym predmetem)
+    ; vykresli okoli kompasu (musi byt pred DRAW3D aby bylo prekresleno zvedlym predmetem)
     ld      DE, Kompas
     ld      BC, KOMPAS_POZICE
-    di
     call    COPY_SPRITE2BUFFER
-    ei
 
-    di
     call    DRAW3D
-    ei
 
 ;     call    COPY_VYREZ2SCREEN
     call    TEST_OTEVRENY_INVENTAR
@@ -92,9 +88,7 @@ MAIN_OTEVRENY_INVENTAR:
     call    AKTUALIZUJ_RUZICI           ;
     ld      DE, S_vsechny
     ld      BC, SIPKY_POZICE
-    di
     call    COPY_SPRITE2BUFFER
-    ei
     
     call    BUFF2SCREEN
 
@@ -150,14 +144,9 @@ endif
     ld      B, D
     ld      C, E
     ld      DE, miss
-    call    SET_MAX_31
     call    SET_TARGET_SCREEN
-    di
     call    COPY_SPRITE2BUFFER
-    ei
     call    SET_TARGET_BUFFER
-    call    SET_MAX_17    
-    
     ret
 
 
@@ -217,9 +206,8 @@ INCLUDE inventory.asm
 ; =====================================================
 ; Vcetne hl
 PUSH_ALL:
-    di
-    ld      (PUSH_ALL_HL+1),hl          ; ulozeni "hl" do pameti
-    ex      (sp),hl                     ; push    "hl" a zaroven nacteni navratove adresy do "hl"
+    ld      (PUSH_ALL_HL+1), HL         ; ulozeni HL do pameti
+    ex      (SP), HL                    ; push HL + HL = ret
 
     push    af
     push    bc
@@ -236,18 +224,16 @@ PUSH_ALL:
     push    hl
     exx
 
-    ei
-    push    hl                          ; ulozeni navratove hodnoty na zasobnik
+    push    hl                          ; push ret
 PUSH_ALL_HL:        
-    ld      hl,0                        ; obnoveni registru "hl"
+    ld      hl, $0000                   ; obnoveni registru HL
     ret
 
     
 ; =====================================================
 ; Vcetne hl
 POP_ALL:
-    di
-    pop     hl                          ; navratova adresa do "hl"
+    pop     hl                          ; navratova adresa do HL
 
     exx
     pop     hl
@@ -264,12 +250,9 @@ POP_ALL:
     pop     bc
     pop     af
     
-    ex      (sp),hl                     ; push    "navratove adresy" a zaroven pop     "hl"
+    ex      (sp),hl                     ; push ret + pop hl
 
-    ei
     ret
-
-
 
 
 ; =====================================================
@@ -487,9 +470,7 @@ else
     ld      h,RUZICE / 256              ;  7:2 resi preteceni
 
 endif        
-    di
     call    INIT_COPY_PATTERN2BUFFER
-    ei
     ret
 
 
@@ -505,7 +486,6 @@ AKTUALIZUJ_SIPKY:
     ld      A, L                        ; 4:1
 
     ld      HL, SIPKY                   ;10:3
-    di
     call    INIT_COPY_PATTERN2BUFFER    ; samotne nestisknute sipky = smaze predchozi stisk    
     add     A, L                        ; 4:1
     ld      L, A                        ; 4:1
@@ -519,7 +499,6 @@ if (SIPKY/256) != (SIPKY_END/256)
 endif
 
     call    INIT_COPY_PATTERN2BUFFER    ; konkretni stisknuta sipka
-    ei
     call    SET_TARGET_BUFFER           ; vrat INIT_COPY_PATTERN2BUFFER na BUFFER
     
     pop     HL
