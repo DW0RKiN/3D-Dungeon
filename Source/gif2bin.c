@@ -480,7 +480,7 @@ BYTE *zx_palette(RGB *gpal, int pocet)
     return ret;
 }
 
-#define MEZERA	0x3F /* black black */
+#define MEZERA	0x40 /* brightness + black paper */
 
 #define FLASH_MASK  0x80
 #define BRIGHT_MASK 0x40
@@ -572,10 +572,10 @@ void write_zx_format(PICTURE *screen, char * soubor)
 #endif
         // Analyza kombinace barev
     
-        if ( ink == Previous_Paper )    // $555555
+        if ( ink == Previous_Paper )    // $333333
         {
 #if INFO
-    printf("\tink = $555555 -> prohozeni ink za paper\n");
+    printf("\tink = $333333 -> prohozeni ink za paper\n");
 #endif
             i = paper;
             paper = ink;
@@ -612,7 +612,7 @@ void write_zx_format(PICTURE *screen, char * soubor)
                 i &= ~PAPER_MASK;       /* polopruhledny znak s jednou barvou (PAPER == 0)*/
             else                        /* polopruhledny s 2 barvami */
             {
-                /* Pokud ma matice 8x8 prilis mnoho pruhlednych znaku, nebo primo je PAPER kreslen barvou $555555 tak bude PAPER pouzit aby vynuloval bity ale barva zustane puvodni */
+                /* Pokud ma matice 8x8 prilis mnoho pruhlednych znaku, nebo primo je PAPER kreslen barvou $333333 tak bude PAPER pouzit aby vynuloval bity ale barva zustane puvodni */
                 if ( alfa_sum > alfa_prah || paper == Previous_Paper )
                 {
 #if INFO
@@ -648,7 +648,7 @@ void write_zx_format(PICTURE *screen, char * soubor)
                 else
                     bits |= ( screen->palette[i] == ink );
             }
-            if ( attr_buf[attr_sum-1]  & FLASH_MASK ) 
+            if ( attr_buf[attr_sum-1] & FLASH_MASK ) 
                 data_buf[data_sum++] = mask;
             data_buf[data_sum++] = bits;            
         }

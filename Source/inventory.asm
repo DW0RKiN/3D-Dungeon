@@ -311,11 +311,14 @@ VYKRESLI_ITEM_NA_POZICI_B:
 
     ld      A, B
     add     A, A
-    add     A, POZICE_V_INVENTARI % 256 - 2
+
+PVIm2     equ (POZICE_V_INVENTARI-2)
+    
+    add     A, PVIm2 % 256
     ld      L, A
-if (POZICE_V_INVENTARI/256 != POZICE_V_INVENTARI_END/256)
+if (PVIm2/256 != POZICE_V_INVENTARI_END/256)
     .warning 'Pomalejsi a delsi kod, POZICE_V_INVENTARI preleza segment!'
-    adc     A, POZICE_V_INVENTARI / 256
+    adc     A, PVIm2 / 256
     sub     L
     ld      H, A
     ld      A, (HL)

@@ -1,4 +1,4 @@
-
+MEZERA		equ	$40
 
 
 ; Upravi fci COPY_SPRITE2BUFFER tak aby zapisovala do bufferu
@@ -44,7 +44,7 @@ SET_MAX_17:
  
 ; --------------------
 
-MEZERA		equ	$3F
+
 
 ; Kopirovani spritu do bufferu
 ; Obrazky se vykresluji po sloupcich, aby slo snadneji kreslit mimo buffer a posouvat tak sprity vlevo a vpravo, i kdyz se tak musi hlidat tretiny...
@@ -137,20 +137,12 @@ CS2B_JAKPISMO:
 	push	hl					; 11:1 uchovame hl
 	ld	hl,$0806				; 10:3
 	ld	(CS2B_SELF_LD8_OR_JR_MASKA_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,8"
+	ld	h,$02					;  7:2
+	ld	(CS2B_SELF_LD4_OR_JR_PREP_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,2"
+	ld	(CS2B_SELF_LD4_OR_JR_PRIP_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,2"
 	ld	h,$04					;  7:2
-	ld	(CS2B_SELF_LD4_OR_JR_PREP_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,4"
-	ld	(CS2B_SELF_LD4_OR_JR_PRIP_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,4"
 	ld	(CS2B_SELF_LD4_OR_JR_VYMAZ_ZRC),hl	; 16:3 na adrese bude instrukce "ld b,4"
 	pop	hl					; 10:1 obnovime hl
-	
-;	push	hl					; 11:1
-;	ld	hl,CS2B_SELF_MIRROR_MASKA+3		; 10:3
-;	ld	(CS2B_SELF_MIRROR_MASKA+1),hl		; 16:3
-;	ld	hl,CS2B_SELF_MIRROR_PRIPISOVANI+3	; 10:3
-;	ld	(CS2B_SELF_MIRROR_PRIPISOVANI+1),hl	; 16:3
-;	ld	hl,CS2B_SELF_MIRROR_PREPISOVANI+3	; 10:3
-;	ld	(CS2B_SELF_MIRROR_PREPISOVANI+1),hl	; 16:3	
-;	pop	hl					; 10:1
 	
 if ( Adr_Attr_Buffer < $8000 )
     .error 'Adresa bufferu obrazovky nema horni bit nastaveny na jednicku!'
@@ -164,35 +156,41 @@ endif
 
 ; Prvni sloupec je vlevo ( nebo vpravo pri zrcadlovem zobrazeni ) mimo buffer a nebude zobrazen.  
 ; Protoze obrazek muze mit diry v datech, nemohu jednoduse posunout index SPRITE_DATA_ADR, jen SPRITE_ATTR_ADR
-; VSTUP:	iyl zaporna hodnota poctu sloupcu ktere mam preskocit
-;		ixl hodnota kterou ma obsahovat "b" na vystupu {0,17}
-; VYSTUP:	"b" bude nastavena na nula nebo max. buff. {17,31}
-;         	"iyh" = Pocet_sloupcu_spritu bude zkracen o pocet preskocenych sloupcu
-;		hl =  SPRITE_DATA_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
-;		de = SPRITE_ATTR_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
+; VSTUP:
+;   IYL zaporna hodnota poctu sloupcu ktere mam preskocit
+;   IXL obsahuje "pocatecni" sloupec = 0 nebo kdyz kreslim zrcadlove { 17,31 }
+;   IXH pocet radku spritu (vyska)
+; VYSTUP:
+;   HL =  SPRITE_DATA_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
+;   DE = SPRITE_ATTR_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
+;   B = IXL
+;   IYL = 0
+;   IYH = Pocet_sloupcu_spritu bude zkracen o pocet preskocenych sloupcu
 
 CS2B_OREZ_POCATEK_SPRITU:
-	ld	sp,8			; 10:3 8x microline na znak
+    ld      SP, $0008                   ; 10:3 8x microline na znak
 CS2B_VYNECH_SLOUPEC:
-	ld	b,ixh			;  8:2 do vnitrniho a rychleho citace "b" = Pocet_radku_spritu ( delka sloupce )
+    ld      B, IXH                      ;  8:2 do vnitrniho a rychleho citace B = vyska
 CS2B_DALSI_ATRIBUT:
-	inc	de			;  6:1 SPRITE_ATTR_ADR++
-	ld	a,(de)			;  7:1 (SPRITE_ATTR_ADR)
-	cp	MEZERA			;  7:2
-	jr	z,CS2B_ODECTI_ZNAK	; dira v datech, cely znak je pruhledny
-	or	a			;  4:1
-	jp	p,CS2B_BEZ_MASKY	; kladne cislo ( bez flash )
-	add	hl,sp			; 11:1 hl+=8
+    inc     DE                          ;  6:1 SPRITE_ATTR_ADR++
+    ld      A, (DE)                     ;  7:1 (SPRITE_ATTR_ADR)
+    and     %11111000                   ;  7:2 FLASH + BRIGHTNESS + PAPER
+    cp      MEZERA                      ;  7:2
+    jr      z, CS2B_BEZ_DAT             ; nic tam neni
+    add     A, A                        ;  4:1
+    jr      nc, CS2B_BEZ_MASKY          ; kladne cislo ( bez flash )
+    add     hl, sp                      ; 11:1 hl+=8
 CS2B_BEZ_MASKY:
-	add	hl,sp			; 11:1 hl+=8
-CS2B_ODECTI_ZNAK
-	djnz	CS2B_DALSI_ATRIBUT	; b--
-	dec	iyh			;  8:2 Pocet_sloupcu_spritu-- protoze spritu zbyva o sloupec mene
- 	jp	z,CS2B_EXIT		; 10:3
-	inc	iyl			;  8:2 jsme uz v nultem sloupci?
-	jr	nz, CS2B_VYNECH_SLOUPEC
-	ld	b,ixl			; b ma obsahovat pocatecni sloupec takze 0 nebo kdyz kreslim zrcadlove { 17, 31 }
-	
+    add     hl, sp                      ; 11:1 hl+=8
+CS2B_BEZ_DAT:
+    djnz    CS2B_DALSI_ATRIBUT          ; b--
+    
+    dec     iyh                         ;  8:2 Pocet_sloupcu_spritu-- protoze spritu zbyva o sloupec mene
+    jp      z, CS2B_EXIT                ; 10:3
+    inc     iyl                         ;  8:2 jsme uz v nultem sloupci?
+    jr      nz, CS2B_VYNECH_SLOUPEC
+    ld      b, ixl                      ; b ma obsahovat pocatecni sloupec takze 0 nebo kdyz kreslim zrcadlove { 17, 31 }
+
 ; ----------- 
 
 
@@ -212,7 +210,7 @@ CS2B_ZACINAME_V_BUFFERU:
 	
 CS2B_SELFMODIFYING_MAXSLOUPEC:
 	ld	a, $11			;  8:2 {17,31}
-	sub	iyl			;  4:1 max - pocatek < 0? Nezaciname vpravo od maxima a pritom kreslime doprava?
+	sub	b			;  4:1 max - pocatek < 0? Nezaciname vpravo od maxima a pritom kreslime doprava?
 	jp	m,CS2B_EXIT		; 10:3
 CS2B_TEST_ZKRACENI_SIRKY:
 	inc	a			;  4:1 zbyvajicich sloupcu pocitano od jednicky
@@ -253,8 +251,8 @@ CS2B_SELFMODIFYING_ADR_ATTR_BUFF:
 	ld	(CS2B_SELF_H+1),a		; 13:3 inicializace pro "ld h,n"
 
 
-	ld	b,iyh		; 8:2  Pocet_sloupcu_spritu
-	ld	ixl,ixh		; 8:2  Pocet_radku_spritu ( delka sloupce )
+    ld      B, IYH                  ; 8:2  Pocet_sloupcu_spritu
+    ld      IXL, IXH                ; 8:2  Pocet_radku_spritu ( delka sloupce )
 
 ; -------------- konec inicializaci
 ; aktualne
@@ -281,247 +279,273 @@ CS2B_SELFMODIFYING_ADR_ATTR_BUFF:
 ; -------------------------------
 ; Kopirovani znaku do bufferu pomoci masky ( nulove bity smazou puvodni ) a nasledne OR s novym
 CS2B_MASKA:
-	and	$7f		; 7:2 zrusime FLASH
-	ld	c,a		; 4:1 c = Novy atribut bez FLASH
-	and 	%00111000	; test bitu pro PAPER
-	ld	a,c
-	jr	nz, CS2B_MASKA_NEZACHOVAT_PAPER
-
-	ld	a,(hl)		; 7:1 (BUF_ATTR_ADR)
-	and	%01111000	; 7:2 smazat vse az na puvodni PAPER a BRIGHTNESS
-	or	c		; 4:1
+    add     A, A                ; 7:2 odstranime FLASH, zbude jen 2xPAPER
+    ld      A, C                ; 7:1
+    jr      nz, CS2B_MASKA_NEZACHOVAT_PAPER
+  
+    xor     (HL)                ; 7:1 (BUF_ATTR_ADR)
+    and     %00000111           ; 7:2 old FLASH + old BRIGHTNESS + old PAPER + new INK
+    xor     (HL)                ; 7:1 (BUF_ATTR_ADR)
 CS2B_MASKA_NEZACHOVAT_PAPER:
-	ld	(hl),a		; 7:1 (BUF_ATTR_ADR) ulozime novy atribut bez flash ( ale mozna s puvodnim PAPER ) 
+    and     $7f                 ; 7:2 zrusime FLASH
+    ld      (HL), A             ; 7:1 (BUF_ATTR_ADR) ulozime novy atribut bez flash ( ale mozna s puvodnim PAPER ) 
 
-	exx			; 4:1
-	
-	
+    exx                         ; 4:1
+
 CS2B_SELF_LD8_OR_JR_MASKA_ZRC:
-	ld	b,8		; ?:2 Self-modifying, je tu bud "ld b,8" nebo "jr CS2B_MASKA_ZRCADLOVE"
-	
+    ld      b, $08              ; ?:2 Self-modifying, je tu bud "ld b,8" nebo "jr CS2B_MASKA_ZRCADLOVE"
+
 CS2B_MASKA_LOOP
-	pop	de		; 10:1
-	ld	a,(hl)		; 7:1 (BUFF_DATA_ADR)
-	and	e		; 4:1 vynulujeme misto kam budeme kreslit novy znak
-	or	d		; 4:1 pridame novy znak
-	ld	(hl), a		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1
-	djnz	CS2B_MASKA_LOOP
-	
-	jr	CS2B_O_ZNAK_NIZE	; 12:2
+    pop     de                  ; 10:1
+    ld      a, (hl)             ; 7:1 (BUFF_DATA_ADR)
+    and     e                   ; 4:1 vynulujeme misto kam budeme kreslit novy znak
+    or      d                   ; 4:1 pridame novy znak
+    ld      (hl), a             ; 7:1 (BUFF_DATA_ADR)
+    inc     h                   ; 4:1
+    djnz    CS2B_MASKA_LOOP
+    
+    jr      CS2B_DOLU           ; 12:2
 
 ;------------------------------------
 CS2B_MASKA_ZRCADLOVE:
-	ex	de,hl		;  4:1
-	ld	h,ZRCADLOVY/256
-	ld	iyh,8
-	
+    ex      de, hl              ;  4:1
+    ld      b, $08              ;  7:2
 CS2B_MASKA_ZRCADLOVE_LOOP:
-	pop	bc		; 10:1
-	ld	a,(de)		;  7:1 (BUFF_DATA_ADR)
-	ld	l,c		;  4:1
-	and	(hl)		;  7:1 vynulujeme misto kam budeme kreslit novy znak
-	ld	l,b		;  4:1
-	or	(hl)		;  7:1 pridame novy znak
-	ld	(de), a		;  7:1 (BUFF_DATA_ADR)
-	inc	d		;  4:1
-				; 50:7
-	dec	iyh
-	jr	nz,CS2B_MASKA_ZRCADLOVE_LOOP
-	
-	ex	de,hl		;  4:1
-	jr	CS2B_O_ZNAK_NIZE	; 12:2
+    pop     hl                  ; 10:1
+    ld      a, (de)             ;  7:1 (BUFF_DATA_ADR)
+    ld      c, h                ;  4:1
+    ld      h, ZRCADLOVY/256    ;  7:2    
+    and     (hl)                ;  7:1 vynulujeme misto kam budeme kreslit novy znak
+    ld      l, c                ;  4:1
+    or      (hl)                ;  7:1 pridame novy znak
+    ld      (de), a             ;  7:1 (BUFF_DATA_ADR)
+    inc     d                   ;  4:1
+    djnz    CS2B_MASKA_ZRCADLOVE_LOOP
+
+    ex      de, hl              ;  4:1
+    jr      CS2B_DOLU           ; 12:2
 
 ;-------------------------------
-	
-CS2B_PRVNI_RADEK:		; jsme ve stinovych registrech
+
+CS2B_PRVNI_RADEK:                   ; jsme ve stinovych registrech
 CS2B_SELF_H_SHADOW:
-	ld	h,0		; 4:1 self-modifying code,  navrat na prvni radek
-	ld	ixl,ixh		; 8:2 obnovime citac pro Pocet_radku_spritu ( delka sloupce )
+    ld      h, $00                  ; 7:2 self-modifying code, navrat na prvni radek
+    ld      ixl, ixh                ; 8:2 obnovime citac pro Pocet_radku_spritu ( delka sloupce )
 CS2B_SELF_MIRROR_DEC:
-	inc	iyl		; 8:2 o znak vpravo ( vlevo u zrcadloveho kresleni )
-	ld	a,iyl		; 8:2 offset znaku na prvnim radku
-	ld	l,a		; 4:1 l' = offset znaku na prvnim radku
+    inc     iyl                     ; 8:2 o znak vpravo ( vlevo u zrcadloveho kresleni )
+    ld      a, iyl                  ; 8:2 offset znaku na prvnim radku
+    ld      l, a                    ; 4:1 l' = offset znaku na prvnim radku
 
-	exx
+    exx
 CS2B_SELF_H:
-	ld	h,0		; self-modifying code hl = BUF_ATTR_ADR prvniho radku
-	ld	l,a
-	djnz	CS2B_POCATEK	; b = zbyvajici Pocet_sloupcu_spritu
-	
+    ld      h, $00                  ; self-modifying code hl = BUF_ATTR_ADR prvniho radku
+    ld      l, a
+    djnz    CS2B_POCATEK            ; b = zbyvajici Pocet_sloupcu_spritu
+
 CS2B_EXIT:
-	ld	sp,0		; self-modifying code
-	pop	iy
-	ei
-	ret
-	
-	
-CS2B_CELOPRUHLEDNY_ZNAK:
-	exx				; Dira v datech, cely znak je pruhledny
-	ld	a,h
-	add	a,8			; simulace kopirovani
-	ld	h,a
+    ld      sp, $0000               ; self-modifying code
+    pop     iy
+    ei
+    ret
 
-CS2B_O_ZNAK_NIZE:			; jsme ve stinovych registrech	
-	dec	ixl			; 8:2	snizime pocitadlo znaku v sloupci
-	jr	z,CS2B_PRVNI_RADEK	; 12/7:2 
-
-	ld	a,32
-	add	a,l
-	ld	l,a		; 4:1 l'+=32 == BUFF_DATA_ADR+=32
-		
-	jr	c,CS2B_TRETINA	; skok pokud jsme v dalsi tretine
-	ld	a,h
-	sub	8		; 
-	ld	h,a		; 4:1 h'-=8 == BUFF_DATA_ADR-=8*256
-	ld	a,l
-	exx
-	jp	CS2B_ATTR_NEXT
-	
 CS2B_TRETINA:
-	exx			; navrat z Jeho Bozskeho Stinu
-	inc	h		; 4:1  hl++ == BUF_ATTR_ADR += 256
-CS2B_ATTR_NEXT:
-	ld	l,a		; l+=32 == BUF_ATTR_ADR += 32
-CS2B_POCATEK:
+    exx                             ; navrat z Jeho Bozskeho Stinu
+    inc     h                       ; 4:1  hl++ == BUF_ATTR_ADR += 256
+    jr      CS2B_ATTR_NEXT
 
-	inc	de		; 6:1 de++ = SPRITE_ATTR_ADR++
-
-; --- cast vetvici kopirovani znaku podle typu atributu na prepisovani, pripisovani, a oboji s pomoci masky
-
-	ld	a,(de)			; 7:1 (SPRITE_ATTR_ADR)
-	
-	cp	MEZERA			; 4:1
-	jr	z,CS2B_CELOPRUHLEDNY_ZNAK	
-
-	or	a
-	jp	m,CS2B_MASKA
-
-	ld	c,a		; 4:1 c = Novy atribut
-	and 	%00111000	; bity pro PAPER
-	jr	z, CS2B_PRIPISOVANI
-
-
-; -------------------------------
-; nepruhledne = prepisovani
-	ld	(hl),c		; 7:1 (BUF_ATTR_ADR)
-	exx			; 4:1
+CS2B_CELOPRUHLEDNY:
+    exx                             ; Dira v datech, cely znak je pruhledny
+    ld      a, h
+    add     a, $08                  ; simulace kopirovani
+    ld      h, a
 
 ; ----------------------------------
+CS2B_DOLU:
+    dec     ixl                     ; 8:2 snizime pocitadlo znaku v sloupci
+    jr      z, CS2B_PRVNI_RADEK     ; 12/7:2 
+CS2B_O_ZNAK_NIZE:                   ; jsme ve stinovych registrech	
+
+    ld      a, $20                  ; A = 32
+    add     a, l
+    ld      l, a                    ; 4:1 l'+=32 == BUFF_DATA_ADR+=32
+
+    jr      c, CS2B_TRETINA         ; skok pokud jsme v dalsi tretine
+    ld      a, h
+    sub     $08                     ; 
+    ld      h, a                    ; 4:1 h'-=8 == BUFF_DATA_ADR-=8*256
+    ld      a, l
+    exx
+
+CS2B_ATTR_NEXT:
+    ld      l, a                    ; l+=32 == BUF_ATTR_ADR += 32
+    
+; ----------------------------------
+; Cast vetvici kopirovani znaku podle typu atributu na prepisovani, pripisovani, a oboji s pomoci masky
+CS2B_POCATEK:
+
+    inc     DE                      ; 6:1 DE++ = SPRITE_ATTR_ADR++
+    ld      A, (DE)                 ; 7:1 (SPRITE_ATTR_ADR)
+    ld      C, A                    ; 4:1
+    and     %10111000               ; FLASH + PAPER
+    jr      z, CS2B_PRIPISOVANI     ; PAPER = black
+    jp      m, CS2B_MASKA
+
+; ----------------------------------
+; nepruhledne = prepisovani
+    ld      (HL), C                 ; 7:1 (BUF_ATTR_ADR)
+    exx                             ; 4:1
 
 CS2B_SELF_LD4_OR_JR_PREP_ZRC:
-	ld	b,4		; ?:2 Self-modifying je tu bud "ld b,4" nebo "jr CS2B_PREPISOVANI_ZRCADLOVE"
-	
+    ld      B, $02                  ; ?:2 Self-modifying je tu bud "ld b,4" nebo "jr CS2B_PREPISOVANI_ZRCADLOVE"
+
 CS2B_PREPISOVANI_LOOP:
-	pop	de		; 10:1
-	ld	(hl), e		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1
-	ld	(hl), d		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1 = 32 / 2 = 16T/byte
-	djnz	CS2B_PREPISOVANI_LOOP
-	
-	jr	CS2B_O_ZNAK_NIZE	; 12:2
+    pop     DE                      ; 10:1
+    ld      (HL), E                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    ld      (HL), D                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    pop     DE                      ; 10:1
+    ld      (HL), E                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    ld      (HL), D                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    djnz    CS2B_PREPISOVANI_LOOP
+    ; kvuli zrychleni o 5 taktu duplicitni kod
+    dec     ixl                     ; 8:2 snizime pocitadlo znaku v sloupci
+    jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
+    jp      CS2B_PRVNI_RADEK        ; 10:3 
 
 ; ----------------------------------
 CS2B_PREPISOVANI_ZRCADLOVE:
-	ld	d,ZRCADLOVY/256
-	ld	iyh,4
+    ld      B, $02                  ;  7:2
 
 CS2B_PREPISOVANI_ZRCADLOVE_LOOP:
-	pop	bc		; 10:1
-	ld	e,c		; 4:1
-	ld	a,(de)		; 7:1
-	ld	(hl), a		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1
-	
-	ld	e,b		; 4:1
-	ld	a,(de)		; 7:1
-	ld	(hl), a		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1
-				; 25T/byte:4B/byte
-	dec	iyh
-	jr	nz,CS2B_PREPISOVANI_ZRCADLOVE_LOOP
-
-	jr	CS2B_O_ZNAK_NIZE	; 12:2
-
-
-
-
-; ==========================================================================================
+    pop     de                      ; 10:1
+    ld      c, d                    ;  4:1
+    ld      d, ZRCADLOVY/256        ;  7:2
+    ld      a, (de)                 ;  7:1
+    ld      (hl), a                 ;  7:1 (BUFF_DATA_ADR)
+    inc     h                       ;  4:1
+    ld      e, c                    ;  4:1
+    ld      a, (de)                 ;  7:1
+    ld      (hl), a                 ;  7:1 (BUFF_DATA_ADR)
+    inc     h                       ;  4:1
+    pop     de                      ; 10:1
+    ld      c, d                    ;  4:1
+    ld      d, ZRCADLOVY/256        ;  7:2
+    ld      a, (de)                 ;  7:1
+    ld      (hl), a                 ;  7:1 (BUFF_DATA_ADR)
+    inc     h                       ;  4:1
+    ld      e, c                    ;  4:1
+    ld      a, (de)                 ;  7:1
+    ld      (hl), a                 ;  7:1 (BUFF_DATA_ADR)
+    inc     h                       ;  4:1
+    djnz    CS2B_PREPISOVANI_ZRCADLOVE_LOOP
+    ; kvuli zrychleni o 5 taktu duplicitni kod
+    dec     ixl                     ; 8:2 snizime pocitadlo znaku v sloupci
+    jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
+    jp      CS2B_PRVNI_RADEK        ; 10:3
 
 ; -------------------------------
 ; Kopirovani znaku do bufferu metodou stare OR nove
-; cerny PAPER je bran jako pruhledny
+; PAPER ve spritu je nulovy (cerny), je to znameni ze je pruhledny a bude ignorovan
 CS2B_PRIPISOVANI:
-; 	ld	a,c
-; 	and	%00000111	; mazani BRIGHTNESS
-; 	ld	c,a		; vyreseno uz v datech
-
 
 ; Test kolize novy INK == puvodni PAPER  
-	ld	a,(hl)		; 7:1 (BUF_ATTR_ADR)
-        rrca
-        rrca
-        rrca
-        and     $07
-        cp      C
-        jr      z, CS2B_VYMAZANI; novy INK je shodny s puvodnim PAPER, takze jen vymazavam puvodni INK
+    ld      A, C                ;  4:1 (SPRITE_ATTR_ADR)
+    add     A, A                ;  4:1
+if ( MEZERA != $40 )
+    .error 'Zmenit kod, MEZERA != $.1000...!'
+endif
+    add     A, A                ;  4:1
+    jr      c, CS2B_CELOPRUHLEDNY    
+    add     A, A                ;  4:1 INK -> PAPER
+    xor     (HL)                ;  7:1 (BUF_ATTR_ADR)
+    and     %00111000           ;  7:2 
+    jr      z, CS2B_VYMAZANI    ; novy INK je shodny s puvodnim PAPER, takze jen vymazavam puvodni INK
 
-	ld	a,(hl)		; 7:1 (BUF_ATTR_ADR)
-	and	%11111000	; 7:2
-	or	c		; 4:1
-	ld	(hl),a		; 7:1 (BUF_ATTR_ADR) zachovame puvodni hodnotu PAPER a BRIGHT
+    ld      A, (HL)             ; 7:1 (BUF_ATTR_ADR)
+    and     %11111000           ; 7:2
+    or      C                   ; 4:1
+    ld      (HL), A             ; 7:1 (BUF_ATTR_ADR) zachovame puvodni hodnotu PAPER a BRIGHT
 
-	exx
+    exx
 
 CS2B_SELF_LD4_OR_JR_PRIP_ZRC:
-	ld	b,4		; ?:2 Self-modifying je zde bud "ld b,4" nebo "jr CS2B_PRIPISOVANI_ZRCADLOVE"
+    ld      B, $02              ; ?:2 Self-modifying je zde bud "ld b,4" nebo "jr CS2B_PRIPISOVANI_ZRCADLOVE"
 
 CS2B_PRIPISOVANI_LOOP:
-	pop	de		; 10:1
-	ld	a,(hl)		; 7:1 (BUFF_DATA_ADR)
-	or	e		; 4:1
-	ld	(hl), a		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1
-	ld	a,(hl)		; 7:1 (BUFF_DATA_ADR)
-	or	d		; 4:1
-	ld	(hl), a		; 7:1 (BUFF_DATA_ADR)
-	inc	h		; 4:1 = 54 / 2 = 27T/byte
-  
-	djnz	CS2B_PRIPISOVANI_LOOP
+    pop     DE                  ; 10:1
+    ld      A, (HL)             ; 7:1 (BUFF_DATA_ADR)
+    or      E                   ; 4:1
+    ld      (HL), A             ; 7:1 (BUFF_DATA_ADR)
+    inc     H                   ; 4:1
+    ld      A, (HL)             ; 7:1 (BUFF_DATA_ADR)
+    or      D                   ; 4:1
+    ld      (HL), A             ; 7:1 (BUFF_DATA_ADR)
+    inc     H                   ; 4:1
+    pop     DE                  ; 10:1
+    ld      A, (HL)             ; 7:1 (BUFF_DATA_ADR)
+    or      E                   ; 4:1
+    ld      (HL), A             ; 7:1 (BUFF_DATA_ADR)
+    inc     H                   ; 4:1
+    ld      A, (HL)             ; 7:1 (BUFF_DATA_ADR)
+    or      D                   ; 4:1
+    ld      (HL), A             ; 7:1 (BUFF_DATA_ADR)
+    inc     H                   ; 4:1
+    djnz    CS2B_PRIPISOVANI_LOOP
 
-	jp	CS2B_O_ZNAK_NIZE	; 12:2 
+    ; kvuli zrychleni o 5 taktu duplicitni kod
+    dec     ixl                     ; 8:2 snizime pocitadlo znaku v sloupci
+    jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
+    jp      CS2B_PRVNI_RADEK        ; 10:3 
 
 ; ---------------------------------
 CS2B_PRIPISOVANI_ZRCADLOVE:
-	ld	d,ZRCADLOVY/256
-	ld	iyh,4
-	
-CS2B_PRIPISOVANI_ZRCADLOVE_LOOP:
-	pop	bc		; 10:1
-	ld	e,c		;  4:1
-	ld	a,(de)		;  7:1 zrcadleny sprite
-	or	(hl)		;  7:1 (BUFF_DATA_ADR)
-	ld	(hl), a		;  7:1 (BUFF_DATA_ADR)
-	
-	inc	h		;  4:1
-	ld	e,b		;  4:1 
-	ld	a,(de)		;  7:1 zrcadleny sprite
-	or	(hl)		;  7:1 (BUFF_DATA_ADR)
-	ld	(hl), a		;  7:1 (BUFF_DATA_ADR)
-	inc	h		;  4:1 = 68 / 2 = 34T/byte
-	
-	dec	iyh
-	jr	nz,CS2B_PRIPISOVANI_ZRCADLOVE_LOOP
+    ld      B, $02
 
-	jp	CS2B_O_ZNAK_NIZE	; 12:2 
-	
+CS2B_PRIPISOVANI_ZRCADLOVE_LOOP:
+    pop     DE                  ; 10:1
+    ld      C, D                ;  4:1
+    ld      D, ZRCADLOVY/256    ;  7:2
+    ld      A, (DE)             ;  7:1 zrcadleny sprite
+    or      (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1
+    ld      E, C                ;  4:1 
+    ld      A, (DE)             ;  7:1 zrcadleny sprite
+    or      (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1
+    pop     DE                  ; 10:1
+    ld      C, D                ;  4:1
+    ld      D, ZRCADLOVY/256    ;  7:2
+    ld      A, (DE)             ;  7:1 zrcadleny sprite
+    or      (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1
+    ld      E, C                ;  4:1 
+    ld      A, (DE)             ;  7:1 zrcadleny sprite
+    or      (HL)                ;  7:1 (BUFF_DATA_ADR)
+    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
+    inc     H                   ;  4:1
+    djnz    CS2B_PRIPISOVANI_ZRCADLOVE_LOOP
+    ; kvuli zrychleni o 5 taktu duplicitni kod
+    dec     ixl                     ; 8:2 snizime pocitadlo znaku v sloupci
+    jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
+    jp      CS2B_PRVNI_RADEK        ; 10:3 
 
 ; ---------------------------------------------------------
+; novy INK je shodny s puvodnim PAPER, takze jen vymazavam puvodni INK
+; ld   A, E        ld   A, E
+; cpl              or   (HL)
+; and  (HL)        xor  E
+; ld   (HL), A     ld   (HL),A
+
 CS2B_VYMAZANI:
     exx
 CS2B_SELF_LD4_OR_JR_VYMAZ_ZRC:
-    ld      B, 4                ; ?:2 Self-modifying je zde bud "ld b,4" nebo "jr CS2B_VYMAZANI_ZRCADLOVE"
+    ld      B, $04              ; ?:2 Self-modifying je zde bud "ld b,4" nebo "jr CS2B_VYMAZANI_ZRCADLOVE"
 
 CS2B_VYMAZANI_LOOP:
     pop     DE                  ; 10:1
@@ -537,33 +561,29 @@ CS2B_VYMAZANI_LOOP:
     inc     H                   ;  4:1 = 62 / 2 = 31 T/byte
     djnz    CS2B_VYMAZANI_LOOP
     
-    jp      CS2B_O_ZNAK_NIZE    ; 12:2 
+    jp      CS2B_DOLU           ; 10:3 
 
 ; ---------------------------------
 CS2B_VYMAZANI_ZRCADLOVE:
-    ld      D, ZRCADLOVY/256
-    ld      IYH, 4
-
+    ld      B, $04              ;  7:2
 CS2B_VYMAZANI_ZRCADLOVE_LOOP:
-    pop     BC                  ; 10:1
-    ld      E, C                ;  4:1
+    pop     DE                  ; 10:1
+    ld      C, D                ;  4:1
+    ld      D, ZRCADLOVY/256    ;  7:2
     ld      A, (DE)             ;  7:1 zrcadleny sprite
     cpl                         ;  4:1
     and     (HL)                ;  7:1 (BUFF_DATA_ADR)
     ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
     inc     H                   ;  4:1
-    
-    ld      E, B                ;  4:1 
+    ld      E, C                ;  4:1 
     ld      A, (DE)             ;  7:1 zrcadleny sprite
     cpl                         ;  4:1
     and     (HL)                ;  7:1 (BUFF_DATA_ADR)
     ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
-    inc     H                   ;  4:1 = 68 / 2 = 34T/byte
+    inc     H                   ;  4:1
+    djnz    CS2B_VYMAZANI_ZRCADLOVE_LOOP
 
-    dec     IYH
-    jr      nz, CS2B_VYMAZANI_ZRCADLOVE_LOOP
-
-    jp      CS2B_O_ZNAK_NIZE    ; 12:2 
+    jp      CS2B_DOLU           ; 10:3 
 
 ; ==========================================================================================
 
