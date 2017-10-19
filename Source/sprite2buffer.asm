@@ -113,8 +113,8 @@ if ( Adr_Attr_Buffer < $8000 )
 endif
 
     bit     7, B                                ;  8:2 zaporny sloupec?
-    ld      IYL, B                              ;  8:2 vnejsi citac se zapornym sloupcem presunem do pomalejsiho a delsiho "iyl"
-    ld      IXL, 0                              ; Pokud budeme orezavat pocatek tak odsud nacteme novou hodnotu pro prvni sloupec ( B ma byt 0)
+    ld      L, B                                ;  4:1 vnejsi citac se zapornym sloupcem
+    ld      H, 0                                ;  7:2 Pokud budeme orezavat pocatek tak odsud nacteme novou hodnotu pro prvni sloupec ( B ma byt 0)
     call    nz, IGNORE_COLUMN
     
 ; kontrola zda nemame zkratit pocet sloupcu spritu
@@ -398,15 +398,19 @@ CS2B_DEL_INK_LOOP:
 ; ---------------------------------
     
     
+    
+    
+
+    
 ; ==================================
 ; Zrcadlove vykreslovani
 CS2B_ZRCADLOVE:
     ld      C, A                    ; ulozime kladnou verzi
 CS2B_Z_SELF_MAX_BUFF:
     ld      A, 17                   ;  7:2 Self-modifying
-    ld      IXL, A                  ;  8:2 Pokud budeme orezavat pocatek tak odsud nacteme novou hodnotu pro prvni sloupec ( B ma byt 17 nebo 31)
+    ld      H, A                    ;  4:1 Pokud budeme orezavat pocatek tak odsud nacteme novou hodnotu pro prvni sloupec ( B ma byt 17 nebo 31)
     sub     B                       ;  4:1 MAX_BUF - pocatecni sloupec
-    ld      IYL, A                  ;  8:2 mozna zaporna hodnota poctu sloupcu ktere mam preskocit
+    ld      L, A                    ;  4:1 mozna zaporna hodnota poctu sloupcu ktere mam preskocit
     call    m, IGNORE_COLUMN        ; zrus neviditelne pocatecni sloupce
     
 ; kontrola zda nemame zkratit pocet sloupcu spritu
@@ -673,24 +677,24 @@ CS2B_Z_DEL_LOOP:
 ; Osetreni pocatku a konce spritu pokud leze mimo povolene meze.
 ; Pokud IYL je zaporna hodnota a priznaky nastavene na "sign" tak prvni sloupec je zacina mimo povoleny vyrez bufferu, takze posunu DE a HL' na viditelny zacatek.
 ; VSTUP:
-;   IYL zaporna hodnota poctu sloupcu ktere mam preskocit
 ;   IYH nezkraceny pocet sloupcu spritu
 ;   IXH vyska spritu
-;   IXL nova hodnota B pokud orezavame pocatek
+;   H nova hodnota B pokud orezavame pocatek
+;   L zaporna hodnota poctu sloupcu ktere mam preskocit
 ;   DE ukazuje na pred prvni atribut spritu
 ;   HL' ukazuje na DATA spritu
 ; VYSTUP:
-;   HL = SPRITE_DATA_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
-;   DE = SPRITE_ATTR_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
-;   IYL = 0
+;   HL' = SPRITE_DATA_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
+;   DE  = SPRITE_ATTR_ADR bude zvetsen a nastaven na prvni skutecne zobrazeny sloupec
+;   L = 0
 ;   IYH = zkraceny pocet sloupcu spritu
 IGNORE_COLUMN:
     exx                             ;  4:1
     ld      DE, $0008               ;  7:2 DE'
-IC_COLUMN_LOOP:
-    ld      B, IXH                  ;  8:2 B' = vyska
-IC_ROW_LOOP:
     exx                             ;  4:1
+IC_COLUMN_LOOP:
+    ld      B, IXH                  ;  8:2 B = vyska
+IC_ROW_LOOP:
     inc     DE                      ;  6:1 SPRITE_ATTR_ADR++
     ld      A, (DE)                 ;  7:1 (SPRITE_ATTR_ADR)
     exx                             ;  4:1
@@ -703,14 +707,14 @@ IC_ROW_LOOP:
 IC_NO_MASK:
     add     HL, DE                  ; 11:1
 IC_NO_DATA:
+    exx                             ;  4:1
     djnz    IC_ROW_LOOP             ;13/8:2 
-    
+                             
     dec     IYH                     ;  8:2 Pocet_sloupcu_spritu-- protoze spritu zbyva o sloupec mene
     jr      z, IC_EXIT_SPRITE2BUFFER; 10:3
-    inc     IYL                     ;  8:2 jsme uz v nultem sloupci?
+    inc     L                       ;  4:1 jsme uz v nultem sloupci?
     jr      nz, IC_COLUMN_LOOP
-    exx                             ;  4:1
-    ld      B, IXL                  ;  8:2 0 nebo 17 nebo 31
+    ld      B, H                    ;  4:1 0 nebo 17 nebo 31
     ret                             ; 10:1
 IC_EXIT_SPRITE2BUFFER:
     pop     AF                      ; 10:1 zrusi RET
