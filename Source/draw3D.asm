@@ -6,7 +6,12 @@ DRAW3D:
     ld      B, $12                      ; 18 prouzku ( sloupcu )
     ld      A, (POHYB)                  ; 13:3
     rrca                                ; carry?
-    sbc     A, A                        ; $00 nebo $FF
+    add     A, A                        ;  4:1 2x
+    add     A, A                        ;  4:1 4x
+if ( BIT_ZRCADLOVE != 2 || Y00 != 0 )
+    .error 'Zmenit kod BIT_ZRCADLOVE != 4 nebo Y00 != 0...'
+endif
+    and     MASKA_ZRCADLOVE             ;  7:2
     ld      C, A
     
 D_POZADI_LOOP:
@@ -19,7 +24,7 @@ D_POZADI_LOOP:
     
     ; vykresli dno bufferu
     ld      de, dno_bufferu
-    ld      bc, $000E                   ;
+    ld      bc, X00+Y14                 ;
     call    COPY_SPRITE2BUFFER        
 
     ld      h, VEKTORY_POHYBU/256       ;  7:2

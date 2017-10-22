@@ -428,26 +428,24 @@ FE_VIEW:
 FE_LOOP:
 
     dec     hl
-    ld      b,(hl)
+    ld      b, (hl)
     dec     hl
-    ld      c,(hl)
+    ld      c, (hl)
     inc     c                           ; ochranujem akumulator
     dec     c
-    jp      z,FE_TEST_LOOP              ; sirka muze byt nula, ale vyska nula znamena nekreslit
+    jp      z, FE_TEST_LOOP             ; sirka muze byt nula, ale vyska nula znamena nekreslit
     
 FE_SELFMODIFIYNG:
-    ld      de,0                        ; 10:3 adresa spritu nepritele ve spravne hloubce
+    ld      de, $0000                   ; 10:3 adresa spritu nepritele ve spravne hloubce
 
 FE_SELFMODIFIYNG2:
-    ld              a,0
+    ld      a, $00
     cp      ixl
-    jp      nz,FE_CALL
+    jp      nz, FE_CALL
     
-    ld      de,ESA1
-    ld      a,b
-    add     a,-1
-    ld      b,a
-    ld      c,$03
+    ld      de, ESA1
+    dec     b                           ; X??-1
+    ld      c, Y03                      ; Y03
 
 FE_CALL:
     push    hl                          ; 11:1

@@ -792,6 +792,12 @@ ZZ_BEZ_AKT_ZRANENI:
     djnz    ZZ_LOOP                     ; 
     ret                                 ; 
 
+    
+FLEK_Y:
+defb    Y04
+defb    Y11
+defb    Y18
+FLEK_Y_END
 
 ; =====================================================    
 ; VSTUP: 
@@ -800,15 +806,17 @@ ZZ_BEZ_AKT_ZRANENI:
 VYKRESLI_KRVAVY_FLEK:
     push    HL
 
-    ; prevod adresy atr. na Y = 7*segment + 4
-    ld      A, D                ; segment pocatku prouzku
-    add     A, A                ; 2x
-    add     A, A                ; 4x
-    add     A, A                ; 8x 
-    sub     D                   ; 7x
-Pomocny equ (Adr_Attr_Buffer/256)*7-4
-    sub     Pomocny             ; usetrim bajty 7*(D-seg Attr)+4 = 7*D - 7*seg Attr + 4 = 7*D - ( 7*seg Attr - 4)
-    ld      C, A                ; C = Y
+if ( FLEK_Y / 256 != FLEK_Y_END / 256 )
+    .error 'FLEK_Y preleze segment'
+endif
+    
+    ; prevod adresy atr. na Y
+    ld      A, D                ;  4:1 segment pocatku prouzku
+    sub     Seg_Attr_Buffer     ;  7:2
+    add     A, FLEK_Y % 256     ;  7:2
+    ld      L, A                ;  4:1
+    ld      H, FLEK_Y / 256     ;  7:2
+    ld      C, (HL)             ;  7:1 C = Y
 
     ; prevod adresy atr. na X = offset % 32 - 1
     ld      A, E                ; offset pocatku prouzku

@@ -92,38 +92,37 @@ KURZOR_V_INVENTARI:
 defb	0              ; 1..MAX_INVENTORY
 ; ^^^^^^^^^^^^^^^^^^^^^^^^^ konec souvisleho bloku ^^^^^^^^^^^^^^^^^^^^^^^^^ 
 
-
-POZICE_PROSTIRANI	equ	$1904
-POZICE_HLAVA		equ	$1A07
-POZICE_NAHRDELNIK	equ	$1A09
-POZICE_BRNENI		equ	$1A0B
-POZICE_LPRSTEN		equ	$1810
-POZICE_BOTY		equ	$1A12
-POZICE_TOULEC		equ	$1D09
-POZICE_NATEPNIK		equ	$1D0B
-POZICE_PPRSTEN		equ	$1C10
+POZICE_PROSTIRANI   equ X25+Y04
+POZICE_HLAVA        equ X26+Y07
+POZICE_NAHRDELNIK   equ X26+Y09
+POZICE_BRNENI       equ X26+Y11
+POZICE_LPRSTEN      equ X24+Y16
+POZICE_BOTY         equ X26+Y18
+POZICE_TOULEC       equ X29+Y09
+POZICE_NATEPNIK     equ X29+Y11
+POZICE_PPRSTEN      equ X28+Y16
 
 ; vvvv ----------------- zacatek souvisleho bloku
 POZICE_V_INVENTARI:
-defw    $1204, $1206, $1208, $120A, $120C, $120E, $1210, $1212
-defw    $1504, $1506, $1508, $150A, $150C, $150E, $1510, $1512
+defw    X18+Y04, X18+Y06, X18+Y08, X18+Y10, X18+Y12, X18+Y14, X18+Y16, X18+Y18
+defw    X21+Y04, X21+Y06, X21+Y08, X21+Y10, X21+Y12, X21+Y14, X21+Y16, X21+Y18
 PROSTIRANI:
 defw    POZICE_PROSTIRANI       ; prostirani
 defw    POZICE_HLAVA            ; hlava
 defw    POZICE_NAHRDELNIK       ; nahrdelnik
 defw    POZICE_BRNENI           ; brneni
-defw    $180D                   ; l.ruka
+defw    X24+Y13                 ; l.ruka
 defw    POZICE_LPRSTEN          ; l.prsten
 defw    POZICE_BOTY             ; boty
 defw    POZICE_TOULEC           ; toulec
 defw    POZICE_NATEPNIK         ; natepnik / chranic predlokti
-defw    $1C0D                   ; p.ruka
+defw    X28+Y13                 ; p.ruka
 defw    POZICE_PPRSTEN          ; p.prsten
 POZICE_V_INVENTARI_HOLD_END:
-defw    $040B                   ; na zemi vlevo nahore
-defw    $020D                   ; na zemi vlevo dole
-defw    $0B0B                   ; na zemi vpravo nahore
-defw    $0D0D                   ; na zemi vpravo dole
+defw    X04+Y11                 ; na zemi vlevo nahore
+defw    X02+Y13                 ; na zemi vlevo dole
+defw    X11+Y11                 ; na zemi vpravo nahore
+defw    X13+Y13                 ; na zemi vpravo dole
 POZICE_V_INVENTARI_END:
 ; ^^^^ ----------------- konec souvisleho bloku
 

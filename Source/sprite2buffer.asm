@@ -4,11 +4,11 @@ MEZERA  equ $40
 ; Upravi fci COPY_SPRITE2BUFFER tak aby zapisovala do bufferu
 ; MENI: akumulator
 SET_TARGET_BUFFER:
-    ld      A, Adr_Buffer / 256                 ;  
-    ld      (CS2B_SELF_ADR_BUFF+1), A
-    ld      (CS2B_Z_SELF_ADR_BUFF+1), A
-    ld      A, Adr_Attr_Buffer / 256            ;  
-    ld      (CS2B_SELF_ADR_ATTR_BUFF+1), A
+    ld      A, Seg_Buffer                       ;  
+    ld      (  CS2B_SELF_ADR_DATA_BUFF+1), A
+    ld      (CS2B_Z_SELF_ADR_DATA_BUFF+1), A
+    ld      A, Seg_Attr_Buffer                  ;  
+    ld      (  CS2B_SELF_ADR_ATTR_BUFF+1), A
     ld      (CS2B_Z_SELF_ADR_ATTR_BUFF+1), A
     ret
 
@@ -17,10 +17,10 @@ SET_TARGET_BUFFER:
 ; MENI: akumulator
 SET_TARGET_SCREEN:
     ld      A, $40                              ;  
-    ld      (CS2B_SELF_ADR_BUFF+1), A
-    ld      (CS2B_Z_SELF_ADR_BUFF+1), A
+    ld      (  CS2B_SELF_ADR_DATA_BUFF+1), A
+    ld      (CS2B_Z_SELF_ADR_DATA_BUFF+1), A
     ld      A, $58                              ;  
-    ld      (CS2B_SELF_ADR_ATTR_BUFF+1), A
+    ld      (  CS2B_SELF_ADR_ATTR_BUFF+1), A
     ld      (CS2B_Z_SELF_ADR_ATTR_BUFF+1), A
     ret
  
@@ -30,7 +30,7 @@ SET_TARGET_SCREEN:
 SET_MAX_31:
     ld      A, 31                               ;
     ld      (CS2B_SELF_MAXSLOUPEC+1), A
-    ld      (CS2B_Z_SELF_MAX_BUFF+1), A
+    ld      (CS2B_Z_SELF_MAXSLOUPEC+1), A
     ret
 
 ; --------------------
@@ -39,13 +39,10 @@ SET_MAX_31:
 SET_MAX_17:
     ld      A, 17                               ;
     ld      (CS2B_SELF_MAXSLOUPEC+1), A
-    ld      (CS2B_Z_SELF_MAX_BUFF+1), A
+    ld      (CS2B_Z_SELF_MAXSLOUPEC+1), A
     ret
  
 ; --------------------
-
-
-
 ; Kopirovani spritu do bufferu
 ; Obrazky se vykresluji po sloupcich, aby slo snadneji kreslit mimo buffer a posouvat tak sprity vlevo a vpravo, i kdyz se tak musi hlidat tretiny...
  
@@ -98,9 +95,8 @@ SET_MAX_17:
     ld      A, (DE)                 ;  7:1 
     ld      IXH, A                  ;  8:2 vyska spritu ( delka sloupce )
 
-    ld      A, C
-    xor     $FF                             ;  7:2 = cpl + set sign flag
-    jp      p, CS2B_ZRCADLOVE
+    bit     BIT_ZRCADLOVE, C        ;  8:2
+    jp      nz, CS2B_ZRCADLOVE
 
     ; --------------- Vykreslovani jak pismo
 
@@ -115,7 +111,7 @@ endif
     
 ; kontrola zda nemame zkratit pocet sloupcu spritu
 CS2B_SELF_MAXSLOUPEC:
-    ld      A, $11                  ;  8:2 {17,31}
+    ld      A, $1F                  ;  8:2 implicitni je 31, zkraceny je 17
     sub     B                       ;  4:1 max - pocatek < 0? Nezaciname vpravo od maxima a pritom kreslime doprava?
     jp      m, CS2B_EXIT_SP_OK      ; 10:3
 CS2B_TEST_ZKRACENI_SIRKY:
@@ -125,40 +121,62 @@ CS2B_TEST_ZKRACENI_SIRKY:
     ld      IYH, A                  ; zkratime pocet sloupcu spritu
 CS2B_KONEC_OK:
 
-
-; do HL BUF_ADR(sloupec, radek)
-; http://clanky.1-2-8.net/2009_09_01_archive.html
-    ld      A, C                    ;  4:1 radek
-    rrca                            ;  4:1 rotace vpravo, 07654321 carry = 0
-    rrca                            ;  4:1 rotace vpravo, 10765432 carry = 1
-    rrca                            ;  4:1 rotace vpravo, 21076543 carry = 2
-    ld      H, A                    ;  4:1 docasne ulozime
-    and     %11100000               ;  7:2
-    add     A, B                    ;  4:1 prictem sloupec
-    ld      L, A                    ;  4:1 priprava pro atributy
-    ex      AF, AF'                 ;  4:1
-    ld      A, C                    ;  4:1 radek
-    exx                             ;  4:1
-    ld      (CS2B_EXIT+1), SP       ; 20:4 uloz puvodni ukazatel zasobniku
-    ld      SP, HL                  ;  6:1 SP = SPRITE_DATA_ADR, DE = SPRITE_ATTR_ADR - 1
-    and     %00011000               ;  7:2 Nastaveni tretiny obrazovky
-CS2B_SELF_ADR_BUFF:
-    add     A, Adr_Buffer/256           ;  7:2 Horni byte Adr_Buffer 
-    ld      (CS2B_SELF_H_SHADOW+1), A   ;  13:3 inicializace pro "ld H, n"
-    ld      H, A                        ;  4:1 H' = A
-    ex      AF, AF'                 ;  4:1
-    ld      L, A                    ;  4:1 HL' = BUFF_DATA_ADR
-    ld      IYL, A                  ;  8:2 IYL = offset prvniho znaku leziciho uvnitr bufferu, potrebujeme pro zacatek dalsiho sloupce
-    exx                             ;  4:1
-    ld      A, H                    ;  4:1 radek >> 3
+if (1)
+    ld      A, C                    ;  4:1 Y radek 
     and     %00000011               ;  7:2
 CS2B_SELF_ADR_ATTR_BUFF:
-    add     A, Adr_Attr_Buffer / 256;  7:2
-    ld      H, A                    ;  4:1  HL = BUFF_ATTR_ADR
+    add     A, Seg_Attr_Buffer      ;  7:2
     ld      (CS2B_SELF_H+1), A      ; 13:3 inicializace pro "ld H,n"
-
-    ld      B, IYH                  ; 8:2  sirka spritu
-    ld      IXL, IXH                ; 8:2  vyska ( delka sloupce )
+    ld      H, A                    ;  4:1
+    ld      A, C                    ;  4:1
+    and     %11100000               ;  7:2
+    add     A, B                    ;  4:1 prictem X sloupec
+    ld      IYL, A                  ;  8:2 IYL = offset prvniho znaku leziciho uvnitr bufferu, potrebujeme pro zacatek dalsiho sloupce
+    ld      L, A                    ;  4:1 HL = BUFF_ATTR_ADR
+    exx
+    ld      (CS2B_EXIT+1), SP       ; 20:4 uloz puvodni ukazatel zasobniku
+    ld      SP, HL                  ;  6:1 SP = SPRITE_DATA_ADR, DE = SPRITE_ATTR_ADR - 1
+    ld      L, A                    ;  4:1 L'
+    exx                             ;  4:1
+    ld      A, C                    ;  4:1 Y radek
+    exx                             ;  4:1
+    and     %00011000               ;  7:2
+CS2B_SELF_ADR_DATA_BUFF:
+    add     A, Seg_Buffer           ;  7:2
+    ld      (CS2B_SELF_H_SHADOW+1), A ;  13:3 inicializace pro "ld H, n"    
+    ld      H, A                    ;  4:1 HL' = BUFF_DATA_ADR
+    exx                             ;  4:1
+else
+    ; prohodi stinove a normalni registry
+    ld      A, C                    ;  4:1 Y radek 
+    and     %00011000               ;  7:2
+CS2B_SELF_ADR_DATA_BUFF:
+    add     A, Seg_Buffer           ;  7:2
+    ld      (CS2B_SELF_H_SHADOW+1), A ;  13:3 inicializace pro "ld H, n"    
+    ld      H, A                    ;  4:1 budouci H' = segment BUFF_DATA_ADR
+    ld      A, C                    ;  4:1
+    and     %11100000               ;  7:2
+    add     A, B                    ;  4:1 prictem X sloupec
+    ld      IYL, A                  ;  8:2 IYL = offset prvniho znaku leziciho uvnitr bufferu, potrebujeme pro zacatek dalsiho sloupce
+    ld      L, A                    ;  4:1 buduci HL' = BUFF_DATA_ADR
+    exx
+    ; v zatim stinovych mame ulozeny v HL adresu SPRITE_DATA_ADR
+    ld      (CS2B_EXIT+1), SP     ; 20:4 uloz puvodni ukazatel zasobniku
+    ld      SP, HL                  ;  6:1 SP = SPRITE_DATA_ADR, DE = SPRITE_ATTR_ADR - 1
+    ld      L, A                    ;  4:1 budouci L
+    exx                             ;  4:1
+    ld      A, C                    ;  4:1 Y radek (puvodni C)
+    exx                             ;  4:1
+    and     %00000011               ;  7:2
+CS2B_SELF_ADR_ATTR_BUFF:
+    add     A, Seg_Attr_Buffer      ;  7:2
+    ld      (CS2B_SELF_H+1), A    ; 13:3 inicializace pro "ld H,n"
+    ld      H, A                    ;  4:1 HL = BUFF_ATTR_ADR
+    ; chyba! prohodi DE a DE'
+endif
+    
+    ld      B, IYH                  ;  8:2  sirka spritu
+    ld      IXL, IXH                ;  8:2  vyska ( delka sloupce )
 
 ; -------------- konec inicializaci
 ; aktualne
@@ -184,30 +202,30 @@ CS2B_SELF_ADR_ATTR_BUFF:
 ; -------------------------------
 ; Kopirovani znaku do bufferu pomoci masky ( nulove bity smazou puvodni ) a nasledne OR s novym
 CS2B_MASK:
-    add     A, A                    ; 7:2 odstranime FLASH, zbude jen 2xPAPER
-    ld      A, C                    ; 7:1
+    add     A, A                    ;  7:2 odstranime FLASH, zbude jen 2xPAPER
+    ld      A, C                    ;  7:1
     jr      nz, CS2B_MASK_NEZACHOVAT_PAPER
   
-    xor     (HL)                    ; 7:1 (BUF_ATTR_ADR)
-    and     %00000111               ; 7:2 old FLASH + old BRIGHTNESS + old PAPER + new INK
-    xor     (HL)                    ; 7:1 (BUF_ATTR_ADR)
+    xor     (HL)                    ;  7:1 (BUF_ATTR_ADR)
+    and     %00000111               ;  7:2 old FLASH + old BRIGHTNESS + old PAPER + new INK
+    xor     (HL)                    ;  7:1 (BUF_ATTR_ADR)
 CS2B_MASK_NEZACHOVAT_PAPER:
-    and     $7f                     ; 7:2 zrusime FLASH
-    ld      (HL), A                 ; 7:1 (BUF_ATTR_ADR) ulozime novy atribut bez flash ( ale mozna s puvodnim PAPER ) 
+    and     $7f                     ;  7:2 zrusime FLASH
+    ld      (HL), A                 ;  7:1 (BUF_ATTR_ADR) ulozime novy atribut bez flash ( ale mozna s puvodnim PAPER ) 
 
-    exx                             ; 4:1
-    ld      B, $08                  ; ?:2 Self-modifying, je tu bud "ld B,8" nebo "jr CS2B_MASK_ZRCADLOVE"
+    exx                             ;  4:1
+    ld      B, $08                  ;  ?:2 Self-modifying, je tu bud "ld B,8" nebo "jr CS2B_MASK_ZRCADLOVE"
     ld      C, H                    ;  4:1
 CS2B_MASK_LOOP
     pop     DE                      ; 10:1
-    ld      A, (HL)                 ; 7:1 (BUFF_DATA_ADR)
-    and     E                       ; 4:1 vynulujeme misto kam budeme kreslit novy znak
-    or      D                       ; 4:1 pridame novy znak
-    ld      (HL), A                 ; 7:1 (BUFF_DATA_ADR)
-    inc     H                       ; 4:1
+    ld      A, (HL)                 ;  7:1 (BUFF_DATA_ADR)
+    and     E                       ;  4:1 vynulujeme misto kam budeme kreslit novy znak
+    or      D                       ;  4:1 pridame novy znak
+    ld      (HL), A                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
     djnz    CS2B_MASK_LOOP
     
-    dec     IXL                     ; 8:2 snizime pocitadlo znaku v sloupci
+    dec     IXL                     ;  8:2 snizime pocitadlo znaku v sloupci
     jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
 ;     jp      CS2B_FIRST_ROW        ; 10:3 
 
@@ -217,17 +235,17 @@ CS2B_MASK_LOOP
 
 CS2B_FIRST_ROW:                     ; jsme ve stinovych registrech
 CS2B_SELF_H_SHADOW:
-    ld      H, $00                  ; 7:2 self-modifying code, navrat na prvni radek
-    ld      IXL, IXH                ; 8:2 obnovime citac pro Pocet_radku_spritu ( delka sloupce )
-    inc     IYL                     ; 8:2 o znak vpravo
-    ld      A, IYL                  ; 8:2 offset znaku na prvnim radku
-    ld      L, A                    ; 4:1 l' = offset znaku na prvnim radku
+    ld      H, $00                  ;  7:2 self-modifying code, navrat na prvni radek
+    ld      IXL, IXH                ;  8:2 obnovime citac pro Pocet_radku_spritu ( delka sloupce )
+    inc     IYL                     ;  8:2 o znak vpravo
+    ld      A, IYL                  ;  8:2 offset znaku na prvnim radku
+    ld      L, A                    ;  4:1 L' = offset znaku na prvnim radku
 
     exx
 CS2B_SELF_H:
     ld      H, $00                  ; self-modifying code hl = BUF_ATTR_ADR prvniho radku
     ld      L, A
-    djnz    CS2B_POCATEK            ; b = zbyvajici Pocet_sloupcu_spritu
+    djnz    CS2B_POCATEK            ; B = zbyvajici sirka spritu
 
 CS2B_EXIT:
     ld      SP, $0000               ; self-modifying code
@@ -238,7 +256,7 @@ CS2B_EXIT_SP_OK:
 
 CS2B_TRETINA:
     exx                             ; navrat z Jeho Bozskeho Stinu
-    inc     H                       ; 4:1  hl++ == BUF_ATTR_ADR += 256
+    inc     H                       ;  4:1  hl++ == BUF_ATTR_ADR += 256
     jr      CS2B_ATTR_NEXT
 
 CS2B_CELOPRUHLEDNY:
@@ -250,36 +268,36 @@ CS2B_CELOPRUHLEDNY:
 
 ; ----------------------------------
 CS2B_DOLU:
-    dec     IXL                     ; 8:2 snizime pocitadlo znaku v sloupci
-    jr      z, CS2B_FIRST_ROW       ; 12/7:2 
+    dec     IXL                     ;  8:2 snizime pocitadlo znaku v sloupci
+    jr      z, CS2B_FIRST_ROW       ;12/7:2 
 CS2B_O_ZNAK_NIZE:                   ; jsme ve stinovych registrech	
 
     ld      A, $20                  ; A = 32
     add     A, L
-    ld      L, A                    ; 4:1 l'+=32 == BUFF_DATA_ADR+=32
+    ld      L, A                    ;  4:1 L'+=32 == BUFF_DATA_ADR+=32
 
     jr      c, CS2B_TRETINA         ; skok pokud jsme v dalsi tretine
     ld      H, C                    ; H = H - 8 = old H
     exx
 
 CS2B_ATTR_NEXT:
-    ld      L, A                    ; l+=32 == BUF_ATTR_ADR += 32
+    ld      L, A                    ; L+=32 == BUF_ATTR_ADR += 32
     
 ; ----------------------------------
 ; Cast vetvici kopirovani znaku podle typu atributu na prepisovani, pripisovani, a oboji s pomoci masky
 CS2B_POCATEK:
 
-    inc     DE                      ; 6:1 DE++ = SPRITE_ATTR_ADR++
-    ld      A, (DE)                 ; 7:1 (SPRITE_ATTR_ADR)
-    ld      C, A                    ; 4:1
+    inc     DE                      ;  6:1 DE++ = SPRITE_ATTR_ADR++
+    ld      A, (DE)                 ;  7:1 (SPRITE_ATTR_ADR)
+    ld      C, A                    ;  4:1
     and     %10111000               ; FLASH + PAPER
     jr      z, CS2B_ADD_INK         ; PAPER = black
     jp      m, CS2B_MASK
 
 ; ----------------------------------
 ; nepruhledne = prepisovani
-    ld      (HL), C                 ; 7:1 (BUF_ATTR_ADR)
-    exx                             ; 4:1
+    ld      (HL), C                 ;  7:1 (BUF_ATTR_ADR)
+    exx                             ;  4:1
 
     ld      C, H                    ;  4:1
     pop     DE                      ; 10:1
@@ -304,7 +322,7 @@ CS2B_POCATEK:
     inc     H                       ;  4:1
     
     ; kvuli zrychleni o 5 taktu duplicitni kod
-    dec     IXL                     ; 8:2 snizime pocitadlo znaku v sloupci
+    dec     IXL                     ;  8:2 snizime pocitadlo znaku v sloupci
     jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
     jp      CS2B_FIRST_ROW          ; 10:3 
 
@@ -314,52 +332,52 @@ CS2B_POCATEK:
 CS2B_ADD_INK:
 
 ; Test kolize novy INK == puvodni PAPER  
-    ld      A, C                ;  4:1 (SPRITE_ATTR_ADR)
-    add     A, A                ;  4:1
+    ld      A, C                    ;  4:1 (SPRITE_ATTR_ADR)
+    add     A, A                    ;  4:1
 if ( MEZERA != $40 )
     .error 'Zmenit kod, MEZERA != $.1000...!'
 endif
-    add     A, A                ;  4:1
+    add     A, A                    ;  4:1
     jr      c, CS2B_CELOPRUHLEDNY    
-    add     A, A                ;  4:1 INK -> PAPER
-    xor     (HL)                ;  7:1 (BUF_ATTR_ADR)
-    and     %00111000           ;  7:2 
-    jr      z, CS2B_DELETE_INK    ; novy INK je shodny s puvodnim PAPER, takze jen vymazavam puvodni INK
+    add     A, A                    ;  4:1 INK -> PAPER
+    xor     (HL)                    ;  7:1 (BUF_ATTR_ADR)
+    and     %00111000               ;  7:2 
+    jr      z, CS2B_DELETE_INK      ; novy INK je shodny s puvodnim PAPER, takze jen vymazavam puvodni INK
 
-    ld      A, (HL)             ; 7:1 (BUF_ATTR_ADR)
-    and     %11111000           ; 7:2
-    or      C                   ; 4:1
-    ld      (HL), A             ; 7:1 (BUF_ATTR_ADR) zachovame puvodni hodnotu PAPER a BRIGHT
+    ld      A, (HL)                 ;  7:1 (BUF_ATTR_ADR)
+    and     %11111000               ;  7:2
+    or      C                       ;  4:1
+    ld      (HL), A                 ;  7:1 (BUF_ATTR_ADR) zachovame puvodni hodnotu PAPER a BRIGHT
 
     exx
 
-    ld      B, $02              ;  7:2
-    ld      C, H                ;  4:1
+    ld      B, $02                  ;  7:2
+    ld      C, H                    ;  4:1
 CS2B_ADD_INK_LOOP:
-    pop     DE                  ; 10:1
-    ld      A, (HL)             ;  7:1 (BUFF_DATA_ADR)
-    or      E                   ;  4:1
-    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
-    inc     H                   ;  4:1
-    ld      A, (HL)             ;  7:1 (BUFF_DATA_ADR)
-    or      D                   ;  4:1
-    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
-    inc     H                   ;  4:1
-    pop     DE                  ; 10:1
-    ld      A, (HL)             ;  7:1 (BUFF_DATA_ADR)
-    or      E                   ;  4:1
-    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
-    inc     H                   ;  4:1
-    ld      A, (HL)             ;  7:1 (BUFF_DATA_ADR)
-    or      D                   ;  4:1
-    ld      (HL), A             ;  7:1 (BUFF_DATA_ADR)
-    inc     H                   ;  4:1
+    pop     DE                      ; 10:1
+    ld      A, (HL)                 ;  7:1 (BUFF_DATA_ADR)
+    or      E                       ;  4:1
+    ld      (HL), A                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    ld      A, (HL)                 ;  7:1 (BUFF_DATA_ADR)
+    or      D                       ;  4:1
+    ld      (HL), A                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    pop     DE                      ; 10:1
+    ld      A, (HL)                 ;  7:1 (BUFF_DATA_ADR)
+    or      E                       ;  4:1
+    ld      (HL), A                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
+    ld      A, (HL)                 ;  7:1 (BUFF_DATA_ADR)
+    or      D                       ;  4:1
+    ld      (HL), A                 ;  7:1 (BUFF_DATA_ADR)
+    inc     H                       ;  4:1
     djnz    CS2B_ADD_INK_LOOP
 
     ; kvuli zrychleni o 5 taktu duplicitni kod
-    dec     IXL                     ; 8:2 snizime pocitadlo znaku v sloupci
+    dec     IXL                     ;  8:2 snizime pocitadlo znaku v sloupci
     jp      nz, CS2B_O_ZNAK_NIZE    ; 10:3
-    jp      CS2B_FIRST_ROW        ; 10:3 
+    jp      CS2B_FIRST_ROW          ; 10:3 
 
 
 ; ---------------------------------------------------------
@@ -399,9 +417,8 @@ CS2B_DEL_INK_LOOP:
 ; ==================================
 ; Zrcadlove vykreslovani
 CS2B_ZRCADLOVE:
-    ld      C, A                    ; ulozime kladnou verzi
-CS2B_Z_SELF_MAX_BUFF:
-    ld      A, 17                   ;  7:2 Self-modifying
+CS2B_Z_SELF_MAXSLOUPEC:
+    ld      A, $1F                   ;  7:2 Self-modifying, implicitni je 31, zkracene je 17
     ld      H, A                    ;  4:1 Pokud budeme orezavat pocatek tak odsud nacteme novou hodnotu pro prvni sloupec ( B ma byt 17 nebo 31)
     sub     B                       ;  4:1 MAX_BUF - pocatecni sloupec
     ld      L, A                    ;  4:1 mozna zaporna hodnota poctu sloupcu ktere mam preskocit
@@ -417,40 +434,63 @@ CS2B_Z_SELF_MAX_BUFF:
     ld      IYH, A                  ; zkratime pocet sloupcu spritu
 CS2B_Z_KONEC_OK:
 
-
-; do HL BUF_ADR(sloupec, radek)
-; http://clanky.1-2-8.net/2009_09_01_archive.html
-    ld      A, C                    ;  4:1 radek
-    rrca                            ;  4:1 rotace vpravo, 07654321 carry = 0
-    rrca                            ;  4:1 rotace vpravo, 10765432 carry = 1
-    rrca                            ;  4:1 rotace vpravo, 21076543 carry = 2
-    ld      H, A                    ;  4:1 docasne ulozime
-    and     %11100000               ;  7:2
-    add     A, B                    ;  4:1 prictem sloupec
-    ld      L, A                    ;  4:1 priprava pro atributy
-    ex      AF, AF'                 ;  4:1
-    ld      A, C                    ;  4:1 radek
-    exx                             ;  4:1
-    ld      (CS2B_Z_EXIT+1), SP     ; 20:4 uloz puvodni ukazatel zasobniku
-    ld      SP, HL                  ;  6:1 SP = SPRITE_DATA_ADR, DE = SPRITE_ATTR_ADR - 1
-    and     %00011000               ;  7:2 Nastaveni tretiny obrazovky
-CS2B_Z_SELF_ADR_BUFF:
-    add     A, Adr_Buffer / 256         ;  7:2 Horni byte Adr_Buffer 
-    ld      (CS2B_Z_SELF_H_SHADOW+1), A ;  13:3 inicializace pro "ld H, n"
-    ld      H, A                        ;  4:1 H' = A
-    ex      AF, AF'                 ;  4:1
-    ld      L, A                    ;  4:1 HL' = BUFF_DATA_ADR
-    ld      IYL, A                  ;  8:2 IYL = offset prvniho znaku leziciho uvnitr bufferu, potrebujeme pro zacatek dalsiho sloupce
-    exx                             ;  4:1
-    ld      A, H                    ;  4:1 radek >> 3
+if (1)
+    ld      A, C                    ;  4:1 Y radek 
     and     %00000011               ;  7:2
 CS2B_Z_SELF_ADR_ATTR_BUFF:
-    add     A, Adr_Attr_Buffer / 256;  7:2
-    ld      H, A                    ;  4:1  HL = BUFF_ATTR_ADR
+    add     A, Seg_Attr_Buffer      ;  7:2
     ld      (CS2B_Z_SELF_H+1), A    ; 13:3 inicializace pro "ld H,n"
-
-    ld      B, IYH                  ; 8:2  sirka spritu
-    ld      IXL, IXH                ; 8:2  vyska spritu ( delka sloupce )
+    ld      H, A                    ;  4:1
+    ld      A, C                    ;  4:1
+    and     %11100000               ;  7:2
+    add     A, B                    ;  4:1 prictem X sloupec
+    ld      IYL, A                  ;  8:2 IYL = offset prvniho znaku leziciho uvnitr bufferu, potrebujeme pro zacatek dalsiho sloupce
+    ld      L, A                    ;  4:1 HL = BUFF_ATTR_ADR
+    exx
+    ld      (CS2B_Z_EXIT+1), SP     ; 20:4 uloz puvodni ukazatel zasobniku
+    ld      SP, HL                  ;  6:1 SP = SPRITE_DATA_ADR, DE = SPRITE_ATTR_ADR - 1
+    ld      L, A                    ;  4:1 L'
+    exx                             ;  4:1
+    ld      A, C                    ;  4:1 Y radek
+    exx                             ;  4:1
+    and     %00011000               ;  7:2
+CS2B_Z_SELF_ADR_DATA_BUFF:
+    add     A, Seg_Buffer           ;  7:2
+    ld      (CS2B_Z_SELF_H_SHADOW+1), A ;  13:3 inicializace pro "ld H, n"    
+    ld      H, A                    ;  4:1 HL' = BUFF_DATA_ADR
+    exx                             ;  4:1
+else
+    ; prohodi stinove a normalni registry
+    ld      A, C                    ;  4:1 Y radek 
+    and     %00011000               ;  7:2
+CS2B_Z_SELF_ADR_DATA_BUFF:
+    add     A, Seg_Buffer           ;  7:2
+    ld      (CS2B_Z_SELF_H_SHADOW+1), A ;  13:3 inicializace pro "ld H, n"    
+    ld      H, A                    ;  4:1 budouci H' = segment BUFF_DATA_ADR
+    ld      A, C                    ;  4:1
+    and     %11100000               ;  7:2
+    add     A, B                    ;  4:1 prictem X sloupec
+    ld      IYL, A                  ;  8:2 IYL = offset prvniho znaku leziciho uvnitr bufferu, potrebujeme pro zacatek dalsiho sloupce
+    ld      L, A                    ;  4:1 buduci HL' = BUFF_DATA_ADR
+    exx
+    ; v zatim stinovych mame ulozeny v HL adresu SPRITE_DATA_ADR
+    ld      (CS2B_Z_EXIT+1), SP     ; 20:4 uloz puvodni ukazatel zasobniku
+    ld      SP, HL                  ;  6:1 SP = SPRITE_DATA_ADR, DE = SPRITE_ATTR_ADR - 1
+    ld      L, A                    ;  4:1 budouci L
+    exx                             ;  4:1
+    ld      A, C                    ;  4:1 Y radek (puvodni C)
+    exx                             ;  4:1
+    and     %00000011               ;  7:2
+CS2B_Z_SELF_ADR_ATTR_BUFF:
+    add     A, Seg_Attr_Buffer      ;  7:2
+    ld      (CS2B_Z_SELF_H+1), A    ; 13:3 inicializace pro "ld H,n"
+    ld      H, A                    ;  4:1 HL = BUFF_ATTR_ADR
+    ; chyba! prohodi DE a DE'
+endif
+    
+    ld      B, IYH                  ;  8:2  sirka spritu
+    ld      IXL, IXH                ;  8:2  vyska spritu ( delka sloupce )
+    
 
 ; -------------- konec inicializaci
 ; aktualne
@@ -541,7 +581,7 @@ CS2B_Z_CELOPRUHLEDNY:
     ld      H, A
 ; ----------------------------------
 CS2B_Z_DOLU:
-    dec     IXL                     ; 8:2 snizime pocitadlo znaku v sloupci
+    dec     IXL                     ;  8:2 snizime pocitadlo znaku v sloupci
     jr      z, CS2B_Z_FIRST_ROW     ;12/7:2 
 CS2B_Z_O_ZNAK_NIZE:                 ; jsme ve stinovych registrech	
 
@@ -552,7 +592,7 @@ CS2B_Z_O_ZNAK_NIZE:                 ; jsme ve stinovych registrech
     jr      c, CS2B_Z_TRETINA       ; skok pokud jsme v dalsi tretine
     ld      A, H
     sub     $08                     ; 
-    ld      H, A                    ; 4:1 h'-=8 == BUFF_DATA_ADR-=8*256
+    ld      H, A                    ;  4:1 h'-=8 == BUFF_DATA_ADR-=8*256
     ld      A, L
     exx
 
@@ -590,7 +630,7 @@ CS2B_Z_ADD_ALL_LOOP:
     inc     H                       ;  4:1
     djnz    CS2B_Z_ADD_ALL_LOOP
     ; kvuli zrychleni o 5 taktu duplicitni kod
-    dec     IXL                     ; 8:2 snizime pocitadlo znaku v sloupci
+    dec     IXL                     ;  8:2 snizime pocitadlo znaku v sloupci
     jp      nz, CS2B_Z_O_ZNAK_NIZE  ; 10:3
     jp      CS2B_Z_FIRST_ROW        ; 10:3
 

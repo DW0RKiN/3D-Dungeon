@@ -252,7 +252,7 @@ endif
     inc     hl
     ld      d,(hl)                  ; de = ukazatel na sprite avatara aktivniho hrace
     
-    ld      bc,$1200
+    ld      bc,X18+Y00
     call    COPY_SPRITE2BUFFER
     
 ;--- Nastrkame spravna data (parametry dale volane fce) na zasobnik a protoze je to zasobnik, posledni bude prvni kreslene.
@@ -286,11 +286,11 @@ IW_LOOP:
     push    DE
     ld      DE, Body_left
     push    DE
-    ld      DE, $1907
+    ld      DE, X25+Y07
     push    DE
     ld      DE, Body_left
     push    DE
-    ld      DE, $1DF8                   ; 7bit znaci zrcadlove kresleni
+    ld      DE, X29+Z07                   ; 7bit znaci zrcadlove kresleni
     push    DE
 ; v zasobniku mame za sebou souradnice a pod tim adresu obrazku
     call    KRESLI_ZE_ZASOBNIKU

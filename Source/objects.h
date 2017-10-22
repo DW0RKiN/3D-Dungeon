@@ -50,30 +50,29 @@ defb	0
 
 ; vvvv ----------------- zacatek souvisleho bloku
 POZICE_RUKOU:
-	defw 01601h		;cf50	01 16 	. . postava 1. horni zbran 
-	defw 01603h		;cf52	03 16 	. . postava 1. dolni zbran
-	defw 01d01h		;cf54	01 1d 	. . postava 2. horni zbran
-	defw 01d03h		;cf56	03 1d 	. . postava 2. dolni zbran
-	defw 01608h		;cf58	08 16 	. . postava 3. horni zbran
-	defw 0160ah		;cf5a	0a 16 	. . postava 3. dolni zbran
-	defw 01d08h		;cf5c	08 1d 	. . postava 4. horni zbran
-	defw 01d0ah		;cf5e	0a 1d 	. . postava 4. dolni zbran
-	defw 0160fh		;cf60	0f 16 	. . postava 5. horni zbran
-	defw 01611h		;cf62	11 16 	. . postava 5. dolni zbran
-	defw 01d0fh		;cf64	0f 1d 	. . postava 6. horni zbran
-	defw 01d11h		;cf66	11 1d 	. . postava 6. dolni zbran
+    defw X22+Y01        ; postava 1. horni zbran 
+    defw X22+Y03        ; postava 1. dolni zbran
+    defw X29+Y01        ; postava 2. horni zbran
+    defw X29+Y03        ; postava 2. dolni zbran
+    defw X22+Y08        ; postava 3. horni zbran
+    defw X22+Y10        ; postava 3. dolni zbran
+    defw X29+Y08        ; postava 4. horni zbran
+    defw X29+Y10        ; postava 4. dolni zbran
+    defw X22+Y15        ; postava 5. horni zbran
+    defw X22+Y17        ; postava 5. dolni zbran
+    defw X29+Y15        ; postava 6. horni zbran
+    defw X29+Y17        ; postava 6. dolni zbran
 POZICE_RUKOU_END:
 ; ^^^^ ----------------- konec souvisleho bloku
 
 
-
-SIPKY_POZICE    equ $000F
-KOMPAS_POZICE   equ $070F
+SIPKY_POZICE    equ X00+Y15
+KOMPAS_POZICE   equ X07+Y15
 
 AVATARS:
-defw	MFace02,	$1201,	FFace02,	$1901
-defw	FFace03,	$1208,	FFace04,	$1908
-defw	MFace01,	$120F,	FFace01,	$190F
+defw	MFace02,	X18+Y01,	FFace02,	X25+Y01
+defw	FFace03,	X18+Y08,	FFace04,	X25+Y08
+defw	MFace01,	X18+Y15,	FFace01,	X25+Y15
 
 ; je label nutny? asi ne, ale musi bezprostredne navazovat za AVATARS
 KOMPAS:
@@ -83,12 +82,12 @@ defw	Kompas,		KOMPAS_POZICE
 SIPKY:
 defw	S_vsechny,	SIPKY_POZICE	; 
 STISKNUTA_SIPKA:
-defw	S_dopredu,	$030F		;  0
-defw	S_dozadu,	$0311		;  4
-defw	S_vlevo,	$0111		;  8 ukrok
-defw	S_vpravo,	$0511		; 12 ukrok
-defw	S_doleva,	$010F		; 16 otoceni
-defw	S_doprava,	$050F		; 20 otoceni
+defw	S_dopredu,	X03+Y15		;  0
+defw	S_dozadu,	X03+Y17		;  4
+defw	S_vlevo,	X01+Y17		;  8 ukrok
+defw	S_vpravo,	X05+Y17		; 12 ukrok
+defw	S_doleva,	X01+Y15		; 16 otoceni
+defw	S_doprava,	X05+Y15		; 20 otoceni
 defw	0,		0		; 24
 SIPKY_END:
 ; ^^^^ ----------------- konec souvisleho bloku
@@ -103,10 +102,10 @@ SIPKA_OTOCDOPRAVA	equ	20
 SIPKA_NIC		equ	24
 
 RUZICE:
-defw	Komp_N,		$080F
-defw	Komp_E,		$080F
-defw	Komp_S,		$080F
-defw	Komp_W,		$080F
+defw	Komp_N,		X08+Y15
+defw	Komp_E,		X08+Y15
+defw	Komp_S,		X08+Y15
+defw	Komp_W,		X08+Y15
 RUZICE_END:
 
   
@@ -118,12 +117,12 @@ ENEMY_GROUP:
 ;                  3 4                               3(4)                       (3)4
 ;                 1   2                               1(2)                     (1)2
 ;                   *                   vpravo      *                   vlevo       *
-;       1       2       3       4       1       2       3       4       1       2       3       4
-defw    0,      $0,     0,      0,      0,      0,      0,      0,      0,      0,      0,      0
-defw    $0305,  $0A05,  $0404,  $0904,  $1105,  0,      $1004,  0,      0,      $FC05,  0,      $FD04   ; 16 FC = -4 a FD = -3
-defw    $0505,  $0A05,  $0604,  $0904,  $0F05,  0,      $0E04,  0,      0,      $0005,  0,      $0104   ; 10
-defw    $0605,  $0905,  $0705,  $0805,  $0D05,  $0F05,  $0C05,  $0E05,  $0005,  $0205,  $0105,  $0305   ; 6
-defw    $08FB,  $0904,  $09FB,  $0AFB,  $0CFB,  $0EFB,  $0A04,  $0DFB,  $0304,  $0504,  $0404,  $07FB   ; 3.75? V tehle vzdalenosti to chce jeste o 2 vpravo a o 2 vlevo
+;             1         2         3         4         1         2         3         4         1         2         3         4
+defw          0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0,        0
+defw    X03+Y05,  X10+Y05,  X04+Y04,  X09+Y04,  X17+Y05,        0,  X16+Y04,        0,        0,  Xm4+Y05,        0,  Xm3+Y04   ; 16
+defw    X05+Y05,  X10+Y05,  X06+Y04,  X09+Y04,  X15+Y05,        0,  X14+Y04,        0,        0,  X00+Y05,        0,  X01+Y04   ; 10
+defw    X06+Y05,  X09+Y05,  X07+Y05,  X08+Y05,  X13+Y05,  X15+Y05,  X12+Y05,  X14+Y05,  X00+Y05,  X02+Y05,  X01+Y05,  X03+Y05   ; 6
+defw    X08+Z04,  X09+Y04,  X09+Z04,  X10+Z04,  X12+Z04,  X14+Z04,  X10+Y04,  X13+Z04,  X03+Y04,  X05+Y04,  X04+Y04,  X07+Z04   ; 3.75? V tehle vzdalenosti to chce jeste o 2 vpravo a o 2 vlevo
 
 
 
@@ -140,15 +139,14 @@ ITEM_POZICE:
 ; dvoubajtove cislo oznacuje levy horni roh odkud kreslit sprite
 ; prvni je souradnice se znamenkem X (zleva doprava)
 ; druhe je kladna souradnice Y (shora dolu), pokud je zaporna, tak se ma sprite kreslit zprava doleva 
-; 	primy smer			vpravo				vlevo                             sirka zadni
-;	l.dal	p.dal	p.bliz	l.bliz	l.dal	p.dal	p.bliz	l.bliz	l.dal	p.dal	p.bliz	l.bliz	  steny	
-defw	$000C,	$11F3,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	; 16
-defw	$040A,	$0DF5,	$0EF4,	$030B,	$100A,	0,	0,	$110B,	0,	$01F5,	$00F4,	0	; 10
-defw	$0608,	$0BF7,	$0CF6,	$0509,	$0D08,	$12F7,	$13F6,	$0E09,	$FF08,	$04F7,	$03F6,	$FE09	;  6 FF = -1 a FE = -2
-defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;  4
-defw	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0,	0	;
+;       primy smer                          vpravo                              vlevo                                 sirka zadni
+;       l.dal    p.dal    p.bliz   l.bliz   l.dal    p.dal    p.bliz   l.bliz   l.dal    p.dal    p.bliz   l.bliz     steny
+defw    X00+Y12, X17+Z12,       0,       0,       0,       0,       0,       0,       0,       0,       0,       0  ; 16
+defw    X04+Y10, X13+Z10, X14+Z11, X03+Y11, X16+Y10,       0,       0, X17+Y11,       0, X01+Z10, X00+Z11,       0  ; 10
+defw    X06+Y08, X11+Z08, X12+Z09, X05+Y09, X13+Y08, X18+Z08, X19+Z09, X14+Y09, Xm1+Y08, X04+Z08, X03+Z09, Xm2+Y09  ;  6
+defw          0,       0,       0,       0,       0,       0,       0,       0,       0,       0,       0,       0  ;  4
+defw          0,       0,       0,       0,       0,       0,       0,       0,       0,       0,       0,       0  ;
 
 
-MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*5	; (primy smer/vpravo/vlevo) * ( 2 * world ) * 5 radek
-
+MAX_VIDITELNOST_PREDMETU_PLUS_1	equ	3*4*5   ; (primy smer/vpravo/vlevo) * ( 2 * world ) * 5 radek
 
