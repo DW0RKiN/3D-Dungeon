@@ -534,18 +534,24 @@ endif
     ld      d, (hl)
     push    de
     
-    ld      a,(KURZOR_V_INVENTARI)
-    add     a,a
-    add     a,POZICE_V_INVENTARI % 256
-    ld      l,a
-    adc     a,POZICE_V_INVENTARI / 256
-    sub     l
-    ld      h,a
-    ld      c,(hl)
-    inc     hl
-    ld      b,(hl)
-    dec     b                           ; posunem doleva
-    dec     c                           ; posunem nahoru
+    ld      A, (KURZOR_V_INVENTARI)
+    add     A, A
+    add     A, POZICE_V_INVENTARI % 256
+    ld      L, A
+    adc     A, POZICE_V_INVENTARI / 256
+    sub     L
+    ld      H, A
+    ld      C, (HL)
+    inc     HL
+    ld      B, (HL)
+    dec     B                           ; posunem doleva
+    ; C = xxxTT0TT
+    ld      A, C
+    sub     $20
+    jr      nc, VAP_V_TRETINE
+    sbc     A, $08
+VAP_V_TRETINE:
+    ld      C, A                        ; posunem nahoru
         
     ld      de,I_bgm
     push    bc
